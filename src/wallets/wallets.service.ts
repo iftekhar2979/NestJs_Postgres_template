@@ -25,16 +25,21 @@ private readonly dataSource: DataSource,
     }
         
   // Wallet Recharge Service
-  async rechargeWallet({userId,amount,paymentMethod,paymentId}:{userId: string; amount: number; paymentMethod: string; paymentId: string}){
+  async rechargeWallet({userId,amount,paymentMethod,paymentId,user}:{userId: string; amount: number; paymentMethod: string; paymentId: string,user:User}){
     if (amount <= 0) {
       throw new BadRequestException('Amount must be greater than zero');
     }
  
-    const paymentInfo = await this.stripeService.getPaymentIntent(paymentId)
+        // const wallet = await this.walletRepository.insert({
+        //   balance:0,
+        //   version:1,
+        //   user:user
+        // })
+    // const paymentInfo = await this.stripeService.getPaymentIntent(paymentId)
   
-    if(paymentInfo.amount_received !== amount){
-      throw new BadGatewayException("Payment Intent and amount is not correct")
-    }
+    // if(paymentInfo.amount_received !== amount){
+    //   throw new BadGatewayException("Payment Intent and amount is not correct")
+    // }
     
 // console.log(paymentIntent)
     // Start a transaction to ensure data integrity
@@ -47,6 +52,7 @@ private readonly dataSource: DataSource,
       }
       const wallet = await queryRunner.manager.findOne(Wallets, { where: { user_id: userId } });
       if (!wallet) {
+
         throw new NotFoundException('Wallet not found');
       }
       // Update wallet balance

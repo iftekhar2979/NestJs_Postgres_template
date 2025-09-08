@@ -1,9 +1,11 @@
+import { number } from 'joi';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Service } from './entity/courier_details.entity';
 import { CreateServiceDto } from './dto/create_courier_details.dto';
 import { Repository } from 'typeorm';
 import { OrdersService } from 'src/orders/orders.service';
+import { User } from 'src/user/entities/user.entity';
 
 @Injectable()
 export class TransglobalService {
@@ -20,4 +22,6 @@ export class TransglobalService {
     const service = this.serviceRepository.create({order,...createServiceDto});
     return await this.serviceRepository.save(service);
   } 
+
+  
 }

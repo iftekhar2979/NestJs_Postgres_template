@@ -1,6 +1,6 @@
 export enum TransectionType {
     BOOST = 'BOOST',
-    PHURCASE = 'PHURCASE',
+    PHURCASE = 'PURCHASE',
     RECHARGE = 'RECHARGE',
     WITHDRAW = 'WITHDRAW',
 }

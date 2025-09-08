@@ -22,6 +22,7 @@ import { join } from "path";
 import { loadSecretsFromAWS } from "./configs/app.config";
 import { SeederService } from "./seeder/seeder.service";
 import dns from 'node:dns'
+import bodyParser from "body-parser";
 
 /**
  * function for bootstraping the nest application
@@ -37,14 +38,13 @@ async function bootstrap() {
   await runMigrations(dataSource, false); // Set to true to exit on migration failure
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     cors: true,
-    bodyParser: true,
     logger: ["error", "fatal", "log", "verbose", "warn", "debug",]
   });
   const configService = app.get<ConfigService>(ConfigService);
     const seederService = app.get(SeederService);
   await seederService.seedAdminUser();
-  app.use('/api/v1/stripe/webhook', raw({ type: "*/*" })),
   app.setGlobalPrefix("/api");
+
   app.enableVersioning({
     defaultVersion: "1",
     type: VersioningType.URI,
@@ -145,9 +145,9 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe({ transform: true, stopAtFirstError: true }));
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-
+  app.use('/api/v1/stripe/webhook', bodyParser.raw({ type: '*/*' }))
   /* FIXME:
-    ##########################
+    ########################## 
     ##### Set-up Swagger #####
     ##########################
   */

@@ -4,7 +4,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { DeliveryAddress } from './entities/delivery_information.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { CreateDeliveryAddressDto, UpdateDeliveryAddressDto } from './dto/createDelivery.dto';
+import { CreateDeliveryAddressDto,  } from './dto/createDelivery.dto';
 import { Product } from 'src/products/entities/products.entity';
 import { Wallets } from 'src/wallets/entity/wallets.entity';
 import { ProductStatus } from 'src/products/enums/status.enum';
@@ -45,7 +45,7 @@ export class DeliveryService {
     // Retrieve product and user relationship in one call
     const product = await this.productRepository.findOne({
       where: { id: product_id },
-      relations: ['user'],
+      relations: ['user','offer'],
     });
 const userInfo = await this.userService.getUserById(user.id)
     // Check if product exists and the current user can purchase it
@@ -65,6 +65,15 @@ const userInfo = await this.userService.getUserById(user.id)
     if (product.status !== ProductStatus.AVAILABLE) {
       throw new ForbiddenException('Product is no longer available for purchase.');
     }
+    const existingOrder= await this.orderRepository.findOne({
+      where:{
+        product:{
+          id:product_id
+        }
+      },
+      relations:['accepted_offer']
+    })
+
 
     // Retrieve the buyer's wallet and check balance
     const wallets = await this.walletRepository.findOne({
@@ -89,25 +98,30 @@ const userInfo = await this.userService.getUserById(user.id)
       throw new BadRequestException("You don't have enough balance to purchase the product.");
     }
 
-    // Create and save delivery address
-   
-    // Mark product as 'In Progress' (preparation for the order)
     product.status = ProductStatus.IN_PROGRESS;
     await queryRunner.manager.save(Product, product);
 
-    // Create the order record
-    const order = new Order();
-    order.product = product;
-    order.buyer = user;
-    order.seller = product.user;
-    order.buyer_id = user.id;
-    order.seller_id = product.user.id;
-    order.status = OrderStatus.DELIVERY_FILLED;
-    order.protectionFee = protectionFee
-
-    await queryRunner.manager.save(Order, order);
- const deliveryAddress = this.deliveryAddressRepository.create({order,forename:userInfo.firstName,surname:userInfo.lastName, emailAddress:userInfo.email, telephoneNumber:userInfo.phone,...createDeliveryAddressDto});
+    if(existingOrder.accepted_offer){
+      const order = new Order();
+      order.product = product;
+      order.buyer = user;
+      order.seller = product.user;
+      order.buyer_id = user.id;
+      order.seller_id = product.user.id;
+      order.status = OrderStatus.DELIVERY_FILLED;
+      order.protectionFee = protectionFee;
+      order.total = product.selling_price
+      await queryRunner.manager.save(Order, order);
+       const deliveryAddress = this.deliveryAddressRepository.create({order,forename:userInfo.firstName,surname:userInfo.lastName, emailAddress:userInfo.email, telephoneNumber:userInfo.phone,...createDeliveryAddressDto});
     await queryRunner.manager.save(deliveryAddress);
+    }
+    existingOrder.total = product.selling_price
+    existingOrder.protectionFee = protectionFee
+    existingOrder.status = OrderStatus.DELIVERY_FILLED
+    await queryRunner.manager.save(Order,existingOrder)
+    const deliveryAddress = this.deliveryAddressRepository.create({order:existingOrder,forename:userInfo.firstName,surname:userInfo.lastName, emailAddress:userInfo.email, telephoneNumber:userInfo.phone,...createDeliveryAddressDto});
+    await queryRunner.manager.save(deliveryAddress);
+
     // Handle notifications
     const notifications = [
       { 
@@ -167,19 +181,19 @@ const userInfo = await this.userService.getUserById(user.id)
     await queryRunner.release();
   }
 }
-  async updateDeliveryAddress(id: number, updateDeliveryAddressDto: UpdateDeliveryAddressDto): Promise<DeliveryAddress> {
-    const deliveryAddress = await this.deliveryAddressRepository.findOne({where:{id}});
-    if (!deliveryAddress) {
-      throw new NotFoundException('Delivery address not found');
-    }
-    Object.assign(deliveryAddress, updateDeliveryAddressDto);
+  // async updateDeliveryAddress(id: number, updateDeliveryAddressDto: UpdateDeliveryAddressDto): Promise<DeliveryAddress> {
+  //   const deliveryAddress = await this.deliveryAddressRepository.findOne({where:{id}});
+  //   if (!deliveryAddress) {
+  //     throw new NotFoundException('Delivery address not found');
+  //   }
+  //   Object.assign(deliveryAddress, updateDeliveryAddressDto);
 
-    try {
-      return await this.deliveryAddressRepository.save(deliveryAddress);
-    } catch (error) {
-      throw new BadRequestException('Error updating delivery address');
-    }
-  }
+  //   try {
+  //     return await this.deliveryAddressRepository.save(deliveryAddress);
+  //   } catch (error) {
+  //     throw new BadRequestException('Error updating delivery address');
+  //   }
+  // }
 
   // Get Delivery Address by ID
   async getDeliveryAddressById(id: number): Promise<DeliveryAddress> {

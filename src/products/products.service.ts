@@ -127,9 +127,14 @@ const productBoostingCost = 1
         transection.amount = productBoostingCost
         transection.paymentMethod ='Internal'
         transection.product = product
+        transection.user = user
+        transection.user_id = user.id
+        transection.status = PaymentStatus.COMPLETED
         transection.transection_type = TransectionType.BOOST
         transection.paymentId = `TSN-${product.id}-${Math.floor(Math.random() * 1000000)}`
         transection.product_id = product.id
+        transection.wallet = wallets
+        transection.wallet_id = wallets.id
         
         await queryRunner.manager.save(Wallets, wallets)
        await queryRunner.manager.save(Transections, transection)
@@ -291,10 +296,10 @@ if(!term || !category ){
     where.product_name = ILike(`%${behaviorData.search}%`)
   }
   if(behaviorData && behaviorData.category){ 
-    where.product_name = ILike(`%${behaviorData.category}%`)
+    where.category = ILike(`%${behaviorData.category}%`)
   }
   
-      // // Adjust filters based on user behavior
+      // Adjust filters based on user behavior
       // if (behaviorData.searchTerms.length > 0) {
       //   where.product_name = ILike(`%${behaviorData.searchTerms.join(' ')}%`);  // Combine search terms
 

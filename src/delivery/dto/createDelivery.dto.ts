@@ -1,8 +1,9 @@
+import { Length } from 'class-validator';
 import { IsString, IsEmail, IsNumber, Min, Max, IsOptional, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateDeliveryAddressDto {
- 
+
 
   @ApiProperty({ example: 'Company Inc.', description: 'Company Name' })
   @IsString()
@@ -56,6 +57,28 @@ export class CreateDeliveryAddressDto {
 
 }
 
-export class UpdateDeliveryAddressDto extends CreateDeliveryAddressDto {
+export class CreateCollectionAddressDto extends CreateDeliveryAddressDto {
+
+  @ApiProperty({ example: 'Width', description: 'Width' })
+  // @IsOptional()
+  @IsNumber()
+  @Min(1, { message: 'Width must be at least 10 CM' })
+  @Max(100, { message: 'Width must be at least 100 CM' })
+  Width ?: number;
+  @ApiProperty({ example: 'Width', description: 'Width' })
+  @IsNumber()
+  @Min(1, { message: 'Weight must be at least 1 KG' })
+  @Max(100, { message: 'Weight must be at least 100 KG' })
+  Weight ?: number;
+  @ApiProperty({ example: 'Length', description: 'Length' })
+  @IsNumber()
+  @Min(1, { message: 'Length must be at least 1 CM' })
+  @Max(100, { message: 'Length must be at least 100 CM' })
+  Length ?: number;
+  @ApiProperty({ example: 'Length', description: 'Length' })
+  @IsNumber()
+  @Min(1, { message: 'Length must be at least 1 CM' })
+  @Max(100, { message: 'Length must be at least 100 CM' })
+  Height ?: number;
   // Same as CreateDeliveryAddressDto, but you can use @IsOptional() if you want to allow optional fields in an update
 }

@@ -35,7 +35,7 @@ export class CollectionAddress {
   @ApiProperty({ example: '112', description: 'County Id' })
    @IsNumber()
     @Min(1)
-    @Max(4)
+    @Max(300)
     @Column('int', )
  country_id: number;
     @ApiProperty({ example: 'US', description: 'County Code' })

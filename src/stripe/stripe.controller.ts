@@ -33,11 +33,12 @@ export class StripeController {
   // }
 
   // Webhook handler for Stripe events
-  @Post('checkout')
+  @Post('webhook')
   async handleStripeWebhook(
     @Body() rawBody: Buffer,
     @Headers('stripe-signature') signature: string,
   ) {
+    console.log(signature)
     const endpointSecret = this.configService.get<string>(
       'STRIPE_WEBHOOK_SECRET',
     );

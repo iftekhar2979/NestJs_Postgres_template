@@ -16,7 +16,7 @@ import { WalletsModule } from 'src/wallets/wallets.module';
     // WalletsModule
   ],
   controllers: [StripeController],
-  providers: [StripeService,],
+  providers: [StripeService,], 
   exports:[StripeService]
 })
 export class StripeModule {}

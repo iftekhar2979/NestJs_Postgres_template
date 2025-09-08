@@ -20,11 +20,12 @@ import { NotificationsModule } from 'src/notifications/notifications.module';
 import { Notifications } from 'src/notifications/entities/notifications.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { UserModule } from 'src/user/user.module';
-
+import { HttpModule } from '@nestjs/axios';
 @Module({
   imports:[
     TypeOrmModule.forFeature([Shipment,Delivery,ShipmentDocument,Label,OrderInvoice,DeliveryAddress,CollectionAddress,Product,Wallets,Transections,Order,Notifications]),
     OrdersModule,
+    HttpModule,
     NotificationsModule,
     AuthModule,
     UserModule

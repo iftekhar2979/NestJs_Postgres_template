@@ -55,12 +55,21 @@ product: Product;
   @ApiProperty({ example: 123, description: 'Accepted Offer ID' })
   @Column('int',{nullable:true})
   offer_id: number;
-
   @ApiProperty({ example: 5, description: 'Quantity of the product in stock' })
   @IsInt()
   @Min(0)
   @Column('decimal',)
   protectionFee: number;
+  @ApiProperty({ example: 5, description: 'Total Amount' })
+  @IsInt()
+  @Min(0)
+  @Column('decimal')
+  total: number;
+  @ApiProperty({ example: 5, description: 'Delivery Charge' })
+  @IsInt()
+  @Min(0)
+  @Column('decimal',{nullable:true})
+  deliveryCharge: number;
   // 🚚 Delivery
   @OneToOne(() => Delivery, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'delivery_id' })
