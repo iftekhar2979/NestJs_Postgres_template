@@ -1,4 +1,4 @@
-import { Controller, Get, OnModuleInit, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, Get, OnModuleInit, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User } from 'src/user/entities/user.entity';
@@ -28,6 +28,18 @@ constructor(private readonly ordersService: OrdersService) {}
   phurcase(@GetUser() user:User, @Query('page') page = 1,
     @Query('limit') limit = 10,) {
     return this.ordersService.findByBuyerId(user.id,page,limit)
+  }
+  @Put(':id/completed')
+  @UseGuards(JwtAuthenticationGuard)
+  orderCompleted(@GetUser() user:User,@Param('id') order_id:number,) {
+    if(!order_id){
+      throw new BadRequestException("Please put the order Id!")
+    }
+    order_id = Number(order_id)
+    if(isNaN(order_id)){
+      throw new BadRequestException("Invalid Order Id")
+    }
+    return this.ordersService.completeOrder({order_id,user})
   }
 
 

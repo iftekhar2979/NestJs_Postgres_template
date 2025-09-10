@@ -8,6 +8,7 @@ export enum NotificationRelated{
     PRODUCT = 'product',
     ORDER ='order',
     CONVERSATION ='conversation',
+    WALLET = 'wallet'
 
 }
 export enum NotificationType {

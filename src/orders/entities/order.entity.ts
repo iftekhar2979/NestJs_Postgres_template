@@ -48,7 +48,7 @@ export class Order {
 @JoinColumn({ name: 'product_id' })
 product: Product;
   // 💬 Accepted Offer
-  @OneToOne(() => Offer, (offer) => offer.order, { cascade: true })
+  @OneToOne(() => Offer, (offer) => offer.order, { cascade: true ,nullable:true})
   @JoinColumn({ name: 'offer_id' })
   accepted_offer: Offer;
 
@@ -89,6 +89,7 @@ product: Product;
   @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
   paymentStatus: PaymentStatus;
 
+
   // ⏱️ Timestamps
   @ApiProperty({ description: 'Created at' })
   @CreateDateColumn({ type: 'timestamp with time zone' })
@@ -97,7 +98,4 @@ product: Product;
   @ApiProperty({ description: 'Updated at' })
   @UpdateDateColumn({ type: 'timestamp with time zone' })
   updated_at: Date;
-}
-export class NewOrders extends Order{
-  faisal:string
 }

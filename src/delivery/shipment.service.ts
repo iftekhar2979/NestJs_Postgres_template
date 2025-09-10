@@ -1,3 +1,4 @@
+import { Service } from 'src/transglobal/entity/courier_details.entity';
 import { DeliveryAddress } from './entities/delivery_information.entity';
 import { number } from 'joi';
 import { CollectionAddress } from 'src/delivery/entities/collection_Address.entity';
@@ -17,7 +18,7 @@ import { Order } from 'src/orders/entities/order.entity';
 import { NotificationAction, NotificationRelated, Notifications, NotificationType } from 'src/notifications/entities/notifications.entity';
 import { UserService } from 'src/user/user.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
-import { CreateCollectionAddressDto, CreateDeliveryAddressDto } from './dto/createDelivery.dto';
+import { CreateCollectionAddressDto } from './dto/createDelivery.dto';
 import { User } from 'src/user/entities/user.entity';
 import { ProductStatus } from 'src/products/enums/status.enum';
 import { OrderStatus, PaymentStatus } from 'src/orders/enums/orderStatus';
@@ -26,9 +27,13 @@ import { TransectionType } from 'src/transections/enums/transectionTypes';
 import { UserRoles } from 'src/user/enums/role.enum';
 import { lastValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ShipmentService {
+  private transgloabalEndpoint:string=''
+  private apiKey :string =''
+  private apiPassword :string = '' 
   constructor(
     @InjectRepository(Shipment)
     private shipmentRepository: Repository<Shipment>,
@@ -49,30 +54,22 @@ export class ShipmentService {
                 @InjectRepository(Notifications) private notificationRepository:Repository<Notifications>,
                 private readonly userService:UserService,
                 private readonly notificationService:NotificationsService,
-                private readonly httpService:HttpService
-  ) {}
-async createCollectionAddress({
-  createDeliveryAddressDto,
-  product_id,
-  user,
-}: {
-  createDeliveryAddressDto: CreateDeliveryAddressDto;
-  product_id: number;
-  user: User;
-}){
-
-}
+                private readonly httpService:HttpService ,
+                private configService: ConfigService
+  ) {
+    this.transgloabalEndpoint= this.configService.get<string>('TRANSGLOBAL_API_ENDPOINTS')
+    this.apiKey= this.configService.get<string>('TRANSGLOBAL_API_KEY')
+    this.apiPassword= this.configService.get<string>('TRANSGLOBAL_API_PASSWORD')
+  }
 
  async createCollectionAddressAndShipment({
-  createDeliveryAddressDto,
+  createCollectionAddressDto,
   product_id,
   user,
-  deliveryCharge,
 }: {
-  createDeliveryAddressDto: CreateCollectionAddressDto;
+  createCollectionAddressDto: CreateCollectionAddressDto;
   product_id: number;
   user: User;
-  deliveryCharge: number;
 }) {
   const queryRunner = this.dataSource.createQueryRunner();
   await queryRunner.startTransaction();
@@ -83,15 +80,15 @@ async createCollectionAddress({
       relations: ['user'],
     });
     if (!product) {
-      throw new BadRequestException("Product not found!");
+      throw new Error("Product not found!");
     }
 
     if (product.user.id === user.id) {
-      throw new ForbiddenException("You can't purchase your own product!");
+      throw new Error("You can't purchase your own product!");
     }
 
     if (product.status === ProductStatus.SOLD) {
-      throw new BadRequestException("Product already sold");
+      throw new Error("Product already sold");
     }
 
     // Check for existing orders to get protection fee
@@ -99,18 +96,45 @@ async createCollectionAddress({
       where: {
         product: { id: product_id },
       },
-      relations: ['accepted_offer'],
+      relations: ['accepted_offer','buyer','seller'],
     });
+    console.log(existingOrder)
 
     if (!existingOrder) {
-      throw new BadRequestException("Order not found");
+      throw new Error("Order not found");
+    }
+    if(existingOrder.status!==OrderStatus.DELIVERY_FILLED){
+      throw new Error("Delivery Information not filled yet!")
     }
 
     const deliveryInfo = await this.deliveryAddressRepo.findOne({where:{order:{id:existingOrder.id}}})
     
 if(!deliveryInfo){
-  throw new BadRequestException("Delivery Information for this Order is not found!")
+  throw new Error("Delivery Information for this Order is not found!")
 }
+
+ const BuyerWallet = await this.walletRepository.findOne({
+      where: { user_id: existingOrder.buyer.id },
+    });
+
+    if (!BuyerWallet) {
+      throw new Error("Buyer wallet not found");
+    }
+    
+    
+    
+    const productSellingPrice = Number(product.selling_price);
+    if (isNaN(productSellingPrice)) {
+      throw new Error('Invalid product price');
+    }
+    const protectionFee = existingOrder.protectionFee || 0;
+    const totalAmount = productSellingPrice + protectionFee;
+    
+    if (BuyerWallet.balance < totalAmount) {
+      throw new Error("Buyer don't have enough balance to purchase the product.");
+    }
+    // Calculate the total amount, including the protection fee and delivery charge
+
     // Save collection address details
     const collection = this.collectionRepository.create({
       order: existingOrder,
@@ -118,60 +142,43 @@ if(!deliveryInfo){
       surname: product.user.lastName,
       emailAddress: product.user.email,
       telephoneNumber: product.user.phone,
-      ...createDeliveryAddressDto,
+      ...createCollectionAddressDto,
     });
 
 const transglobal = await this.callTransglobalApi({
-  packageInfo:{Weight:createDeliveryAddressDto.Weight,
-  Width:createDeliveryAddressDto.Width,
-  Height:createDeliveryAddressDto.Height,
-  Length:createDeliveryAddressDto.Length
+  packageInfo:{Weight:createCollectionAddressDto.Weight,
+  Width:createCollectionAddressDto.Width,
+  Height:createCollectionAddressDto.Height,
+  Length:createCollectionAddressDto.Length
 },
 deliveryInfo,
 collectionInfo:collection
 })
-    const BuyerWallet = await this.walletRepository.findOne({
-      where: { user_id: user.id },
-    });
-
-    if (!BuyerWallet) {
-      throw new BadRequestException("Buyer wallet not found");
-    }
-
-    const productSellingPrice = Number(product.selling_price);
-    if (isNaN(productSellingPrice)) {
-      throw new BadRequestException('Invalid product price');
-    }
-
-    // Calculate the total amount, including the protection fee and delivery charge
-    const protectionFee = existingOrder.protectionFee || 0;
-    const totalAmount = productSellingPrice + protectionFee + deliveryCharge;
+   
 
     // Check if the buyer has enough balance
-    if (BuyerWallet.balance < totalAmount) {
-      throw new BadRequestException("You don't have enough balance to purchase the product.");
-    }
+ 
 
     // Deduct the total amount from the buyer's wallet
-    BuyerWallet.balance -= totalAmount;
-    BuyerWallet.version += 1;  // Optimistic Locking, increment version to prevent race conditions
+    // BuyerWallet.balance -= totalAmount;
+    // BuyerWallet.version += 1;  // Optimistic Locking, increment version to prevent race conditions
 
     const randomString = Math.random().toString(36).substring(2, 10);
     const paymentId = `Trans-${product.id}-${randomString}`;
 
-    // Transaction for payment
-    const transaction = new Transections();
-    transaction.amount = totalAmount;
-    transaction.order = existingOrder;
-    transaction.paymentId = paymentId;
-    transaction.transection_type = TransectionType.PHURCASE;
-    transaction.status = PaymentStatus.COMPLETED;
-    transaction.product = product;
-    transaction.paymentMethod = 'Internal';
+    // // Transaction for payment
+    // const transaction = new Transections();
+    // transaction.amount = totalAmount;
+    // transaction.order = existingOrder;
+    // transaction.paymentId = paymentId;
+    // transaction.transection_type = TransectionType.PHURCASE;
+    // transaction.status = PaymentStatus.COMPLETED;
+    // transaction.product = product;
+    // transaction.paymentMethod = 'Internal';
 
-    // Save changes within the transaction
-    await queryRunner.manager.save(Transections, transaction);
-    await queryRunner.manager.save(Wallets, BuyerWallet);
+    // // Save changes within the transaction
+    // await queryRunner.manager.save(Transections, transaction);
+    // await queryRunner.manager.save(Wallets, BuyerWallet);
 
     // Mark product as 'SOLD'
     product.status = ProductStatus.SOLD;
@@ -194,7 +201,7 @@ collectionInfo:collection
         related: NotificationRelated.ORDER,
         action: NotificationAction.CREATED,
         type: NotificationType.SUCCESS,
-        msg: `Good news! The seller has confirmed your order. The buyer protection fee, delivery charges, and the purchase amount have been successfully deducted from your wallet.`,
+        msg: `Good news! The seller has confirmed your order. The buyer protection fee, delivery charges, and the purchase amount will be deducted from soon.`,
         target_id: existingOrder.id,
         notificationFor: UserRoles.USER,
         isImportant: true,
@@ -231,34 +238,30 @@ collectionInfo:collection
     return {
       message: 'Order placed successfully and delivery address saved.',
       status: 'success',
-      data: product,
+      data: transglobal,
       statusCode: 200,
     };
   } catch (error) {
     // Rollback the transaction if something goes wrong
     await queryRunner.rollbackTransaction();
     console.error('Error during order creation:', error);
-    throw new BadRequestException('Error creating delivery address');
+    throw new BadRequestException(error.message);
   } finally {
     // Release the query runner
     await queryRunner.release();
   }
 }
  async callTransglobalApi({packageInfo,deliveryInfo,collectionInfo}:{deliveryInfo:DeliveryAddress,collectionInfo:CollectionAddress,packageInfo:{Weight:number,Length:number,Width:number,Height:number}}) {
-    const transglobalApiUrl = 'https://staging2.services3.transglobalexpress.co.uk/Quote/V2/GetQuote'; // Replace with actual URL
+    const transglobalApiUrl = `${this.transgloabalEndpoint}/Quote/V2/GetQuote`; // Replace with actual URL
 
-    // Fetch credentials and other sensitive data from environment variables
-    const apiKey = process.env.TRANSGLOBAL_API_KEY; 
-    const password = process.env.TRANSGLOBAL_API_PASSWORD;
-
-    if (!apiKey || !password) {
+    if (!this.apiKey || !this.apiPassword) {
       throw new Error('Transglobal API credentials are missing');
     }
 
     const requestData = {
       Credentials: {
-        APIKey: apiKey,
-        Password: password,
+          APIKey: this.apiKey,
+    Password: this.apiPassword
       },
       Shipment: {
         Consignment: {
@@ -305,13 +308,49 @@ collectionInfo:collection
       const response = await lastValueFrom(
         this.httpService.post(transglobalApiUrl, requestData)
       );
-      if (response.data && response.data.success) {
+      if (response.data && response.data.Status === 'SUCCESS') {
         return response.data;  // Assuming the API returns a `data` field containing the result
       } else {
+        console.log(response.data)
         throw new BadRequestException(`Transglobal API error: ${response.data.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error calling Transglobal API:', error.message);
+      console.error('Error calling Transglobal API:', error);
+      throw new Error('Failed to communicate with Transglobal API');
+    }
+  }
+ async transglobalFinalShipment({QuoteId,ServiceId}:{QuoteId:number,ServiceId:number}) {
+    const transglobalApiUrl = `${this.transgloabalEndpoint}/Book/V2/BookShipment`; 
+
+    if (!this.apiKey || !this.apiPassword) {
+      throw new Error('Transglobal API credentials are missing');
+    }
+
+    const requestData = {
+      Credentials: {
+          APIKey: this.apiKey,
+    Password: this.apiPassword
+      },
+      QuoteSelection: {
+    QuoteID: QuoteId
+  },
+  BookDetails: {
+    ServiceID: ServiceId
+  }
+    };
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.post(transglobalApiUrl, requestData)
+      );
+      if (response.data && response.data.Status === 'SUCCESS') {
+        return response.data;  // Assuming the API returns a `data` field containing the result
+      } else {
+        console.log(response.data)
+        throw new BadRequestException(`Transglobal API error: ${response.data.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error calling Transglobal API:', error);
       throw new Error('Failed to communicate with Transglobal API');
     }
   }
@@ -396,4 +435,180 @@ collectionInfo:collection
       await queryRunner.release();
     }
   }
+
+  async updateOrderInfo({user,shipmentDto,product_id}:{
+    user:User,
+    product_id:number,
+    shipmentDto:CreateShipmentDto
+  }){
+try{
+    const product = await this.productRepository.findOne({
+      where: { id: product_id },
+      relations: ['user'],
+    });
+    if (!product) {
+      throw new BadRequestException("Product not found!");
+    }
+
+    if (product.user.id === user.id) {
+      throw new ForbiddenException("You can't purchase your own product!");
+    }
+
+
+    // if (product.status === ProductStatus.SOLD) {
+    //   throw new BadRequestException("Product already sold");
+    // }
+
+    // Check for existing orders to get protection fee
+    const existingOrder = await this.orderRepository.findOne({
+      where: {
+        product: { id: product_id },
+      },
+      relations: ['accepted_offer','buyer','seller'],
+    });
+
+    if(existingOrder.buyer.id === user.id){
+      throw new BadRequestException("You can't make shipment of your own purchase!")
+    }
+    if (!existingOrder) {
+      throw new BadRequestException("Order not found");
+    }
+    if(existingOrder.status !== OrderStatus.SHIPMENT_READY){
+throw new BadRequestException("Collection Address not filled yet!")
+    }
+    const deliveryInfo = await this.deliveryAddressRepo.findOne({where:{order:{id:existingOrder.id}}})
+if(!deliveryInfo){
+  throw new BadRequestException("Delivery Information for this Order is not found!")
+}
+const buyerWallet = await this.walletRepository.findOne({where:{user:{id:existingOrder.buyer.id}}})
+if(!buyerWallet){
+  throw new BadRequestException("Buyer wallet is not active !")
+}
+const queryRunner = this.dataSource.createQueryRunner();
+await queryRunner.startTransaction();
+try{
+  const shipment = await this.transglobalFinalShipment({QuoteId:shipmentDto.QuoteID,ServiceId:shipmentDto.ServiceID})
+  shipmentDto.orderInvoice = shipment.OrderInvoice 
+  shipmentDto.orderReference = shipment.OrderReference
+  shipmentDto.Status = shipment.Status 
+  
+  const deliveryCharge = Number(shipment.OrderInvoice.TotalGross)
+  const totalAmount = Number(existingOrder.total) + Number(existingOrder.protectionFee) + deliveryCharge
+
+  if(buyerWallet.balance <= totalAmount){
+throw new Error("Buyer don't have enough balance!")
+  }
+  
+  existingOrder.deliveryCharge = deliveryCharge
+  existingOrder.status = OrderStatus.PREPEARED
+  
+  buyerWallet.balance -= totalAmount
+  buyerWallet.version += 1
+
+  const randomString = Math.random().toString(36).substring(2, 10);
+  const paymentId = `Trans-${product.id}-${randomString}`;
+    // // Transaction for payment
+    const transaction = new Transections();
+    transaction.amount = totalAmount;
+    transaction.order = existingOrder;
+    transaction.paymentId = paymentId;
+    transaction.transection_type = TransectionType.PHURCASE;
+    transaction.status = PaymentStatus.COMPLETED;
+    transaction.product = product;
+    transaction.paymentMethod = 'Internal';
+    transaction.user = existingOrder.buyer
+    transaction.wallet = buyerWallet
+
+    const shipmentInfo = new Shipment()
+    shipmentInfo.Status = shipment.Status 
+    shipmentInfo.order = existingOrder
+    shipmentInfo.orderInvoice = shipment.OrderInvoice
+    shipmentInfo.orderReference = shipment.OrderReference
+
+ const notifications = [
+      { 
+        user: user,
+        userId: user.id,
+        related: NotificationRelated.ORDER,
+        action: NotificationAction.CREATED,
+        type: NotificationType.SUCCESS,
+        msg: `Your order for ${product.product_name} is handed to quorier.We deduced delivery charge, product price and protection fee from you wallet!`,
+        target_id: product.id,
+        notificationFor: UserRoles.USER,
+        isImportant: true,
+      },
+      {
+        userId: product.user.id,
+        user: product.user,
+        related: NotificationRelated.ORDER,
+        action: NotificationAction.CREATED,
+        type: NotificationType.SUCCESS,
+        msg: `You shipment is successfully updated for ${product.product_name}.Make the percel ready for shipment.`,
+        target_id: product.id,
+        notificationFor: UserRoles.USER,
+        isImportant: true,
+      },
+      {
+        userId: product.user.id,
+        user: product.user,
+        related: NotificationRelated.ORDER,
+        action: NotificationAction.CREATED,
+        type: NotificationType.SUCCESS,
+        msg: `Order : #${existingOrder.id} with ${product.product_name} is ready for shipment.`,
+        target_id: product.id,
+        notificationFor: UserRoles.ADMIN,
+        isImportant: true,
+      },
+      {
+  userId: existingOrder.buyer.id,
+  related: NotificationRelated.WALLET,
+  action: NotificationAction.CREATED,
+  type: NotificationType.SUCCESS,
+  msg: `Purchase successful! A total of ${totalAmount} has been deducted from your wallet for product ${product.product_name} Order #${existingOrder.id}, including delivery charges and protection fees.`,
+  notificationFor: UserRoles.USER,
+  isImportant: true,
+  targetId:buyerWallet.id
+},
+ {
+        userId: product.user.id,
+        user: product.user,
+        related: NotificationRelated.ORDER,
+        action: NotificationAction.CREATED,
+        type: NotificationType.SUCCESS,
+        msg:  `Order : #${existingOrder.id} with ${product.product_name} has ${totalAmount} in transection Including delivery charges and protection fees.`,
+        target_id: product.id,
+        notificationFor: UserRoles.ADMIN,
+        isImportant: true,
+      },
+
+    ];
+
+    // Bulk insert notifications for both user and admin
+    await this.notificationService.bulkInsertNotifications(notifications);
+    // Save changes within the transaction
+    await queryRunner.manager.save(Order,existingOrder)
+    await queryRunner.manager.save(Transections, transaction);
+    await queryRunner.manager.save(Wallets, buyerWallet);
+    await queryRunner.manager.save(Shipment, shipmentInfo)
+    await queryRunner.commitTransaction();
+
+      return {
+        message:`Product maked as delivery state!`,
+        data:existingOrder,
+        statusCode:201
+      }
+} catch (error) {
+    // Rollback the transaction if something goes wrong
+    await queryRunner.rollbackTransaction();
+    console.error('Error during order creation:', error);
+    throw new BadRequestException('Shipment Service Failed for shipment');
+  } finally {
+    // Release the query runner
+    await queryRunner.release();
+  }
+}catch(error){
+console.log(error)
+}
+  }
+  
 }

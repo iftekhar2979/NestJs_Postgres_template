@@ -7,6 +7,7 @@ export enum OrderStatus {
     REFUNDED = 'refunded',
     DELIVERY_FILLED = 'delivery_filled',
     SHIPMENT_READY = 'shipment_ready',
+    PREPEARED = 'prepeared',
     PAYMENT_DUE = 'payment_due'
 
 }

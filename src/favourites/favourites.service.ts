@@ -41,8 +41,8 @@ export class FavouritesService {
 
     if (existingFavorite) {
       // If the product is already a favorite, remove it
-      await this.favoriteRepo.remove(existingFavorite);
-      throw new BadRequestException('Product removed from favorites');
+   const favourite =   await this.favoriteRepo.remove(existingFavorite);
+     return  {message:"Product removed from favourite",status:'success',statusCode:200,data:await this.favoriteRepo.save(favourite)}
     } else {
       // If the product is not a favorite, add it
       const favorite = this.favoriteRepo.create({ user, product });

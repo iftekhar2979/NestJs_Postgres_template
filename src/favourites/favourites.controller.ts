@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthenticationGuard } from 'src/auth/guards/session-auth.guard';
 import { FavouritesService } from './favourites.service';
 import { CreateFavoriteDto } from './dto/favourite.dto';
@@ -12,6 +12,7 @@ export class FavouritesController {
 
   // Toggle favorite (add or remove a product)
   @Post()
+  @HttpCode(200)
   @UseGuards(JwtAuthenticationGuard)
   async toggleFavorite(@GetUser() user:User,@Body() createFavoriteDto: CreateFavoriteDto) {
     createFavoriteDto.userId= user.id

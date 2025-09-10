@@ -38,12 +38,7 @@ export class DeliveryService {
   product_id: number;
   user: User;
 }) {
-  const queryRunner = this.dataSource.createQueryRunner();
-  await queryRunner.startTransaction();
-
-  try {
-    // Retrieve product and user relationship in one call
-    const product = await this.productRepository.findOne({
+     const product = await this.productRepository.findOne({
       where: { id: product_id },
       relations: ['user','offer'],
     });
@@ -65,18 +60,7 @@ const userInfo = await this.userService.getUserById(user.id)
     if (product.status !== ProductStatus.AVAILABLE) {
       throw new ForbiddenException('Product is no longer available for purchase.');
     }
-    const existingOrder= await this.orderRepository.findOne({
-      where:{
-        product:{
-          id:product_id
-        }
-      },
-      relations:['accepted_offer']
-    })
-
-
-    // Retrieve the buyer's wallet and check balance
-    const wallets = await this.walletRepository.findOne({
+        const wallets = await this.walletRepository.findOne({
       where: { user_id: user.id },
     });
 
@@ -88,8 +72,7 @@ const userInfo = await this.userService.getUserById(user.id)
     if (isNaN(productSellingPrice)) {
       throw new BadRequestException('Invalid product price');
     }
-
-    // Calculate protection fee (5% of the product price)
+ // Calculate protection fee (5% of the product price)
     const protectionFee = (productSellingPrice * 5) / 100;
     const totalAmount = productSellingPrice + protectionFee;
 
@@ -98,29 +81,52 @@ const userInfo = await this.userService.getUserById(user.id)
       throw new BadRequestException("You don't have enough balance to purchase the product.");
     }
 
+  const queryRunner = this.dataSource.createQueryRunner();
+  await queryRunner.startTransaction();
+
+  try {
+    // Retrieve product and user relationship in one call
+ 
+    const existingOrder= await this.orderRepository.findOne({
+      where:{
+        product:{
+          id:product_id
+        }
+      },
+      relations:['accepted_offer']
+    })
+
+
+    // Retrieve the buyer's wallet and check balance
+
+   
     product.status = ProductStatus.IN_PROGRESS;
     await queryRunner.manager.save(Product, product);
 
-    if(existingOrder.accepted_offer){
-      const order = new Order();
-      order.product = product;
-      order.buyer = user;
-      order.seller = product.user;
-      order.buyer_id = user.id;
-      order.seller_id = product.user.id;
-      order.status = OrderStatus.DELIVERY_FILLED;
-      order.protectionFee = protectionFee;
-      order.total = product.selling_price
-      await queryRunner.manager.save(Order, order);
-       const deliveryAddress = this.deliveryAddressRepository.create({order,forename:userInfo.firstName,surname:userInfo.lastName, emailAddress:userInfo.email, telephoneNumber:userInfo.phone,...createDeliveryAddressDto});
-    await queryRunner.manager.save(deliveryAddress);
+    if(!existingOrder){
+        const order = new Order();
+        order.product = product;
+        order.buyer = user;
+        order.seller = product.user;
+        order.offer_id = null
+        order.buyer_id = user.id;
+        order.seller_id = product.user.id;
+        order.status = OrderStatus.DELIVERY_FILLED;
+        order.protectionFee = protectionFee;
+        order.total = Number(product.selling_price)
+        await queryRunner.manager.save(Order, order);
+         const deliveryAddress = this.deliveryAddressRepository.create({order,forename:userInfo.firstName,surname:userInfo.lastName, emailAddress:userInfo.email, telephoneNumber:userInfo.phone,...createDeliveryAddressDto});
+      await queryRunner.manager.save(deliveryAddress);
+      
+    }else{
+
+      existingOrder.total = Number(product.selling_price)
+      existingOrder.protectionFee = protectionFee
+      existingOrder.status = OrderStatus.DELIVERY_FILLED
+      await queryRunner.manager.save(Order,existingOrder)
+      const deliveryAddress = this.deliveryAddressRepository.create({order:existingOrder,forename:userInfo.firstName,surname:userInfo.lastName, emailAddress:userInfo.email, telephoneNumber:userInfo.phone,...createDeliveryAddressDto});
+      await queryRunner.manager.save(deliveryAddress);
     }
-    existingOrder.total = product.selling_price
-    existingOrder.protectionFee = protectionFee
-    existingOrder.status = OrderStatus.DELIVERY_FILLED
-    await queryRunner.manager.save(Order,existingOrder)
-    const deliveryAddress = this.deliveryAddressRepository.create({order:existingOrder,forename:userInfo.firstName,surname:userInfo.lastName, emailAddress:userInfo.email, telephoneNumber:userInfo.phone,...createDeliveryAddressDto});
-    await queryRunner.manager.save(deliveryAddress);
 
     // Handle notifications
     const notifications = [

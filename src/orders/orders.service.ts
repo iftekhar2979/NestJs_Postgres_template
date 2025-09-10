@@ -212,8 +212,134 @@ async purchaseOrder({product_id,user}:{product_id:number,user:User}){
   await queryRunner.manager.save(Product, product)
 
   }catch(error){
-
+console.log(error)
   }
 }
+
+async completeOrder({order_id,user}:{order_id:number,user:User}){
+  try{
+    const order = await this.orderRepository.findOne({where:{id:order_id},  relations: ['product', 'accepted_offer', 'delivery', 'buyer', 'seller']})
+    if(!order){
+      throw new BadRequestException("Order is not found!")
+    }
+    if(order.status !== OrderStatus.PREPEARED){
+      throw new BadRequestException("Order is not yet ready for shipment.")
+    }
+    if(order.buyer.id !== user.id){
+      throw new BadRequestException("You have no permission to compelete the order.")
+    }
+    const sellerWallet = await this.walletRepository.findOne({where:{user:{id:order.seller.id}}})
+if(!sellerWallet){
+  throw new BadRequestException("Seller wallet is not active !")
+}
+
+const {product, seller, buyer}= order
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
+    try{
+
+    
+  order.status = OrderStatus.DELIVERED
+    
+  sellerWallet.balance += Number(order.total)
+  sellerWallet.version += 1
+
+  const randomString = Math.random().toString(36).substring(2, 10);
+  const paymentId = `Trans-${order.product.id}-${randomString}`;
+    // // Transaction for payment
+    const transaction = new Transections();
+    transaction.amount = order.total;
+    transaction.order = order;
+    transaction.paymentId = paymentId;
+    transaction.transection_type = TransectionType.PHURCASE;
+    transaction.status = PaymentStatus.COMPLETED;
+    transaction.product = order.product;
+    transaction.paymentMethod = 'Internal';
+    transaction.user = order.seller
+    transaction.wallet = sellerWallet
+
+const notifications = [
+      { 
+        user: user,
+        userId: user.id,
+        related: NotificationRelated.ORDER,
+        action: NotificationAction.CREATED,
+        type: NotificationType.SUCCESS,
+        msg: `Your Purchase ,Order #${order.id} is marked as delivered or completed.`,
+        target_id: order.id,
+        notificationFor: UserRoles.USER,
+        isImportant: true,
+      },
+      {
+        userId: seller.id ,
+        user: product.user,
+        related: NotificationRelated.ORDER,
+        action: NotificationAction.CREATED,
+        type: NotificationType.SUCCESS,
+        msg: `Order ${order.id} is marked as completed by ${seller.firstName}`,
+        target_id: product.id,
+        notificationFor: UserRoles.USER,
+        isImportant: true,
+      },
+      {
+        userId: seller.id,
+        user: seller,
+        related: NotificationRelated.ORDER,
+        action: NotificationAction.CREATED,
+        type: NotificationType.SUCCESS,
+        msg: `Order : #${order.id} with ${product.product_name} is completed.`,
+        target_id: product.id,
+        notificationFor: UserRoles.ADMIN,
+        isImportant: true,
+      },
+      {
+  userId: seller.id,
+  related: NotificationRelated.WALLET,
+  action: NotificationAction.CREATED,
+  type: NotificationType.SUCCESS,
+  msg: `Congratulation Order completed ! A total of ${order.total} has been credited to your wallet for order #${order.id}.`,
+  notificationFor: UserRoles.USER,
+  isImportant: true,
+  targetId:sellerWallet.id
+},
+ {
+        userId: seller.id,
+        user: seller,
+        related: NotificationRelated.ORDER,
+        action: NotificationAction.CREATED,
+        type: NotificationType.SUCCESS,
+        msg:  `Order : #${order.id} with ${product.product_name} has transection to ${seller.firstName}'s wallet.`,
+        target_id: product.id,
+        notificationFor: UserRoles.ADMIN,
+        isImportant: true,
+      },
+    ];
+
+    // Bulk insert notifications for both user and admin
+    await this.notificaionService.bulkInsertNotifications(notifications);
+        await queryRunner.manager.save(Order,order)
+        await queryRunner.manager.save(Transections, transaction);
+        await queryRunner.manager.save(Wallets, sellerWallet);
+        // await queryRunner.manager.save(Shipment, shipmentInfo)
+        await queryRunner.commitTransaction();
+
+
+          return {
+        message:`Product maked as completed!`,
+        data:order,
+        statusCode:201
+      }
+  }catch(error){
+    await queryRunner.rollbackTransaction();
+    console.error('Error during order creation:', error);
+    throw new BadRequestException('Error creating delivery address');
+  } finally {
+    // Release the query runner
+    await queryRunner.release();
+  }
+}catch(error){
+  console.log(error)
+}}
+
 }
 

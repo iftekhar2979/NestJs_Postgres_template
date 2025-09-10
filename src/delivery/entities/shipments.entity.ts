@@ -26,12 +26,13 @@ export class Shipment {
   @Column({ nullable: true })
   trackingURL: string;
 
-  @OneToMany(() => OrderInvoice, (orderInvoice) => orderInvoice.shipment, { cascade: true })
-  orderInvoice: OrderInvoice[];
+  @OneToOne(() => OrderInvoice, (orderInvoice) => orderInvoice.shipment, { cascade: true })
+  orderInvoice: OrderInvoice;
 
-  @OneToMany(() => Label, (label) => label.shipment, { cascade: true })
+  @OneToMany(() => Label, (label) => label.shipment, { cascade: true, nullable:true })
   labels: Label[];
 
-  @OneToMany(() => ShipmentDocument, (document) => document.shipment, { cascade: true })
+  @OneToMany(() => ShipmentDocument, (document) => document.shipment, { cascade: true , nullable:true })
   documents: ShipmentDocument[];
 }
+ 

@@ -164,7 +164,7 @@ const productBoostingCost = 1
       await this.notificationService.createNotification({
         userId: user.id,
         related: NotificationRelated.PRODUCT,
-        msg: `${user.firstName} has listed a product for your review!`,
+        msg: `${product.product_name} is listed for your review!`,
         type: NotificationType.SUCCESS,
         targetId: savedProduct.id,
         notificationFor: UserRoles.ADMIN,
@@ -295,9 +295,9 @@ if(!term || !category ){
   if(behaviorData && behaviorData.search){ 
     where.product_name = ILike(`%${behaviorData.search}%`)
   }
-  if(behaviorData && behaviorData.category){ 
-    where.category = ILike(`%${behaviorData.category}%`)
-  }
+  // if(behaviorData && behaviorData.category){ 
+  //   where.category = ILike(`%${behaviorData.category}%`)
+  // }
   
       // Adjust filters based on user behavior
       // if (behaviorData.searchTerms.length > 0) {

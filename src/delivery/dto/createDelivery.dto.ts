@@ -25,14 +25,14 @@ export class CreateDeliveryAddressDto {
 
   @ApiProperty({ example: '12345', description: 'Postcode' })
   @IsString()
-  @MinLength(5, { message: 'Postcode must be at least 5 characters long' })
+  @MinLength(3, { message: 'Postcode must be at least 5 characters long' })
   @MaxLength(10, { message: 'Postcode must be less than or equal to 10 characters' })
   postcode: string;
 
   @ApiProperty({ example: '1234567890', description: 'Telephone Number' })
   @IsString()
   @MinLength(10, { message: 'Telephone number must be at least 10 characters long' })
-  @MaxLength(15, { message: 'Telephone number must be less than or equal to 15 characters' })
+  @MaxLength(20, { message: 'Telephone number must be less than or equal to 15 characters' })
   telephoneNumber: string;
 
   @ApiProperty({ example: 112, description: 'County Id' })
@@ -64,21 +64,21 @@ export class CreateCollectionAddressDto extends CreateDeliveryAddressDto {
   @IsNumber()
   @Min(1, { message: 'Width must be at least 10 CM' })
   @Max(100, { message: 'Width must be at least 100 CM' })
-  Width ?: number;
+  Width : number;
   @ApiProperty({ example: 'Width', description: 'Width' })
   @IsNumber()
   @Min(1, { message: 'Weight must be at least 1 KG' })
   @Max(100, { message: 'Weight must be at least 100 KG' })
-  Weight ?: number;
+  Weight : number;
   @ApiProperty({ example: 'Length', description: 'Length' })
   @IsNumber()
   @Min(1, { message: 'Length must be at least 1 CM' })
   @Max(100, { message: 'Length must be at least 100 CM' })
-  Length ?: number;
+  Length : number;
   @ApiProperty({ example: 'Length', description: 'Length' })
   @IsNumber()
   @Min(1, { message: 'Length must be at least 1 CM' })
   @Max(100, { message: 'Length must be at least 100 CM' })
-  Height ?: number;
+  Height : number;
   // Same as CreateDeliveryAddressDto, but you can use @IsOptional() if you want to allow optional fields in an update
 }

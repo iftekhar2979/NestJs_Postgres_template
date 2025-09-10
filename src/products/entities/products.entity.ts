@@ -30,6 +30,7 @@ import { User } from 'src/user/entities/user.entity';
 import { Favorite } from 'src/favourites/entities/favourite.entity';
 import { number } from 'joi';
 import { ProductBoosts } from 'src/product-boost/entities/product-boost.entity';
+import { Offer } from 'src/offers/entities/offer.entity';
 
 @Entity('products')
 export class Product {
@@ -153,6 +154,9 @@ user: User;
 favorites: Favorite[];  
 @OneToMany(() => ProductBoosts, (favorite) => favorite.product)
 boosted: ProductBoosts[];  
+@ManyToOne(() => Offer, (offer) => offer.product, { nullable: true })
+  @JoinColumn({ name: 'offer_id' })
+  offer: Offer;  // The related offer for this product
 }
 
 export class FavouriteProduct extends Product {

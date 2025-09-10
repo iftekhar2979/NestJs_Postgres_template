@@ -69,6 +69,9 @@ messages: Messages[];
   @ApiProperty({ description: 'Timestamp when the offer was last updated' })
   @UpdateDateColumn({ type: 'timestamp with time zone' })
   updated_at: Date;
+
+    @OneToMany(() => Product, (product) => product.offer)
+  products: Product[];
 ;
 
 }
