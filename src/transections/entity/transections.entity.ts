@@ -45,12 +45,12 @@ export class Transections {
        @ManyToOne(() => Wallets, { onDelete: 'CASCADE' })
        @JoinColumn({ name: 'wallet_id' })
         wallet: Wallets;
-       @OneToOne(() => Order, { onDelete: 'CASCADE' , nullable:true  })
-       @JoinColumn({ name: 'order_id' })
-        order: Order;
-       @OneToOne(() => Product, { onDelete: 'CASCADE' ,nullable:true })
-       @JoinColumn({ name: 'product_id' })
-     product: Product;
+      @ManyToOne(() => Order, { onDelete: 'CASCADE', nullable: true })
+      @JoinColumn({ name: 'order_id' })
+      order: Order;
+      @ManyToOne(() => Product, { onDelete: 'CASCADE', nullable: true })
+      @JoinColumn({ name: 'product_id' })
+      product: Product;
       @ApiProperty({ description: 'Timestamp when the offer was created' })
        @CreateDateColumn({ type: 'timestamp with time zone' })
       created_at: Date;    

@@ -50,7 +50,8 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
 
-
+  app.setBaseViewsDir(join(__dirname, '..','..','src', 'views'));
+  app.setViewEngine('ejs');
   const corsOptions: CorsOptions = {
     // FIXME:
     origin: ["http://localhost:3000"], // Only allow requests from yourdomain.com

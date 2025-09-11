@@ -3,4 +3,5 @@ export enum TransectionType {
     PHURCASE = 'PURCHASE',
     RECHARGE = 'RECHARGE',
     WITHDRAW = 'WITHDRAW',
+    ORDER_COMPLETATION = 'ORDER_COMPLETATION',
 }

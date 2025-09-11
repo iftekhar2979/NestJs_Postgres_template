@@ -18,6 +18,7 @@ import { User } from 'src/user/entities/user.entity';
 import { OrderStatus, PaymentStatus } from '../enums/orderStatus';
 import { Delivery } from 'src/delivery/entities/delivery.entity';
 import { IsInt, Min } from 'class-validator';
+import { Transections } from 'src/transections/entity/transections.entity';
 
 @Entity('orders')
 export class Order {
@@ -88,7 +89,10 @@ product: Product;
   @ApiProperty({ example: 'pending', description: 'Payment status' })
   @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
   paymentStatus: PaymentStatus;
-
+  
+   @OneToMany(() => Transections, (transection) => transection)
+    transections: Transections[]; 
+   
 
   // ⏱️ Timestamps
   @ApiProperty({ description: 'Created at' })

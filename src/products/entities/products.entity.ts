@@ -31,6 +31,7 @@ import { Favorite } from 'src/favourites/entities/favourite.entity';
 import { number } from 'joi';
 import { ProductBoosts } from 'src/product-boost/entities/product-boost.entity';
 import { Offer } from 'src/offers/entities/offer.entity';
+import { Transections } from 'src/transections/entity/transections.entity';
 
 @Entity('products')
 export class Product {
@@ -152,6 +153,8 @@ updated_at: Date;
 user: User; 
 @OneToMany(() => Favorite, (favorite) => favorite.product)
 favorites: Favorite[];  
+@OneToMany(() => Transections, (transection) => transection)
+transections: Transections[]; 
 @OneToMany(() => ProductBoosts, (favorite) => favorite.product)
 boosted: ProductBoosts[];  
 @ManyToOne(() => Offer, (offer) => offer.product, { nullable: true })

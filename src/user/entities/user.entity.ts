@@ -17,6 +17,7 @@ import { Favorite } from "src/favourites/entities/favourite.entity";
 import { ProductBoosts } from "src/product-boost/entities/product-boost.entity";
 import { UserBehaviour } from "src/bull/processors/BehaviourQueue";
 import { UserBehaviours } from "src/user-behaviour/entities/userBehaviour.entity";
+import { Reviews } from "src/reviews/entity/reviews.entity";
 // import { Verification } from "./verification.entity";
 
 
@@ -126,6 +127,8 @@ export class User {
   favorites: Favorite[]; 
   @OneToMany(() => UserBehaviours, (behaviour) => behaviour.user)
   behaviours: UserBehaviours[]; 
+  @OneToMany(() => Reviews, (reviews) => reviews.user)
+  reviews: UserBehaviours[]; 
 
   @OneToMany(() => ProductBoosts, (boost) => boost.user)
   boosts: ProductBoosts[];

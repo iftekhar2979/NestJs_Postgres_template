@@ -222,6 +222,9 @@ async completeOrder({order_id,user}:{order_id:number,user:User}){
     if(!order){
       throw new BadRequestException("Order is not found!")
     }
+    if(order.status === OrderStatus.DELIVERED){
+      throw new BadRequestException("Product already delivered")
+    }
     if(order.status !== OrderStatus.PREPEARED){
       throw new BadRequestException("Order is not yet ready for shipment.")
     }
@@ -251,7 +254,7 @@ const {product, seller, buyer}= order
     transaction.amount = order.total;
     transaction.order = order;
     transaction.paymentId = paymentId;
-    transaction.transection_type = TransectionType.PHURCASE;
+    transaction.transection_type = TransectionType.ORDER_COMPLETATION;
     transaction.status = PaymentStatus.COMPLETED;
     transaction.product = order.product;
     transaction.paymentMethod = 'Internal';
