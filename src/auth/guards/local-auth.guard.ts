@@ -1,7 +1,5 @@
 import { ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
 import { AuthGuard } from "@nestjs/passport";
-import { UserService } from "src/user/user.service";
 
 /**
  * Authentication guard for Local passport Strategy

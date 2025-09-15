@@ -43,6 +43,7 @@ async function bootstrap() {
   const configService = app.get<ConfigService>(ConfigService);
     const seederService = app.get(SeederService);
   await seederService.seedAdminUser();
+  await seederService.seedSettings()
   app.setGlobalPrefix("/api");
 
   app.enableVersioning({

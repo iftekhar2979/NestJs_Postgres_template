@@ -131,7 +131,7 @@ export class AuthController {
   @ApiBody({ required: true, type: LoginUserDto })
   async loginPassportLocal(@Req() req: Request) {
     const user = req.user as any;
-// console.log(user)
+const userInfo = await this.authService.userInfo(user)
     const token = await this.authService.signToken(user);
 if(!user.firstName){
   // console.log(payload)
@@ -145,7 +145,8 @@ const token = await this.authService.userNotAccepted({existingToken:user})
       HttpStatus.NOT_ACCEPTABLE,  // This sets the 406 HTTP status code
     );
 }
-    return { status: "success", data:user, token ,statusCode:200 };
+delete user.password
+    return { status: "success", data:{...user,address:userInfo.address,phone:userInfo.phone,}, token ,statusCode:200 };
   }
 
 
@@ -204,6 +205,19 @@ if(!user) {
   async ResetPassword(@Req() req: Request,@Body() password:ResetPasswordDto) {
     const user = req.user;
     return await this.authService.resetPassword(password, user);
+  }
+ 
+  @Post("update-password")
+  @UseGuards(JwtAuthenticationGuard)
+  @UseInterceptors(TransformInterceptor)
+  @ApiOperation({
+    description: "update Password",
+    summary: "updated Password .",
+  })
+  @ApiUnauthorizedResponse({ description: "Session Expired!" })
+  async updatePassword(@GetUser() user:User,@Body() password:UpdateMyPasswordDto) {
+    // const user = req.user;
+    return await this.authService.updatePassword(password,user);
   }
  
   @Get("google")

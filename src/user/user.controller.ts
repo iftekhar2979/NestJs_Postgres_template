@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Session, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Query, Request, Session, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import {
   ApiTags,
   ApiBearerAuth,
@@ -6,6 +6,7 @@ import {
   ApiUnauthorizedResponse,
   ApiForbiddenResponse,
   ApiOperation,
+  ApiQuery,
 } from "@nestjs/swagger";
 import { GetFileDestination, GetUser } from "../auth/decorators/get-user.decorator";
 import { User } from "./entities/user.entity";
@@ -17,29 +18,46 @@ import { ApiResponseDto, CountApiResponseDto } from "../shared/dto/base-response
 import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { multerConfig, multerS3Config } from "src/common/multer/multer.config";
 import { JwtAuthenticationGuard } from "src/auth/guards/session-auth.guard";
+import { GetUsersQueryDto } from "./dto/get-user.query.dto";
+import { Roles } from "./decorators/roles.decorator";
+import { UpdateUserProfileDto } from "./dto/update-profile.dto";
 
 /**
  * UserController is responsible for handling incoming requests specific to User and returning responses to the client.
  * It creates a route - "/user"
  */
 @Controller("users")
-@UseGuards(JwtAuthGuard)
+
 @ApiTags("User")
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: "In case user is not logged in" })
 export class UserController {
-  constructor(private readonly userService: UserService) {}
-  @Get("all")
-  @ApiOperation({
-    description: "Api to fetch details of all users.",
-    summary: "Api to fetch details of all users.",
-  })
-  @ApiOkResponse({ description: "Get list of all users in Database", type: CountApiResponseDto<User[]>, isArray: true })
-  async getAllUsers(): Promise<CountApiResponseDto<User[]>> {
-    const users = await this.userService.getAllUsers();
+  constructor(private readonly userService: UserService
 
-    return { status: "success", count: users.length, data: users };
+  ) {}
+
+
+  @Get('all')
+  @ApiOperation({ summary: 'Get all users with role USER (paginated + searchable)' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @UseGuards(JwtAuthenticationGuard)
+  @ApiQuery({ name: 'search', required: false, description: 'Search by first or last name' })
+  async getAllUsers(@Query() query: GetUsersQueryDto) {
+    console.log(query)
+    return this.userService.getUserFilters(query)
   }
+  // @Get("all")
+  // @ApiOperation({
+  //   description: "Api to fetch details of all users.",
+  //   summary: "Api to fetch details of all users.",
+  // })
+  // @ApiOkResponse({ description: "Get list of all users in Database", type: CountApiResponseDto<User[]>, isArray: true })
+  // async getAllUsers(): Promise<CountApiResponseDto<User[]>> {
+  //   const users = await this.userService.getAllUsers();
+
+  //   return { status: "success", count: users.length, data: users };
+  // }
 
   /**
    * Get API - "/me" - Get data about current logged in user
@@ -48,13 +66,15 @@ export class UserController {
    * @throws UnauthorizedException with message in case user is not logged in.
    */
   @Get("me")
+   @UseGuards(JwtAuthenticationGuard)
   @ApiOperation({
     description: "Api to fetch details of logged in user.",
     summary: "Api to fetch details of logged in user.",
   })
   @ApiOkResponse({ description: "Get data about current logged in user", type: ApiResponseDto<User> })
   async getUser(@GetUser() user: User): Promise<ApiResponseDto<User>> {
-    return { status: "success", data: user };
+  const userInfo = await this.userService.getUserById(user.id)
+    return { status: "success", data: userInfo };
   }
 
   /**
@@ -110,5 +130,28 @@ export class UserController {
     const user = await this.userService.getUserById(id);
 
     return { status: "success", data: user };
+  }
+
+
+  @Patch('profile')
+  @UseGuards(JwtAuthenticationGuard)
+  @UseInterceptors(FileInterceptor('image',multerConfig))
+   async updateProfile(
+    @GetUser() user:User,
+    @Request() req,
+    @Body() updateDto: UpdateUserProfileDto,
+    // @GetFileDestination() fileDestination: string
+  ) {
+    if(req.file){
+  const length= req.file.path.split('/').length;
+   updateDto.image = req.file.path.split('/').slice(1,length).join('/');
+    }
+    const updatedUser = await this.userService.updateProfile(user.id,updateDto)
+    return {
+      message: 'Profile updated successfully',
+      data: updatedUser,
+      status:'success',
+      statuscode:200
+    };
   }
 }

@@ -55,6 +55,8 @@ import { UserlogsModule } from './userlogs/userlogs.module';
 import { ImageProcessor } from "./bull/processors/ProductQueue";
 import { GeminiModule } from './gemini/gemini.module';
 import { UserBehaviourModule } from './user-behaviour/user-behaviour.module';
+import { SettingsModule } from './settings/settings.module';
+import { SettingService } from './setting/setting.service';
 /**
  * It is the root module for the application in we import all feature modules and configure modules and packages that are common in feature modules. Here we also configure the middlewares.
  *
@@ -153,6 +155,7 @@ import { UserBehaviourModule } from './user-behaviour/user-behaviour.module';
     UserlogsModule,
     GeminiModule,
     UserBehaviourModule,
+    SettingsModule,
   
   ],
   controllers: [AppController],
@@ -164,7 +167,8 @@ import { UserBehaviourModule } from './user-behaviour/user-behaviour.module';
     },
     WithdrawsService,
     // BullQueueProcessor,
-    ImageProcessor
+    ImageProcessor,
+    SettingService
     // ProductBoostgService,
   ],
 })

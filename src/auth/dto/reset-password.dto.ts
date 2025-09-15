@@ -23,3 +23,19 @@ export class ResetPasswordDto {
     @IsString()
     passwordConfirm: string;
 }
+export class UpdatePassword extends ResetPasswordDto {
+    /**
+     * Password user wants as new password
+     */
+    @ApiProperty({ required: true, description: "Password user wants as new password" })
+    @IsNotEmpty()
+    @IsString()
+    @MinLength(8, { message: "password must contain minimum of 8 characters" })
+    @MaxLength(32, { message: "password must contain maximum of 32 characters" })
+    @Matches(/(?:(?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {
+        message: "Weak Password",
+    })
+    passwordCurrent: string;
+
+ 
+}

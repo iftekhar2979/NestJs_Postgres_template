@@ -17,7 +17,7 @@ import { MailService } from "../mail/mail.service";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { JwtPayload } from "./dto/jwt-payload.dto";
 import { LoginUserDto } from "./dto/login-user.dto";
-import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { ResetPasswordDto, UpdatePassword } from "./dto/reset-password.dto";
 import { UpdateMyPasswordDto } from "./dto/update-password.dto";
 import { User } from "../user/entities/user.entity";
 import { argon2hash, argon2verify } from "../utils/hashes/argon2";
@@ -189,6 +189,30 @@ const { password, passwordConfirm } = resetPasswordDto;
     await this.userRepository.save(userinfo);
     return { message: "Password reset successfully", status: "success", data: null };
   }
+  async updatePassword(resetPasswordDto: UpdatePassword, user) {
+const { passwordCurrent,password, passwordConfirm } = resetPasswordDto;
+    if (password !== passwordConfirm) {
+      throw new BadRequestException("Password does not match with passwordConfirm");
+    }
+    this.logger.log("Masking Password", AuthService.name);
+  
+    const userinfo = await this.userRepository.findOne({ where: { id: user.id } });
+    if (!user) {
+      throw new NotFoundException("User not found");   
+    }
+  const isPassMatched = await argon2verify(userinfo.password, passwordCurrent);
+    if (!isPassMatched) {
+      throw new BadRequestException("Wrong Password!");
+    }
+    this.logger.log("Hashing Password", AuthService.name);
+0
+    const hashedPassword = await argon2hash(password);
+    userinfo.password = hashedPassword; 
+    this.logger.log("Saving Updated User", AuthService.name);
+    await this.userRepository.save(userinfo);
+       this.mailService.sendPasswordUpdateEmail(userinfo);
+    return { message: "Password updated successfully", status: "success", data: null };
+  }
   async loginPassport(loginUserDto: LoginUserDto) {
     const { email, password } = loginUserDto;
 
@@ -223,6 +247,7 @@ const { password, passwordConfirm } = resetPasswordDto;
   
   async updateMyPassword(updateMyPassword: UpdateMyPasswordDto, user: User) {
     const { passwordCurrent, password, passwordConfirm } = updateMyPassword;
+    console.log(passwordCurrent,password)
     this.logger.log("Verifying current password from user", AuthService.name);
     if (!(await argon2verify(user.password, passwordCurrent))) {
       throw new UnauthorizedException("Invalid password");
@@ -264,6 +289,10 @@ return token
   async signToken(user: any): Promise<string> {
     // console.log(user)
     const payload: JwtPayload = { id: user.id };
+    // console.log(payload)
+  
+    // console.log(userInfo)
+
     this.logger.log("Signing token", AuthService.name);
 if(!user.firstName){
   // console.log(payload)
@@ -272,6 +301,9 @@ if(!user.firstName){
   return this.jwtService.sign(payload);
 }
     return this.jwtService.sign(payload);
+  }
+  async userInfo(user:User){
+      return await this.userRepository.findOne({where:{id:user.id},select:{password:false}})
   }
 
    async signTokenSendEmailAndSMS(user: User, req: Request, verificationCode: string) {

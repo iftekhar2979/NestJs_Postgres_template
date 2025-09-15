@@ -1,12 +1,17 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { User } from "./entities/user.entity";
+import { ILike, Repository } from "typeorm";
+import { User, USERSTATUS } from "./entities/user.entity";
 import { MailService } from "../mail/mail.service";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { InjectLogger } from "../shared/decorators/logger.decorator";
 import { CreateAdminDto } from "src/auth/dto/create-user.dto";
 import { argon2hash } from "src/utils/hashes/argon2";
+import { GetUsersQueryDto } from "./dto/get-user.query.dto";
+import { UserRoles } from "./enums/role.enum";
+import { Verification } from "./entities/verification.entity";
+import { pagination } from "src/shared/utils/pagination";
+import { UpdateUserProfileDto } from "./dto/update-profile.dto";
 
 /**
  * This service contain contains methods and business logic related to user.
@@ -15,9 +20,49 @@ import { argon2hash } from "src/utils/hashes/argon2";
 export class UserService {
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
+    @InjectRepository(Verification) private verificationRepo: Repository<Verification>,
     @InjectLogger() private readonly logger: Logger,
     private readonly mailService: MailService
 ) {}
+
+async getUserFilters(query: GetUsersQueryDto) {
+  const { page = 1, limit = 10, search } = query;
+  const take = Number(limit);
+  const skip = (Number(page) - 1) * take;
+
+  const qb = this.userRepository.createQueryBuilder('user');
+
+qb.where('user.roles @> ARRAY[:role]', { role: UserRoles.USER });
+
+  // Search by firstName or lastName
+  if (search) {
+    qb.andWhere(
+      `(user.firstName ILIKE :search OR user.lastName ILIKE :search)`,
+      { search: `%${search}%` },
+    );
+  }
+  if (query.status) {
+   qb.where('(user.status ILIKE :status)', { status: query.status });
+  }
+
+  // Pagination
+  qb.take(take).skip(skip);
+
+  // Order by creation date
+  qb.orderBy('user.createdAt', 'DESC');
+
+  const [users, total] = await qb.getManyAndCount();
+
+  return {
+    message:'users retrived successfully',
+    status:'success',
+    statusCode:200,
+    data: users,
+    pagination:pagination({page:Number(page), limit:Number(limit),total})
+   
+  };
+}
+
 
   async getAllUsers(): Promise<User[]> {
     this.logger.log("getting all users data", UserService.name);
@@ -29,16 +74,40 @@ export class UserService {
     //  let { password } = body;
     body.password = await argon2hash(body.password); 
     // console.log(body)
-    const user = this.userRepository.insert(body); 
+    const result = await this.userRepository.insert(body); 
+    const user = await this.userRepository.findOne({ where: { id: result.identifiers[0].id } });
+    await this.verificationRepo.insert({
+      // user:user,
+      user,
+      is_deleted:false,
+      is_email_verified:true,
+      // user_id:user. 
+       
+    })
+    const verification = this
     return "Admin Created Successfully"
   }
+async updateProfile(userId: string, updateDto: UpdateUserProfileDto): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
 
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Apply updates
+    Object.assign(user, updateDto);
+
+    return this.userRepository.save(user);
+  }
   async getUserById(id: string): Promise<User> {
     // console.log(id)
-    const user = await this.userRepository.findOne(
+    const user = await this.userRepository.findOne( 
       { where: { id } ,
       // relations:['verfications'],
-      select: ["id", "firstName", "lastName", "email", "roles",'phone'] });
+      // select: ["id", "firstName", "lastName", "email", "roles",'phone','address'] 
+    });
   //  console.log(user)
     return user;
   }
