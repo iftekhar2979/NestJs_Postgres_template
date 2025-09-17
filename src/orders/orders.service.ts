@@ -47,6 +47,8 @@ async createOrderFromOffer(offer: Offer): Promise<Order> {
     seller: offer.seller,
     seller_id: offer.seller.id,
     product: offer.product,
+    protectionFee: offer.price * 10/100,
+    total:offer.price,
     accepted_offer: offer,
     offer_id: offer.id,
     delivery: null,
@@ -138,13 +140,15 @@ async findBySellerId(
   page :number =1,
   limit :number = 10,
 ):Promise<ResponseInterface<Order[]>> {
+  console.log(sellerId)
   const [orders, total] = await this.orderRepository.findAndCount({
-    where: { seller_id: sellerId },
+    where: { seller:{id:sellerId} },
     relations: ['product', 'accepted_offer', 'delivery', 'buyer', 'seller'],
     skip: (page - 1) * limit,
     take: limit,
     order: { created_at: 'DESC' },
   });
+  console.log(orders)
 // orsers
 
   return {
@@ -154,8 +158,6 @@ async findBySellerId(
     data: orders,
     pagination: pagination({page:page,limit:limit,total})
     }
-
-    
 }
 
 async purchaseOrder({product_id,user}:{product_id:number,user:User}){

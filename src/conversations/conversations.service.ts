@@ -144,7 +144,6 @@ await this.offerStatusHandle({offer,existingConversation,offerType})
     this.productService.checkProductStatus(product.status);
 
     const users = await this.userService.getMultipleUserByIds(userIds);
-
     // Create conversation using transactional entity manager
     const savedConversation = await manager.save(Conversations, {
       product,
@@ -192,6 +191,7 @@ await this.offerStatusHandle({offer,existingConversation,offerType})
       .createQueryBuilder('conversation')
       .leftJoinAndSelect('conversation.participants', 'participant')
       .leftJoinAndSelect('conversation.product', 'product')
+       .leftJoinAndSelect('product.images', 'productImages')
       .leftJoin('participant.user', 'user')  // Join with user but don't auto-select full user
       .leftJoinAndSelect('conversation.lastmsg', 'lastmsg') // Join with last message
       .addSelect([

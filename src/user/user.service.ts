@@ -1,3 +1,4 @@
+import { UserRole } from 'aws-sdk/clients/workmail';
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ILike, Repository } from "typeorm";
@@ -32,8 +33,7 @@ async getUserFilters(query: GetUsersQueryDto) {
 
   const qb = this.userRepository.createQueryBuilder('user');
 
-qb.where('user.roles @> ARRAY[:role]', { role: UserRoles.USER });
-
+qb.where(':role = ANY (user.roles)', { role:UserRoles.USER })
   // Search by firstName or lastName
   if (search) {
     qb.andWhere(

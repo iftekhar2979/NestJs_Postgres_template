@@ -9,7 +9,7 @@ import { GetFilesDestination, GetOptionalFilesDestination, GetUser } from 'src/a
 import { JwtAuthenticationGuard } from 'src/auth/guards/session-auth.guard';
 import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from 'src/common/multer/multer.config';
-import { GetProductsQueryDto } from './dto/GetProductDto.dto';
+import { GetAdminProductQuery, GetProductsQueryDto } from './dto/GetProductDto.dto';
 import { UpdateProductDto } from './dto/updatingProduct.dto';
 import { User } from 'src/user/entities/user.entity';
 import { Roles } from 'src/user/decorators/roles.decorator';
@@ -44,15 +44,26 @@ constructor(private readonly productsService: ProductsService) {}
     return this.productsService.create(createProductDto, user);
   }
 
-// @Post()
-// @UseGuards(JwtAuthenticationGuard)
-//   @ApiResponse({ status: 201, description: 'Product retrived successfully', type: Product })
-//   @ApiBody({ type: CreateProductDto })
-//   async getProducts(
+@Get('all')
+@UseGuards(JwtAuthenticationGuard)
+  @ApiResponse({ status: 200, description: 'Product retrived successfully', type: Product })
+  @ApiBody({ type: CreateProductDto })
+  async getProducts(
+@Query() query: GetAdminProductQuery,
+  ) {
 
-//   ) {
-//     return this.productsService.findAll()
-//   }
+    return this.productsService.findAll(Number(query.page),Number(query.limit),query)
+  }
+@Get(':productId')
+@UseGuards(JwtAuthenticationGuard)
+  @ApiResponse({ status: 200, description: 'Product retrived successfully', type: Product })
+  @ApiBody({ type: CreateProductDto })
+  async productInfo(
+     @Param('productId', ParseIntPipe) id: number,
+  ) {
+    return this.productsService.getProductById(id);
+  }
+
 @Get()
 @UseGuards(JwtAuthenticationGuard)
   @ApiResponse({ status: 200, description: 'Product retrived successfully', type: Product })
@@ -104,7 +115,7 @@ constructor(private readonly productsService: ProductsService) {}
   }
 
 
-  @Patch('/status/:id')
+  @Patch(':id/status')
    @UseGuards(JwtAuthenticationGuard,RolesGuard)
    @Roles(UserRoles.ADMIN)
 @ApiResponse({ status: 200, description: 'Product updated successfully', type: Product })

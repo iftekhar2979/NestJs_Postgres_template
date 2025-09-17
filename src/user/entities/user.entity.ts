@@ -81,10 +81,8 @@ export class User {
   password: string;
 
   @Column({ nullable: true ,type:'varchar'})
-  @Exclude({ toPlainOnly: true })
   address: string;
   @Column({ nullable: true ,type:'varchar'})
-  @Exclude({ toPlainOnly: true })
   phone: string;
 
   /**

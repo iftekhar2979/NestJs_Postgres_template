@@ -14,7 +14,7 @@ export class SettingsController {
   @Get(':key')
   getByKey(@Param('key') key: string) {
     return this.settingsService.getSettingByKey(key);
-  }
+  } 
 
   @Put(':key')
   updateSetting(

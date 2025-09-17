@@ -8,13 +8,13 @@ export class CreateDeliveryAddressDto {
   @ApiProperty({ example: 'Company Inc.', description: 'Company Name' })
   @IsString()
   @MinLength(2, { message: 'Company name must be at least 2 characters long' })
-  @MaxLength(100, { message: 'Company name must be less than or equal to 100 characters' })
+  @MaxLength(60, { message: 'Company name must be less than or equal to 100 characters' })
   companyName: string;
 
   @ApiProperty({ example: '123 Main St', description: 'Address Line One' })
   @IsString()
   @MinLength(5, { message: 'Address Line One must be at least 5 characters long' })
-  @MaxLength(200, { message: 'Address Line One must be less than or equal to 200 characters' })
+  @MaxLength(64, { message: 'Address Line One must be less than or equal to 200 characters' })
   addressLineOne: string;
 
   @ApiProperty({ example: 'City', description: 'City' })

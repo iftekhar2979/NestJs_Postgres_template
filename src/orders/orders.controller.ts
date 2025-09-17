@@ -19,6 +19,7 @@ constructor(private readonly ordersService: OrdersService) {}
   @UseGuards(JwtAuthenticationGuard)
   getOrdersBySeller(@GetUser() user:User , @Query('page') page = 1,
     @Query('limit') limit = 10) {
+      console.log(user)
     return this.ordersService.findBySellerId(user.id,page , limit)
   }
 

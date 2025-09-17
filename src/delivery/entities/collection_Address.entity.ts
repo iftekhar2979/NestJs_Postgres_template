@@ -48,4 +48,15 @@ country_code: string;
   @ManyToOne(() => Order, (order) => order)
   @JoinColumn({ name: 'order_id' })
   order: Order; // Link Collection Address to Order
+
+ @Column('int',{nullable:true})
+  Width : number;
+  @ApiProperty({ example: 'Width', description: 'Width' })
+ @Column('int',{nullable:true})
+  Weight : number;
+ @Column('int',{nullable:true})
+  Length : number;
+  @Column('int',{nullable:true})
+  Height : number;
 }
+ 

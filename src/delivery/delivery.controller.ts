@@ -24,22 +24,22 @@ export class DeliveryController {
   async create(@Body() createShipmentDto: CreateShipmentDto) {
     return this.shipmentService.create(createShipmentDto);
   }
-  @Post(':id')
+  @Post(':productID')
   @UseGuards(JwtAuthenticationGuard)
-  @ApiParam({ name: 'id', type: Number, description: 'ID of the read the product' })
+  @ApiParam({ name: 'productID', type: Number, description: 'ID of the read the product' })
   @ApiResponse({ status: 200, description: 'Product updated successfully', type: Delivery })
-  async createDelivery(@Body() createDeliveryAddressDto: CreateDeliveryAddressDto ,@GetUser() user:User,@Param('id') product_id:string) {
+  async createDelivery(@Body() createDeliveryAddressDto: CreateDeliveryAddressDto ,@GetUser() user:User,@Param('productID') product_id:string) {
     if(isNaN(parseFloat(product_id))){
       throw new BadRequestException("Product id is not valid!")
     }
    
     return this.deliveryService.createDeliveryAddress({createDeliveryAddressDto,user,product_id:Number(product_id)})
   }
-  @Post(':id/collection')
+  @Post(':productID/collection')
   @UseGuards(JwtAuthenticationGuard)
-  @ApiParam({ name: 'id', type: Number, description: 'ID of the read the product' })
+  @ApiParam({ name: 'productID', type: Number, description: 'ID of the read the product' })
   @ApiResponse({ status: 200, description: 'Product updated successfully', type: Delivery })
-  async updateCollection(@Body() createCollectionAddressDto: CreateCollectionAddressDto ,@GetUser() user:User,@Param('id') product_id:string) {
+  async updateCollection(@Body() createCollectionAddressDto: CreateCollectionAddressDto ,@GetUser() user:User,@Param('productID') product_id:string) {
     if(isNaN(parseFloat(product_id))){
       throw new BadRequestException("Product id is not valid!")
     }
@@ -50,11 +50,11 @@ export class DeliveryController {
       user
     })
   }
-  @Post(':id/shipment')
+  @Post(':productID/shipment')
   @UseGuards(JwtAuthenticationGuard)
-  @ApiParam({ name: 'id', type: Number, description: 'ID of the read the product' })
+  @ApiParam({ name: 'productID', type: Number, description: 'ID of the read the product' })
   @ApiResponse({ status: 200, description: 'Product updated successfully', type: Delivery })
-  async handleShipment(@Body() shipmentDto: CreateShipmentDto ,@GetUser() user:User,@Param('id') product_id:string) {
+  async handleShipment(@Body() shipmentDto: CreateShipmentDto ,@GetUser() user:User,@Param('productID') product_id:string) {
     if(isNaN(parseFloat(product_id))){
       throw new BadRequestException("Product id is not valid!")
     }
@@ -64,5 +64,16 @@ export class DeliveryController {
       product_id : Number(product_id),
       user
     })
+  }
+  @Post(':productID/shipment/late')
+  @UseGuards(JwtAuthenticationGuard)
+  @ApiParam({ name: 'productID', type: Number, description: 'ID of the read the product' })
+  @ApiResponse({ status: 200, description: 'Product updated successfully', type: Delivery })
+  async ShipmentLatter(@GetUser() user:User,@Param('productID') product_id:string) {
+    if(isNaN(parseFloat(product_id))){
+      throw new BadRequestException("Product id is not valid!")
+    }
+   
+    return this.shipmentService.UpdateShipmentInformationLater({user,product_id:Number(product_id)})
   }
 }

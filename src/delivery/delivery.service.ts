@@ -67,15 +67,16 @@ const userInfo = await this.userService.getUserById(user.id)
     if (!wallets) {
       throw new BadRequestException("User wallet not found");
     }
-
+console.log(product.selling_price)
     const productSellingPrice = Number(product.selling_price);
+    console.log(productSellingPrice)
     if (isNaN(productSellingPrice)) {
       throw new BadRequestException('Invalid product price');
     }
  // Calculate protection fee (5% of the product price)
     const protectionFee = (productSellingPrice * 5) / 100;
     const totalAmount = productSellingPrice + protectionFee;
-
+console.log(totalAmount,wallets)
     // Check if buyer has sufficient balance
     if (wallets.balance < totalAmount) {
       throw new BadRequestException("You don't have enough balance to purchase the product.");

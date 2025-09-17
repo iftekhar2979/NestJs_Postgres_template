@@ -5,8 +5,8 @@ import { FavouriteProduct, Product } from './entities/products.entity';
 import { ProductImage } from './entities/productImage.entity';
 import { CreateProductDto } from './dto/CreateProductDto.dto';
 import { ProductStatus } from './enums/status.enum';
-import { GetProductsQueryDto } from './dto/GetProductDto.dto';
-import { pagination } from 'src/shared/utils/pagination';
+import { GetAdminProductQuery, GetProductsQueryDto } from './dto/GetProductDto.dto';
+import { Pagination, pagination } from 'src/shared/utils/pagination';
 import { UpdateProductDto } from './dto/updatingProduct.dto';
 import { ResponseInterface } from 'src/common/types/responseInterface';
 import { NotificationsService } from 'src/notifications/notifications.service';
@@ -120,6 +120,7 @@ const productBoostingCost = 1
       product.boost_start_time = new Date()
       product.boost_end_time = isBoosted ? new Date(Date.now() + boostDays * 24 * 60 * 60 * 1000) : null; // 7 days boost
 
+       const savedProduct = await queryRunner.manager.save(Product, product);
       if(createProductDto.is_boosted){
         wallets.balance -= productBoostingCost
         wallets.version += 1
@@ -140,7 +141,7 @@ const productBoostingCost = 1
        await queryRunner.manager.save(Transections, transection)
       
   }
-      const savedProduct = await queryRunner.manager.save(Product, product);
+     
 
       // Handle images if any
       if (createProductDto.images && Array.isArray(createProductDto.images)) {
@@ -154,7 +155,8 @@ const productBoostingCost = 1
           img.product_id = savedProduct.id;  // Associate image with the product
           return img;
         });
-        
+        product.images = productImages
+      await queryRunner.manager.save(Product, product);
         // Save product images inside the transaction
         await queryRunner.manager.save(ProductImage, productImages);
       }
@@ -197,21 +199,30 @@ const productBoostingCost = 1
   async findAll(
   page = 1,
   limit = 10,
-  filters?: { name?: string; category?: string; size?: string ,userId ?:string , type:'own' | 'global' },
-): Promise<{ data: Product[]; total: number; page: number; limit: number }> {
+  filters?: GetAdminProductQuery,
+): Promise<{ data: Product[]; pagination:Pagination,message:string,statusCode:200 }> {
   const skip = (page - 1) * limit;
 
   const query = this.productRepository.createQueryBuilder('product')
-    .leftJoinAndSelect('product.images', 'images');
-
-    if(filters.type =='own'){
-query.andWhere('product.user_id = :user_id',{user_id:filters.userId})
-    }
+  .leftJoinAndSelect('product.images', 'images');
+  // .leftJoinAndSelect('product.images', 'images');
+  query.leftJoinAndSelect('product.user', 'user');
   // Filters
-  if (filters?.name) {
-    query.andWhere('product.product_name ILIKE :name', { name: `%${filters.name}%` });
-  }
+if (filters?.name) {
+  query.andWhere(
+    `(product.product_name ILIKE :name 
+      OR product.brand ILIKE :name 
+      OR product.description ILIKE :name 
+      OR user.firstName ILIKE :name 
+      OR user.lastName ILIKE :name)`,
+    { name: `%${filters.name}%` }
+  );
+}
 
+
+  if(filters?.status){
+    query.andWhere('product.status ILIKE :status',{status:`%${filters.status}%`})
+  }
   if (filters?.category) {
     query.andWhere('product.category ILIKE :category', { category: `%${filters.category}%` });
   }
@@ -219,19 +230,23 @@ query.andWhere('product.user_id = :user_id',{user_id:filters.userId})
   if (filters?.size) {
     query.andWhere('product.size = :size', { size: filters.size });
   }
-
+  // query.leftJoinAndSelect('product.images', 'productImages');
+query.orderBy('product.is_boosted', 'DESC')
+  .addOrderBy('product.boost_end_time', 'ASC')
+  .addOrderBy('product.created_at', 'DESC');
   // Pagination
   query.skip(skip).take(limit);
 
   const [data, total] = await query.getManyAndCount();
 
   return {
+    message:'Product retrived successfully',
+    statusCode:200,
     data,
-    total,
-    page,
-    limit,
+    pagination:pagination({page,limit,total})
   };
 }
+
  shuffleArray(array) {
   let currentIndex = array.length, randomIndex, temporaryValue;
 
@@ -252,6 +267,7 @@ query.andWhere('product.user_id = :user_id',{user_id:filters.userId})
   const {
     term,
     size,
+    status = ProductStatus.AVAILABLE,
     category,
     price,
     page = '1',
@@ -292,9 +308,9 @@ query.andWhere('product.user_id = :user_id',{user_id:filters.userId})
 if(!term || !category ){
 
   const behaviorData = await this.userBehaviourService.latestBehaviour(userId);
-  if(behaviorData && behaviorData.search){ 
-    where.product_name = ILike(`%${behaviorData.search}%`)
-  }
+  // if(behaviorData && behaviorData.search){ 
+  //   where.product_name = ILike(`%${behaviorData.search}%`)
+  // }
   // if(behaviorData && behaviorData.category){ 
   //   where.category = ILike(`%${behaviorData.category}%`)
   // }
@@ -492,12 +508,25 @@ await this.productRepository.save(product);
 
     async updateProductsStatus(id: number, status:ProductStatus ): Promise<ResponseInterface<Product>> {
       
-    const product = await this.productRepository.findOne({ where: { id ,status:ProductStatus.PENDING } });
+   try{ const product = await this.productRepository.findOne({ where: { id ,status:ProductStatus.PENDING } });
     if(!product){
       throw new NotFoundException("Product not found!")
     }
+    product.status =ProductStatus.AVAILABLE
     await this.productRepository.save(product)
+
+    await this.notificationService.createNotification({
+      userId:product.user.id,
+      action:NotificationAction.UPDATED,
+      msg:`${product.product_name} is now available on marketplace`,
+      isImportant:false,
+      related:NotificationRelated.PRODUCT,
+      targetId:product.id
+    })
     return {message:"Product updated",statusCode:200,data: product,status:"success"}
+  }catch(error){
+    console.log(error)
+  }
     }
    async getProductifFavourites(id: number, userId ?: string): Promise<any> {
   

@@ -53,17 +53,19 @@ async function bootstrap() {
 
   app.setBaseViewsDir(join(__dirname, '..','..','src', 'views'));
   app.setViewEngine('ejs');
-  const corsOptions: CorsOptions = {
-    // FIXME:
-    origin: ["http://localhost:3000"], // Only allow requests from yourdomain.com
-    methods: ["GET, POST, PATCH, DELETE"], // Limit methods to only the ones your API requires
-    allowedHeaders: ["Content-Type", "Authorization"], // Allow only specific headers
-    credentials: true, // Allow credentials (cookies, authorization headers) if needed
-    optionsSuccessStatus: 204, // Set the success status code for preflight requests
-    maxAge: 86400, // Cache the preflight response for 24 hours (in seconds)
-  };
+ 
+  // const corsOptions: CorsOptions = {
+  //   origin: '*', // ✅ frontend origin
+  //   methods: ["GET", "POST", "PATCH", "DELETE"],
+  //   allowedHeaders: ["Content-Type", "Authorization"],
+  //   credentials: true,
+  //   optionsSuccessStatus: 204,
+  //   maxAge: 86400,
+  // };
   app.useStaticAssets(join(__dirname, '..','..', 'public'));
-  app.enableCors(corsOptions);
+  app.enableCors({
+    origin:''
+  });
   app.use(cookieParser());
   app.use(compression());
 
