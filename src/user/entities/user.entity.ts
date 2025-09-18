@@ -118,7 +118,7 @@ export class User {
   @ApiProperty()
   deletedAt: Date;
 
-  @OneToMany(() => Product, (product) => product.user_id)
+  @OneToMany(() => Product, (product) => product.user)
   products: Product[];
 
   @OneToMany(() => Favorite, (favorite) => favorite.user)

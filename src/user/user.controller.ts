@@ -131,6 +131,17 @@ export class UserController {
 
     return { status: "success", data: user };
   }
+  @Get(":id/profile")
+  @ApiOperation({
+    description: "Api to fetch profile details of an user",
+    summary: "Api to fetch profile details of an user",
+  })
+  @ApiOkResponse({ description: "Get data about current logged in user", type: ApiResponseDto<User> })
+  async getUserProfile(@Param("id") id: string): Promise<ApiResponseDto<User>> {
+    const user = await this.userService.getUserById(id,['reviews','products']);
+
+    return { status: "success", data: user };
+  }
 
 
   @Patch('profile')

@@ -13,6 +13,7 @@ import { UserRoles } from "./enums/role.enum";
 import { Verification } from "./entities/verification.entity";
 import { pagination } from "src/shared/utils/pagination";
 import { UpdateUserProfileDto } from "./dto/update-profile.dto";
+import { string } from 'joi';
 
 /**
  * This service contain contains methods and business logic related to user.
@@ -101,14 +102,14 @@ async updateProfile(userId: string, updateDto: UpdateUserProfileDto): Promise<Us
 
     return this.userRepository.save(user);
   }
-  async getUserById(id: string): Promise<User> {
-    // console.log(id)
+  async getUserById(id: string , relations?:string[]): Promise<User> {
+    let query :any = {where:{id}}
+    if(relations){
+query.relations =relations
+    }
     const user = await this.userRepository.findOne( 
-      { where: { id } ,
-      // relations:['verfications'],
-      // select: ["id", "firstName", "lastName", "email", "roles",'phone','address'] 
-    });
-  //  console.log(user)
+      query
+    );
     return user;
   }
   async getUser(id:string){
