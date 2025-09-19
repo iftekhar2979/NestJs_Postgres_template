@@ -44,7 +44,6 @@ export class UserController {
   @UseGuards(JwtAuthenticationGuard)
   @ApiQuery({ name: 'search', required: false, description: 'Search by first or last name' })
   async getAllUsers(@Query() query: GetUsersQueryDto) {
-    console.log(query)
     return this.userService.getUserFilters(query)
   }
   // @Get("all")

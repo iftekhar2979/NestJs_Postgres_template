@@ -88,9 +88,10 @@ private readonly dataSource: DataSource,
 
 async getWalletByUserId(userId:string):Promise<ResponseInterface<Wallets>>{
   // console.log(userId)
-  const wallet = await this.walletRepository.findOne({where:{user_id:userId}});
+  const wallet = await this.walletRepository.findOne({where:{user:{id:userId}}});
   // const bul = await this.bullQueue.add('Added',wallet)
-  // console.log(bul)
+  console.log(wallet)
+  // console.log(wallet)
   // this.logger.error("Balance detect",wallet.balance)
   if(!wallet){
     throw new NotFoundException('Wallet not found');
@@ -98,9 +99,9 @@ async getWalletByUserId(userId:string):Promise<ResponseInterface<Wallets>>{
   return { message:"wallets retrived successfully",status:'success',statusCode:200,data:wallet};
 }
   // Wallet Withdraw Service
-  async withdrawFromWallet(userId: string, amount: number, paymentId: string, paymentMethod: string): Promise<any> {
-    if (amount <= 0) {
-      throw new BadRequestException('Amount must be greater than zero');
+  async withdrawFromWallet(userId: string, amount: number): Promise<any> {
+    if (amount <= 10) {
+      throw new BadRequestException('Amount must be greater than 10');
     }
     // Start a transaction to ensure data integrity
     const queryRunner = this.walletRepository.manager.connection.createQueryRunner();
@@ -109,35 +110,33 @@ async getWalletByUserId(userId:string):Promise<ResponseInterface<Wallets>>{
     try {
       const wallet = await queryRunner.manager.findOne(Wallets, { where: { user_id: userId } });
       if (!wallet) {
-        throw new NotFoundException('Wallet not found');
+        throw new Error('Wallet not found');
       }
       if (wallet.balance < amount) {
-        throw new BadRequestException('Insufficient balance');
+        throw new Error('Insufficient balance');
       }
       wallet.balance -= amount;
+      wallet.version ++
       await queryRunner.manager.save(Wallets, wallet);
 
       const transection = new Transections();
       transection.user_id = userId;
       transection.amount = amount;
       transection.transection_type = TransectionType.WITHDRAW; // Debit for withdrawal
-      transection.paymentId = null;
-      transection.paymentMethod = paymentMethod;
+      transection.paymentId = '';
+      transection.paymentMethod = 'withdraw';
       transection.status = PaymentStatus.PENDING;
       transection.wallet_id = wallet.id;
 
       await queryRunner.manager.save(Transections, transection);
 
-      // Commit the transaction
       await queryRunner.commitTransaction();
 
-      return { message: 'Withdrawal successful', balance: wallet.balance };
+      return { message: 'Withdrawal successful', data: wallet  };
     } catch (error) {
-      // If any error occurs, rollback the transaction
       await queryRunner.rollbackTransaction();
-      throw error;
+     throw new BadRequestException(error.message)
     } finally {
-      // Release the query runner
       await queryRunner.release();
     }
   }

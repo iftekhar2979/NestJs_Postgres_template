@@ -55,6 +55,7 @@ async createOrderFromOffer(offer: Offer): Promise<Order> {
     delivery_id: null,
   });
   console.log("ORDERInfo",order)
+  await this.orderRepository.save(order)
 const productName = offer.product.product_name
   const notifications =[
     {

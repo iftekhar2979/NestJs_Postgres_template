@@ -6,12 +6,14 @@ import { Repository } from 'typeorm';
 import { GetTransactionHistoryDto } from './dto/Get-transection.dto';
 import { User } from 'src/user/entities/user.entity';
 import { TransectionType } from './enums/transectionTypes';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class TransectionsService {
  constructor(
     @InjectRepository(Transections)
     private transectionsRepo: Repository<Transections>,
+    private userService:UserService
   ) {}
 
   async getWalletHistory(filter: GetTransactionHistoryDto,user:User) {
@@ -116,5 +118,24 @@ const total = totalAmount[0]
 
   return {total,data:earningsByMonth};
 }
+async getStatistics(){
+      const totalAmount = await this.transectionsRepo.query(`
+      SELECT COALESCE(SUM(CAST(amount AS float)), 0) as "totalAmount"
+      FROM transections
+      WHERE transection_type = $1
+    `, [TransectionType.RECHARGE]);
+    const users = await this.userService.getTotalUsersCount()
+
+    return {
+      data:{
+        totalAmount:totalAmount[0].totalAmount,
+        users
+      },
+      statusCode:200,
+      status:'success',
+    
+    }
+}
+
 
 }

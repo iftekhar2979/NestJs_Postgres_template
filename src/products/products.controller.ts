@@ -54,7 +54,7 @@ constructor(private readonly productsService: ProductsService) {}
 
     return this.productsService.findAll(Number(query.page),Number(query.limit),query)
   }
-@Get(':productId')
+@Get(':productId/details')
 @UseGuards(JwtAuthenticationGuard)
   @ApiResponse({ status: 200, description: 'Product retrived successfully', type: Product })
   @ApiBody({ type: CreateProductDto })

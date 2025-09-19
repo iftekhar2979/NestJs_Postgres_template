@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, ParseFloatPipe, Post, UseGuards } from '@nestjs/common';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { JwtAuthenticationGuard } from 'src/auth/guards/session-auth.guard';
 import { User } from 'src/user/entities/user.entity';
@@ -31,6 +31,14 @@ export class WalletsController {
     } catch (error) {
       throw new BadRequestException(error.response || error.message);
     }
+  }
+   @Post('withdraw')
+   @UseGuards(JwtAuthenticationGuard)
+  async withdraw(
+    @GetUser() user:User,
+    @Body('amount', ParseFloatPipe) amount: number,
+  ) {
+    return this.walletsService.withdrawFromWallet(user.id,amount)
   }
 
 }

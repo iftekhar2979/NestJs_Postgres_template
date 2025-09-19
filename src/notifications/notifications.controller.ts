@@ -1,9 +1,12 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { userInfo } from 'os';
+
+import { Controller, Get, Query, Request, UseGuards } from '@nestjs/common';
 import { NotificationRelated } from './entities/notifications.entity';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { JwtAuthenticationGuard } from 'src/auth/guards/session-auth.guard';
 import { User } from 'src/user/entities/user.entity';
 import { NotificationsService } from './notifications.service';
+import { UserRoles } from 'src/user/enums/role.enum';
 
 @Controller('notifications')
 export class NotificationsController {
@@ -12,6 +15,7 @@ export class NotificationsController {
       @UseGuards(JwtAuthenticationGuard)
   async getNotifications(
     @GetUser() user:User,
+    @Request() req,
     @Query('page') page: number = 1,  // Default page 1
     @Query('limit') limit: number = 10,  // Default limit 10
     @Query('isRead') isRead: boolean = false,  // Default to false (unread)
@@ -19,15 +23,20 @@ export class NotificationsController {
     @Query('isImportant') isImportant: boolean = false,  // Default to false (not important)
     @Query('notificationFor') notificationFor: string  // Filter by notificationFor (user role or specific notification group)
   ) {
+    let roleInfo = UserRoles.USER
+    if(req.userInfo.roles.includes(UserRoles.ADMIN)){
+notificationFor = UserRoles.ADMIN
+roleInfo = UserRoles.ADMIN
+    }
     // Call the service to get notifications based on query params
     const notificationsResponse = await this.notificationService.getNotifications({
-      userId : user.id,
+      userId : roleInfo===UserRoles.ADMIN  ? null : user.id,
       page,
       limit,
       isRead,
       related,
       isImportant,
-      notificationFor
+      notificationFor:roleInfo
     });
 
     // Return the response

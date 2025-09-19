@@ -71,6 +71,15 @@ qb.where(':role = ANY (user.roles)', { role:UserRoles.USER })
 
     return users;
   } 
+   async getTotalUsersCount(): Promise<number> {
+    this.logger.log('Getting total user count');
+
+    const count = await this.userRepository.count({
+   
+    });
+
+    return count;
+  }
   async createSuperAdmin(body:CreateAdminDto): Promise<string> {
     //  let { password } = body;
     body.password = await argon2hash(body.password); 

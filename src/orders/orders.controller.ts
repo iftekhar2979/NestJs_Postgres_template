@@ -30,9 +30,9 @@ constructor(private readonly ordersService: OrdersService) {}
     @Query('limit') limit = 10,) {
     return this.ordersService.findByBuyerId(user.id,page,limit)
   }
-  @Put(':id/completed')
+  @Put(':orderID/completed')
   @UseGuards(JwtAuthenticationGuard)
-  orderCompleted(@GetUser() user:User,@Param('id') order_id:number,) {
+  orderCompleted(@GetUser() user:User,@Param('orderID') order_id:number,) {
     if(!order_id){
       throw new BadRequestException("Please put the order Id!")
     }
@@ -42,6 +42,4 @@ constructor(private readonly ordersService: OrdersService) {}
     }
     return this.ordersService.completeOrder({order_id,user})
   }
-
-
 }

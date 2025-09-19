@@ -1,7 +1,7 @@
 
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Conversations } from './entities/conversations.entity';
-import { DataSource, Repository } from 'typeorm';
+import { Brackets, DataSource, In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ParticipantsService } from 'src/participants/participants.service';
 import { Order } from 'src/orders/entities/order.entity';
@@ -15,6 +15,9 @@ import { Offer } from 'src/offers/entities/offer.entity';
 import { OfferStatus } from 'src/offers/enums/offerStatus.enum';
 import { number } from 'joi';
 import { SocketService } from 'src/socket/socket.service';
+import { ConversationParticipant } from 'src/participants/entities/participants.entity';
+import { CreateDirectConversationDto } from './dto/create-direct-conversation.dto';
+import { ResponseInterface } from 'src/common/types/responseInterface';
 @Injectable()
 export class ConversationsService {
     constructor(
@@ -114,8 +117,6 @@ const msg= this.messageRepo.create({
   
 async getOrCreate({productId, userIds, offer,offerType}:{productId: number, userIds: string[], offer: Offer,offerType:OfferStatus}): Promise<Conversations> {
   try{
-
-  
   const existing = await this.participantService.checkChatAlreadyExist({
     product_id: productId,
     user_ids: userIds
@@ -154,8 +155,6 @@ await this.offerStatusHandle({offer,existingConversation,offerType})
 
     // Add participants
     await this.participantService.addMultiple(savedConversation, users, product, manager);
-
-  
     // Save message
    const msg = await manager.create(Messages, {
       sender_id: offer.buyer_id,
@@ -168,7 +167,7 @@ await this.offerStatusHandle({offer,existingConversation,offerType})
     });
     savedConversation.lastmsg = msg
     await manager.save(msg)
-    console.log(msg)
+    // console.log(msg)
    await manager.save(Conversations,savedConversation);
   // await this.updatedConversation({conversation_id:savedConversation.id , message:msg ,conversation:{lastmsg:msg}})
     this.socketService.handleMessageDelivery({senderId:offer.buyer_id,receiverId:offer.seller_id,conversation_id:savedConversation.id,message:msg})
@@ -180,8 +179,9 @@ await this.offerStatusHandle({offer,existingConversation,offerType})
     throw new BadRequestException("Error in fetching existing conversation")
   }
 }
-  async getAllConversations(user_id: string, page: number, limit: number) {
+  async getAllConversations(user_id: string,term:string, page: number, limit: number) {
   try {
+    console.log(term)
     // Calculate skip and take for pagination
     const skip = (page - 1) * limit;
     const take = limit;
@@ -189,6 +189,7 @@ await this.offerStatusHandle({offer,existingConversation,offerType})
     // Fetch conversations with necessary relations and apply pagination
     const [conversations, total] = await this.conversationRepo
       .createQueryBuilder('conversation')
+     
       .leftJoinAndSelect('conversation.participants', 'participant')
       .leftJoinAndSelect('conversation.product', 'product')
        .leftJoinAndSelect('product.images', 'productImages')
@@ -203,7 +204,15 @@ await this.offerStatusHandle({offer,existingConversation,offerType})
         'user.isActive',
    
       ])  // Only select necessary fields from user
+      .orderBy('conversation.created_at', 'DESC') 
       .where('user.id = :user_id', { user_id }) // Filter conversations where user.id is not equal to provided user_id
+       .andWhere(
+    new Brackets((qb) => {
+      qb.where('conversation.name ILIKE :term', { term: `%${term}%` })
+        .orWhere('user.firstName ILIKE :term', { term: `%${term}%` })
+        .orWhere('user.lastName ILIKE :term', { term: `%${term}%` })
+         })
+  )
       .skip(skip) // Apply pagination
       .take(take)
       .getManyAndCount();
@@ -223,6 +232,94 @@ await this.offerStatusHandle({offer,existingConversation,offerType})
     // Handle any unexpected errors and provide a descriptive message
     console.error('Error fetching conversations:', error);
     throw new Error('Unable to retrieve conversations at this time.');
+  }
+}
+
+ async directConversation({ dto, user }: { dto: CreateDirectConversationDto; user: User }): Promise<ResponseInterface<Conversations>> {
+  const queryRunner = this.dataSource.createQueryRunner();
+
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+
+  try {
+    const { productId, userId } = dto;
+
+    if (user.id === userId) {
+      throw new ForbiddenException("same user can't create any conversation");
+    }
+
+    const participantIds = [userId, user.id];
+
+    // ✅ 1. Check for existing conversation with same product and same 2 users
+    const existingConversations = await this.conversationRepo
+      .createQueryBuilder('conversation')
+      .leftJoinAndSelect('conversation.participants', 'participants')
+      .leftJoinAndSelect('participants.user', 'user')
+      .where('conversation.product = :productId', { productId })
+      .getMany();
+
+    for (const conv of existingConversations) {
+      const participantUserIds = conv.participants.map((p) => p.user.id);
+      if (
+        participantUserIds.length === 2 &&
+        participantUserIds.includes(user.id) &&
+        participantUserIds.includes(userId)
+      ) {
+        // ✅ Return existing conversation
+        return {message:'conversation created successfully',status:'success',statusCode:200,data:await this.conversationRepo.findOne({
+          where: { id: conv.id },
+          relations: ['participants', 'participants.user', 'product'],
+        })};
+      }
+    }
+
+    // 2. Fetch Product
+    const product = await queryRunner.manager.findOne(Product, {
+      where: { id: productId },
+    });
+    if (!product) throw new Error('Product not found');
+
+    // 3. Fetch Users
+    const users = await queryRunner.manager.find(User, {
+      where: { id: In(participantIds) },
+    });
+
+    if (users.length !== participantIds.length) {
+      throw new Error('One or more users not found');
+    }
+
+    // 4. Create Conversation
+    const conversation = queryRunner.manager.create(Conversations, {
+      name: `${product.product_name} (${users[0].firstName} - ${users[1].firstName})`,
+      image: null,
+      product,
+    });
+
+    const savedConversation = await queryRunner.manager.save(conversation);
+
+    // 5. Create Participants
+    const participants = users.map((user) =>
+      queryRunner.manager.create(ConversationParticipant, {
+        conversation: savedConversation,
+        user,
+      }),
+    );
+
+    await queryRunner.manager.save(ConversationParticipant, participants);
+
+    // 6. Commit
+    await queryRunner.commitTransaction();
+
+    // 7. Return with relations
+    return { message:'conversation created successfully',status:'success',statusCode:201,data: await this.conversationRepo.findOne({
+      where: { id: savedConversation.id },
+      relations: ['participants', 'participants.user', 'product'],
+    })}
+  } catch (err) {
+    await queryRunner.rollbackTransaction();
+    throw err;
+  } finally {
+    await queryRunner.release();
   }
 }
 }

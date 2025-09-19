@@ -301,11 +301,14 @@ query.orderBy('product.is_boosted', 'DESC')
 
   if (type === 'own') {
     where.user_id = userId;
+    
+  }else{
+    where.status = ProductStatus.AVAILABLE;
+
   }
 
-  where.status = ProductStatus.AVAILABLE;
 
-if(!term || !category ){
+if(!term || !category || type !== 'own'){
 
   const behaviorData = await this.userBehaviourService.latestBehaviour(userId);
   // if(behaviorData && behaviorData.search){ 
@@ -335,9 +338,13 @@ if(!term || !category ){
     // }
   const skip = (parseInt(page) - 1) * parseInt(limit);
   const take = parseInt(limit);
-  if(term || category || price ){
+  if(term || category || price || type!=='own'){
     await this.queue.add('user-behaviour',{ user,search:term,category,price,size},{attempts:10})
 
+  }
+  let orderBy :{is_boosted?:string,boost_end_time?: string,created_at?: string,status?:string ,updated_at?:string } ={is_boosted:"DESC",boost_end_time: "ASC",created_at: 'DESC',status:'DESC' }
+  if(type === 'own'){
+    orderBy = {updated_at: 'DESC',created_at: 'DESC'}
   }
   const [data, total] = await this.productRepository.findAndCount({
     where,

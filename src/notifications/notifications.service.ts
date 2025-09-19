@@ -82,7 +82,7 @@ export class NotificationsService {
   isImportant,
   notificationFor
 }: {
-  userId: string;
+  userId: string | null;
   page: number;
   limit: number;
   isRead: boolean;
@@ -92,24 +92,19 @@ export class NotificationsService {
 }): Promise<GetNotificationsResponse> {
   const skip = (page - 1) * limit;
   const take = limit;
-console.log(userId)
+console.log(userId,notificationFor)
   // Start building the query
   const query = this.notificationsRepository.createQueryBuilder('notification')
-    .where('notification.user_id = :userId', { userId });
 
-  // Add filters dynamically only if they are provided
-  if (isRead !== undefined) {
-    query.andWhere('notification.isRead = :isRead', { isRead });
+  if(userId){
+    query.where('notification.user_id = :userId', { userId });
   }
-  if (related) {
-    query.andWhere('notification.related = :related', { related });
-  }
+
+ 
   if (notificationFor) {
     query.andWhere('notification.notificationFor = :notificationFor', { notificationFor });
   }
-  if (isImportant !== undefined) {
-    query.andWhere('notification.isImportant = :isImportant', { isImportant });
-  }
+
 
   // Apply pagination
   query.skip(skip)
@@ -118,11 +113,11 @@ console.log(userId)
 
   // Fetch the notifications and total count
   const [notifications, total] = await query.getManyAndCount();
-
   const data = notifications.map(notification => ({
     id: notification.id,
     msg: notification.msg,
     related: notification.related,
+    user:notification.user,
     action: notification.action,
     type: notification.type,
     target_id: notification.target_id,
