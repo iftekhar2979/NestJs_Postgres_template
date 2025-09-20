@@ -189,7 +189,6 @@ await this.offerStatusHandle({offer,existingConversation,offerType})
     // Fetch conversations with necessary relations and apply pagination
     const [conversations, total] = await this.conversationRepo
       .createQueryBuilder('conversation')
-     
       .leftJoinAndSelect('conversation.participants', 'participant')
       .leftJoinAndSelect('conversation.product', 'product')
        .leftJoinAndSelect('product.images', 'productImages')
