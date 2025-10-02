@@ -15,48 +15,45 @@ import { HealthModule } from "./health/health.module";
 import { winstonLoggerConfig } from "./configs/winston.config";
 import { S3Module } from "./s3/s3.module";
 import { SseModule } from "./sse/sse.module";
-import { OtpModule } from './otp/otp.module';
-import { PassportModule } from "@nestjs/passport";
-import { JwtModule } from "@nestjs/jwt";
-import { ProductsModule } from './products/products.module';
+import { OtpModule } from "./otp/otp.module";
+import { ProductsModule } from "./products/products.module";
 import { ElasticsearchModule } from "@nestjs/elasticsearch";
-import { SearchModule } from './search/search.module';
-import { FavouritesModule } from './favourites/favourites.module';
-import { OffersModule } from './offers/offers.module';
-import { OrdersModule } from './orders/orders.module';
-import { DeliveryModule } from './delivery/delivery.module';
-import { CategoryModule } from './category/category.module';
-import { SizesModule } from './sizes/sizes.module';
-import { WalletsModule } from './wallets/wallets.module';
-import { TransectionsModule } from './transections/transections.module';
-import { WithdrawsService } from './withdraws/withdraws.service';
-import { WithdrawsModule } from './withdraws/withdraws.module';
-import { ConversationsModule } from './conversations/conversations.module';
-import { MessagesModule } from './messages/messages.module';
-import { ParticipantsModule } from './participants/participants.module';
-import { AttachmentModule } from './attachment/attachment.module';
-import { SeederModule } from './seeder/seeder.module';
-import { NotificationsModule } from './notifications/notifications.module';
-import { SocketModule } from './socket/socket.module';
-import { ReviewsModule } from './reviews/reviews.module';
-import { TransglobalModule } from './transglobal/transglobal.module';
+import { SearchModule } from "./search/search.module";
+import { FavouritesModule } from "./favourites/favourites.module";
+import { OffersModule } from "./offers/offers.module";
+import { OrdersModule } from "./orders/orders.module";
+import { DeliveryModule } from "./delivery/delivery.module";
+import { CategoryModule } from "./category/category.module";
+import { SizesModule } from "./sizes/sizes.module";
+import { WalletsModule } from "./wallets/wallets.module";
+import { TransectionsModule } from "./transections/transections.module";
+import { WithdrawsService } from "./withdraws/withdraws.service";
+import { WithdrawsModule } from "./withdraws/withdraws.module";
+import { ConversationsModule } from "./conversations/conversations.module";
+import { MessagesModule } from "./messages/messages.module";
+import { ParticipantsModule } from "./participants/participants.module";
+import { AttachmentModule } from "./attachment/attachment.module";
+import { SeederModule } from "./seeder/seeder.module";
+import { NotificationsModule } from "./notifications/notifications.module";
+import { SocketModule } from "./socket/socket.module";
+import { ReviewsModule } from "./reviews/reviews.module";
+import { TransglobalModule } from "./transglobal/transglobal.module";
 import { ScheduleModule } from "@nestjs/schedule";
-import { ProductBoostModule } from './product-boost/product-boost.module';
+import { ProductBoostModule } from "./product-boost/product-boost.module";
 // import { ProductBoostgService } from './product-boostg/product-boostg.service';
-import { StripeModule } from './stripe/stripe.module';
+import { StripeModule } from "./stripe/stripe.module";
 // import { StripController } from './strip/strip.controller';
-import { RedisModule } from './redis/redis.module';
+import { RedisModule } from "./redis/redis.module";
 import { CacheModule } from "@nestjs/cache-manager";
-import * as redisStore from 'cache-manager-ioredis';
+import * as redisStore from "cache-manager-ioredis";
 // import { BullQueueProcessor } from './bull-queue.processor';
-import { BullModule } from '@nestjs/bull';
-import { BullQueueProcessor } from "./bull/bull.queue-processor";
-import { UserlogsModule } from './userlogs/userlogs.module';
+import { BullModule } from "@nestjs/bull";
+import { UserlogsModule } from "./userlogs/userlogs.module";
 import { ImageProcessor } from "./bull/processors/ProductQueue";
-import { GeminiModule } from './gemini/gemini.module';
-import { UserBehaviourModule } from './user-behaviour/user-behaviour.module';
-import { SettingsModule } from './settings/settings.module';
-import { SettingService } from './setting/setting.service';
+import { GeminiModule } from "./gemini/gemini.module";
+import { UserBehaviourModule } from "./user-behaviour/user-behaviour.module";
+import { SettingsModule } from "./settings/settings.module";
+import { SettingService } from "./setting/setting.service";
 /**
  * It is the root module for the application in we import all feature modules and configure modules and packages that are common in feature modules. Here we also configure the middlewares.
  *
@@ -67,24 +64,24 @@ import { SettingService } from './setting/setting.service';
  */
 @Module({
   imports: [
-  CacheModule.register({
+    CacheModule.register({
       isGlobal: true,
       store: redisStore,
-      prefix: '', 
-      host: process.env.REDIS_IP || 'localhost', // Use environment variable or default to localhost
+      prefix: "",
+      host: process.env.REDIS_IP || "localhost", // Use environment variable or default to localhost
       port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379, // Use environment variable or default to 6379
-      ttl: 600,        
-      max: 100, 
+      ttl: 600,
+      max: 100,
     }),
 
-     BullModule.forRoot({
+    BullModule.forRoot({
       redis: {
-        host: process.env.REDIS_IP || 'localhost',  // Use environment variable for Redis connection
-        port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379,  // Default Redis port
+        host: process.env.REDIS_IP || "localhost", // Use environment variable for Redis connection
+        port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379, // Default Redis port
       },
     }),
     BullModule.registerQueue({
-      name: 'myQueue',  // Name of your queue
+      name: "myQueue", // Name of your queue
     }),
 
     ConfigModule.forRoot({
@@ -93,7 +90,6 @@ import { SettingService } from './setting/setting.service';
       validationSchema: envSchema,
       // validationOptions: { allowUnknown: false, abortEarly: true },
     }),
-
 
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
@@ -108,17 +104,17 @@ import { SettingService } from './setting/setting.service';
     // ElasticsearchModule.register({
     //   node: `${process.env.ELASTICSEARCH_NODE}`, // Your Elasticsearch node URL
     // }),
-     ElasticsearchModule.register({
-      node: 'https://localhost:9200',
+    ElasticsearchModule.register({
+      node: "https://localhost:9200",
       auth: {
-        username: 'elastic',
-        password: 'zLOt2va9_fUKmX0kN3xD', 
+        username: "elastic",
+        password: "zLOt2va9_fUKmX0kN3xD",
       },
-    tls:{
-      rejectUnauthorized: false, // This is for development purposes only, do not use in production
-    }
+      tls: {
+        rejectUnauthorized: false, // This is for development purposes only, do not use in production
+      },
     }),
-    ScheduleModule.forRoot(), 
+    ScheduleModule.forRoot(),
     WinstonModule.forRoot(winstonLoggerConfig),
     PostgreSQLDatabaseModule,
     AuthModule,
@@ -156,7 +152,6 @@ import { SettingService } from './setting/setting.service';
     GeminiModule,
     UserBehaviourModule,
     SettingsModule,
-  
   ],
   controllers: [AppController],
   providers: [
@@ -168,7 +163,7 @@ import { SettingService } from './setting/setting.service';
     WithdrawsService,
     // BullQueueProcessor,
     ImageProcessor,
-    SettingService
+    SettingService,
     // ProductBoostgService,
   ],
 })

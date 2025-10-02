@@ -1,7 +1,7 @@
-import { IsUUID, IsInt, IsOptional, IsString, IsArray, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-import { AttachmentDto } from 'src/attachment/dto/attachments.dto';
-import { User } from 'src/user/entities/user.entity';
+import { IsUUID, IsInt, IsOptional, IsString, IsArray, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
+import { AttachmentDto } from "src/attachment/dto/attachments.dto";
+import { User } from "src/user/entities/user.entity";
 
 export class SendMessageDto {
   @IsUUID()
@@ -16,7 +16,7 @@ export class SendMessageDto {
 
   @IsOptional()
   @IsString()
-  type?: 'text' | 'image' | 'video' | 'offer';
+  type?: "text" | "image" | "video" | "offer";
 
   @IsOptional()
   @IsArray()

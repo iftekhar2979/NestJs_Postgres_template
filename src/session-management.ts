@@ -22,7 +22,7 @@ import { Pool } from "pg";
  *
  * const app: NestExpressApplication = ...; // Initialize your NestJS application
  * expressSession(app);
- * 
+ *
  * @remarks
  * Ensure that the following environment variables are set:
  * - POSTGRES_USER: Database user for PostgreSQL connection.
@@ -50,7 +50,7 @@ const expressSession = (app: NestExpressApplication) => {
       store: new (PgSession(session))({
         pool: pgPool, // Reuse the PostgreSQL pool for session storage
         tableName: "user_sessions", // Custom table name for sessions
-        pruneSessionInterval: 60 * 60, // Automatically prune expired sessions every hour
+        pruneSessionInterval: 60 * 60 * 24, // Automatically prune expired sessions every hour
       }),
       secret: process.env.SESSION_SECRET || "strongSecretKey", // Strong, environment-specific secret
       name: "sessionId", // Custom cookie name

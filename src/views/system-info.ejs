@@ -62,50 +62,110 @@
 
   <div class="section">
     <h2>Host Info</h2>
-    <p><strong>Hostname:</strong> <%= hostname %></p>
-    <p><strong>Uptime:</strong> <%= uptime.days  %> days</p>
-    <p><strong>Uptime:</strong> <%= uptime.hours %> Hours</p>
-    <p><strong>Uptime:</strong> <%= uptime.raw %> S</p>
+    <p><strong>Hostname:</strong> <span id="hostname"><%= hostname %></span></p>
+    <p><strong>Uptime:</strong> <span id="uptime-days"><%= uptime.days %></span> days</p>
+    <p><strong>Uptime:</strong> <span id="uptime-hours"><%= uptime.hours %></span> hours</p>
+    <p><strong>Uptime:</strong> <span id="uptime-raw"><%= uptime.raw %></span> seconds</p>
   </div>
 
   <div class="section">
     <h2>Memory Usage</h2>
-    <p><strong>Total:</strong> <%= memory.totalMB %> MB</p>
-    <p><strong>Used:</strong> <%= memory.usedMB %> MB</p>
-    <p><strong>Free:</strong> <%= memory.freeMB %> MB</p>
-    <p><strong>Usage:</strong> <%= memory.usagePercent %>%</p>
+    <p><strong>Total:</strong> <span id="mem-total"><%= memory.totalMB %></span> MB</p>
+    <p><strong>Used:</strong> <span id="mem-used"><%= memory.usedMB %></span> MB</p>
+    <p><strong>Free:</strong> <span id="mem-free"><%= memory.freeMB %></span> MB</p>
+    <p><strong>Usage:</strong> <span id="mem-percent"><%= memory.usagePercent %></span>%</p>
     <div class="progress">
-      <div class="progress-bar" style="width: <%= memory.usagePercent %>%;"></div>
+      <div class="progress-bar" id="mem-bar" style="width: <%= memory.usagePercent %>%;"></div>
     </div>
+    <h2>Process Memory Usage</h2>
+    <p><strong>Heap Memory:</strong> <span id="heap-used"><%= nodeMemory.heapUsedMB %></span> MB</p>
+    <p><strong>Total Heap Memory:</strong> <span id="heap-total"><%= nodeMemory.heapTotalMB %></span> MB</p>
+    <!-- <p><strong>Free:</strong> <span id="mem-free"><%= memory.freeMB %></span> MB</p>
+    <p><strong>Usage:</strong> <span id="mem-percent"><%= memory.usagePercent %></span>%</p> -->
+    <!-- <div class="progress">
+      <div class="progress-bar" id="mem-bar" style="width: <%= memory.usagePercent %>%;"></div>
+    </div> -->
   </div>
 
   <div class="section">
     <h2>CPU Info</h2>
-    <p><strong>Total Cores:</strong> <%= cpu.cores %></p>
+    <p><strong>Total Cores:</strong> <span id="cpu-cores"><%= cpu.cores %></span></p>
 
-    <table>
-      <tr>
-        <th>Core</th>
-        <th>Model</th>
-        <th>Speed (MHz)</th>
-        <th>Usage %</th>
-      </tr>
-      <% cpu.details.forEach(core => { %>
+    <table id="cpu-table">
+      <thead>
         <tr>
-          <td><%= core.core %></td>
-          <td><%= core.model %></td>
-          <td><%= core.speedMHz %></td>
-          <td><%= core.usagePercent %>%</td>
+          <th>Core</th>
+          <th>Model</th>
+          <th>Speed (MHz)</th>
+          <th>Usage %</th>
         </tr>
-      <% }) %>
+      </thead>
+      <tbody>
+        <% cpu.details.forEach(core => { %>
+          <tr>
+            <td><%= core.core %></td>
+            <td><%= core.model %></td>
+            <td><%= core.speedMHz %></td>
+            <td><%= core.usagePercent %>%</td>
+          </tr>
+        <% }) %>
+      </tbody>
     </table>
   </div>
 
   <div class="section">
     <h2>Load Average</h2>
-    <p><strong>1 min:</strong> <%= loadAverage[0] %></p>
-    <p><strong>5 min:</strong> <%= loadAverage[1] %></p>
-    <p><strong>15 min:</strong> <%= loadAverage[2] %></p>
+    <p><strong>1 min:</strong> <span id="load-1"><%= loadAverage[0] %></span></p>
+    <p><strong>5 min:</strong> <span id="load-5"><%= loadAverage[1] %></span></p>
+    <p><strong>15 min:</strong> <span id="load-15"><%= loadAverage[2] %></span></p>
   </div>
+
+  <!-- 🔌 SSE Connection Script -->
+  <script>
+    const eventSource = new EventSource('/api/v1/stream');
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      // ✅ Host Info
+      document.getElementById('hostname').textContent = data.hostname;
+      document.getElementById('uptime-days').textContent = data.uptime.days;
+      document.getElementById('uptime-hours').textContent = data.uptime.hours;
+      document.getElementById('uptime-raw').textContent = data.uptime.raw;
+
+      // ✅ Memory
+      document.getElementById('mem-total').textContent = data.memory.totalMB;
+      document.getElementById('mem-used').textContent = data.memory.usedMB;
+      document.getElementById('heap-total').textContent = data.nodeMemory.heapTotalMB;
+      document.getElementById('heap-used').textContent = data.nodeMemory.heapUsedMB;
+      document.getElementById('mem-free').textContent = data.memory.freeMB;
+      document.getElementById('mem-percent').textContent = data.memory.usagePercent;
+      document.getElementById('mem-bar').style.width = data.memory.usagePercent + '%';
+
+      // ✅ CPU Info Table
+      const tbody = document.querySelector('#cpu-table tbody');
+      tbody.innerHTML = ''; // clear old rows
+      data.cpu.details.forEach(core => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${core.core}</td>
+          <td>${core.model}</td>
+          <td>${core.speedMHz}</td>
+          <td>${core.usagePercent}%</td>
+        `;
+        tbody.appendChild(row);
+      });
+      document.getElementById('cpu-cores').textContent = data.cpu.cores;
+
+      // ✅ Load Average
+      document.getElementById('load-1').textContent = data.loadAverage[0];
+      document.getElementById('load-5').textContent = data.loadAverage[1];
+      document.getElementById('load-15').textContent = data.loadAverage[2];
+    };
+
+    eventSource.onerror = (err) => {
+      console.error('SSE connection error:', err);
+    };
+  </script>
 </body>
 </html>

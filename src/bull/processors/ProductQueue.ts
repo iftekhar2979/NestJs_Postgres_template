@@ -1,59 +1,72 @@
-import { Processor, Process } from '@nestjs/bull';
-import { Job } from 'bull';
-import { Injectable } from '@nestjs/common';
-const sharp = require("sharp")
-import * as fs from 'fs';  // File system module to write images to disk
-import * as path from 'path';  // Path module for handling file paths
-import { InjectRepository } from '@nestjs/typeorm';
-import { UserBehaviour } from './BehaviourQueue';
-import { Repository } from 'typeorm';
-import { UserBehaviours } from 'src/user-behaviour/entities/userBehaviour.entity';
-import { UserBehaviourService } from 'src/user-behaviour/user-behaviour.service';
+import { Processor, Process } from "@nestjs/bull";
+import { Job } from "bull";
+import { Injectable } from "@nestjs/common";
+import sharp from "sharp";
+import * as fs from "fs"; // File system module to write images to disk
+import * as path from "path"; // Path module for handling file paths
+import { UserBehaviourService } from "src/user-behaviour/user-behaviour.service";
+import { MailService } from "src/mail/mail.service";
 
-@Processor('product')  // Processor listening to 'ProductQueue'
+@Processor("product") // Processor listening to 'ProductQueue'
 @Injectable()
 export class ImageProcessor {
-constructor(
-  private readonly userBehaviourService:UserBehaviourService
-){}
-  @Process('Product-image')  // Listen for jobs of type 'Product-image'
- async handleImageJob(job: Job) {
-  console.log("Job Processing");
-  console.time()
-  const images = job.data; 
-  const projectRoot =  path.join(__dirname, "..","..","..","..",'public');// go back to project root
-  const outputDir = path.join(projectRoot, "uploads");
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
+  constructor(
+    private readonly _userBehaviourService: UserBehaviourService,
+    private readonly _mailService: MailService
+  ) {}
+  @Process("Product-image") // Listen for jobs of type 'Product-image'
+  async handleImageJob(job: Job) {
+    console.log("Job Processing");
+    console.time();
+    const images = job.data;
+    const projectRoot = path.join(__dirname, "..", "..", "..", "..", "public"); // go back to project root
+    const outputDir = path.join(projectRoot, "uploads");
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
 
-  for (const imgUrl of images) {
-    const absoluteInputPath = path.join(projectRoot, imgUrl); // make absolute
-    const outputImagePath = path.join(projectRoot, path.basename(imgUrl)); // overwrite with same name
+    for (const imgUrl of images) {
+      const absoluteInputPath = path.join(projectRoot, imgUrl); // make absolute
+      const outputImagePath = path.join(projectRoot, path.basename(imgUrl)); // overwrite with same name
       const tempPath = absoluteInputPath + ".tmp";
+      try {
+        await sharp(absoluteInputPath).resize(800, 800).toFile(tempPath);
+        fs.renameSync(tempPath, absoluteInputPath);
+        console.log(`Image replaced successfully: ${outputImagePath}`);
+        console.timeEnd();
+      } catch (err) {
+        console.error(`Error processing image: ${absoluteInputPath}`, err);
+      }
+    }
+  }
+  @Process("user-behaviour")
+  async userBehaviour(job: Job) {
+    console.log("User Behavior", job.data);
     try {
-      await sharp(absoluteInputPath)
-        .resize(800, 800)
-        .toFile(tempPath);
-      fs.renameSync(tempPath, absoluteInputPath);
-      console.log(`Image replaced successfully: ${outputImagePath}`);
-      console.timeEnd()
-    } catch (err) {
-      console.error(`Error processing image: ${absoluteInputPath}`, err);
+      if (job.data.search || job.data.category || job.data.brand) {
+        await this._userBehaviourService.createUserBehaviour(job.data);
+      }
+    } catch (error) {
+      console.log(error);
     }
   }
-}
-@Process('user-behaviour')
-async userBehaviour(job:Job){
-  console.log("User Behavior",job.data)
-  try{
-    if(job.data.search || job.data.category || job.data.brand){
-      await this.userBehaviourService.createUserBehaviour(job.data)
 
+  @Process("mail")
+  async mailSender(job: Job) {
+    console.log("User Behavior", job.data);
+    const { user, seller, product, offer, type } = job.data;
+    if (!user || !seller || !product || !offer) {
+      throw new Error("Job Data is not proper");
     }
-
-  }catch(error){
-    console.log(error)
+    if (!type) {
+      throw new Error("No type mentioned");
+    }
+    if (type === "send_offer") {
+      await this._mailService.sendOfferConfirmation(user, seller, offer, product);
+    } else if (type === "accepted_offer") {
+      await this._mailService.acceptOfferConfirmation(user, seller, offer, product);
+    } else {
+      await this._mailService.offerRejection(user, seller, offer, product);
+    }
   }
-}
 }

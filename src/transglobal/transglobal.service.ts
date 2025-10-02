@@ -1,27 +1,22 @@
-import { number } from 'joi';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Service } from './entity/courier_details.entity';
-import { CreateServiceDto } from './dto/create_courier_details.dto';
-import { Repository } from 'typeorm';
-import { OrdersService } from 'src/orders/orders.service';
-import { User } from 'src/user/entities/user.entity';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Service } from "./entity/courier_details.entity";
+import { CreateServiceDto } from "./dto/create_courier_details.dto";
+import { Repository } from "typeorm";
+import { OrdersService } from "src/orders/orders.service";
 
 @Injectable()
 export class TransglobalService {
-
-      constructor(
+  constructor(
     @InjectRepository(Service)
-    private serviceRepository: Repository<Service>,
-    private OrderService: OrdersService
+    private _serviceRepository: Repository<Service>,
+    private _OrderService: OrdersService
   ) {}
 
-  async createService(createServiceDto: CreateServiceDto,buyer_id?:string): Promise<Service> {
-    const order = await this.OrderService.findOrder({id: createServiceDto.order_id});
-   
-    const service = this.serviceRepository.create({order,...createServiceDto});
-    return await this.serviceRepository.save(service);
-  } 
+  async createService(createServiceDto: CreateServiceDto): Promise<Service> {
+    const order = await this._OrderService.findOrder({ id: createServiceDto.order_id });
 
-  
+    const service = this._serviceRepository.create({ order, ...createServiceDto });
+    return await this._serviceRepository.save(service);
+  }
 }

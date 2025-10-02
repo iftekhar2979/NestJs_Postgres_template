@@ -1,57 +1,55 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { UserBehaviours } from './entities/userBehaviour.entity';
-import { Repository } from 'typeorm';
-import { string } from 'joi';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { UserBehaviours } from "./entities/userBehaviour.entity";
+import { Repository } from "typeorm";
 
 @Injectable()
 export class UserBehaviourService {
+  constructor(
+    @InjectRepository(UserBehaviours) private _userBehaviourRepo: Repository<UserBehaviours> // Inject your repository
+  ) {}
 
-      constructor(
-        @InjectRepository(UserBehaviours) private userBehaviourRepo: Repository<UserBehaviours>, // Inject your repository
-      ) {}
-
-    async  createUserBehaviour(data:UserBehaviours){
-        try{
-          const behaviour =await this.userBehaviourRepo.insert(data)
-          console.log(behaviour)
-        return behaviour
-      }catch(error){
-        console.log(error)
-      }
+  async createUserBehaviour(data: UserBehaviours) {
+    try {
+      const behaviour = await this._userBehaviourRepo.insert(data);
+      console.log(behaviour);
+      return behaviour;
+    } catch (error) {
+      console.log(error);
     }
-    async latestPersonalizedBehaviour(userId:string){
-        try{
-           const userBehavior = await this.userBehaviourRepo.find({
-    where: { user:{id:userId} },
-    order: { created_at: 'DESC' },
-    take: 5,  // Limit to the last 5 behaviors
-  });
+  }
+  async latestPersonalizedBehaviour(userId: string) {
+    try {
+      const userBehavior = await this._userBehaviourRepo.find({
+        where: { user: { id: userId } },
+        order: { created_at: "DESC" },
+        take: 5, // Limit to the last 5 behaviors
+      });
 
-        return userBehavior
-      }catch(error){
-        console.log(error)
-      }
-      }
-    async latestBehaviour(userId:string){
-        try{
-           const userBehavior = await this.userBehaviourRepo.findOne({
-    where: { user:{id:userId} },
-    order: { created_at: 'DESC' },
-  });
+      return userBehavior;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  async latestBehaviour(userId: string) {
+    try {
+      const userBehavior = await this._userBehaviourRepo.findOne({
+        where: { user: { id: userId } },
+        order: { created_at: "DESC" },
+      });
 
-        return userBehavior
-      }catch(error){
-        console.log(error)
-      }
-      }
+      return userBehavior;
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
-       combineBehaviors(userId: string) {
+  combineBehaviors(userId: string) {
     return this.latestPersonalizedBehaviour(userId).then((behaviors) => {
-      let aggregatedSearchTerms: string[] = [];
-      let aggregatedCategories: string[] = [];
-      let aggregatedBrand: string[] = [];
-      let aggregatedPriceRanges: string[] = [];
+      const aggregatedSearchTerms: string[] = [];
+      const aggregatedCategories: string[] = [];
+      const aggregatedBrand: string[] = [];
+      const aggregatedPriceRanges: string[] = [];
 
       behaviors.forEach((behavior) => {
         if (behavior.search) aggregatedSearchTerms.push(behavior.search);
@@ -61,11 +59,11 @@ export class UserBehaviourService {
       });
 
       return {
-        searchTerms: [...new Set(aggregatedSearchTerms)],  // Remove duplicates
+        searchTerms: [...new Set(aggregatedSearchTerms)], // Remove duplicates
         categories: [...new Set(aggregatedCategories)],
         brand: [...new Set(aggregatedBrand)],
         priceRanges: [...new Set(aggregatedPriceRanges)],
       };
     });
-}
+  }
 }

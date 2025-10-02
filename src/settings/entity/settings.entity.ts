@@ -1,10 +1,10 @@
 // src/settings/entities/setting.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { ApiProperty } from "@nestjs/swagger";
 
-@Entity({ name: 'settings' })
+@Entity({ name: "settings" })
 export class Setting {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   @ApiProperty()
   id: string;
 
@@ -12,7 +12,7 @@ export class Setting {
   @ApiProperty()
   key: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: "text" })
   @ApiProperty()
   content: string;
 
