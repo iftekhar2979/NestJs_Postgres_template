@@ -1,6 +1,6 @@
-import { applyDecorators, Type } from '@nestjs/common';
-import { ApiOkResponse, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
-import { ApiResponseDto, CountApiResponseDto } from '../dto/base-response.dto';
+import { applyDecorators, Type } from "@nestjs/common";
+import { ApiOkResponse, ApiExtraModels, getSchemaPath } from "@nestjs/swagger";
+import { ApiResponseDto, CountApiResponseDto } from "../dto/base-response.dto";
 
 type ParamType = {
   isArray: boolean;
@@ -10,8 +10,8 @@ const params: ParamType = { isArray: false };
 
 export const ApiSuccessResponse = <TModel extends Type<any>>(
   model: TModel,
-  description = 'Successful response',
-  options: ParamType = params,
+  description = "Successful response",
+  options: ParamType = params
 ) => {
   // Check if the model is CountApiResponseDto
   if (options.isArray) {
@@ -24,16 +24,16 @@ export const ApiSuccessResponse = <TModel extends Type<any>>(
             { $ref: getSchemaPath(CountApiResponseDto) },
             {
               properties: {
-                data: { type: 'array', items: { $ref: getSchemaPath(model) } },
+                data: { type: "array", items: { $ref: getSchemaPath(model) } },
                 count: {
-                  type: 'number',
-                  description: 'Total count of items',
+                  type: "number",
+                  description: "Total count of items",
                 },
               },
             },
           ],
         },
-      }),
+      })
     );
   }
 
@@ -51,6 +51,6 @@ export const ApiSuccessResponse = <TModel extends Type<any>>(
           },
         ],
       },
-    }),
+    })
   );
 };

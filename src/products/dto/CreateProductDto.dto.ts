@@ -22,9 +22,6 @@ export class CreateProductDto {
   @IsNumberString()
   selling_price: string;
 
-  @ApiProperty({ description: 'Purchasing price', example: '300.00' })
-  @IsNumberString()
-  phurcasing_price: string; 
 
   @ApiProperty({ description: 'Quantity', example: '5' })
   @IsNumberString()

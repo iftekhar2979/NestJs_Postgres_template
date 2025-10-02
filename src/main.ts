@@ -8,20 +8,16 @@ import helmet from "helmet";
 import csurf from "csurf";
 import xssClean from "xss-clean";
 import hpp from "hpp";
-import { json, raw, urlencoded } from "express";
-import { ConfigService } from "@nestjs/config"; 
+import { json, urlencoded } from "express";
+import { ConfigService } from "@nestjs/config";
 import { AppModule } from "./app.module";
-import { ExpressAdapter, NestExpressApplication } from "@nestjs/platform-express";
-import { CorsOptions } from "@nestjs/common/interfaces/external/cors-options.interface";
-import { expressSession } from "./session-management";
+import { NestExpressApplication } from "@nestjs/platform-express";
 // FIXME: have it if you are using secret manager
 // import { loadSecretsFromAWS } from "./configs/app.config";
 import { createDataSource } from "./configs/ormconfig";
 import { runMigrations } from "./migration-runner";
 import { join } from "path";
-import { loadSecretsFromAWS } from "./configs/app.config";
 import { SeederService } from "./seeder/seeder.service";
-import dns from 'node:dns'
 import bodyParser from "body-parser";
 
 /**
@@ -38,12 +34,12 @@ async function bootstrap() {
   await runMigrations(dataSource, false); // Set to true to exit on migration failure
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     cors: true,
-    logger: ["error", "fatal", "log", "verbose", "warn", "debug",]
+    logger: ["error", "fatal", "log", "verbose", "warn", "debug"],
   });
   const configService = app.get<ConfigService>(ConfigService);
-    const seederService = app.get(SeederService);
+  const seederService = app.get(SeederService);
   await seederService.seedAdminUser();
-  await seederService.seedSettings()
+  await seederService.seedSettings();
   app.setGlobalPrefix("/api");
 
   app.enableVersioning({
@@ -51,9 +47,9 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
 
-  app.setBaseViewsDir(join(__dirname, '..','..','src', 'views'));
-  app.setViewEngine('ejs');
- 
+  app.setBaseViewsDir(join(__dirname, "..", "..", "src", "views"));
+  app.setViewEngine("ejs");
+
   // const corsOptions: CorsOptions = {
   //   origin: '*', // ✅ frontend origin
   //   methods: ["GET", "POST", "PATCH", "DELETE"],
@@ -62,9 +58,9 @@ async function bootstrap() {
   //   optionsSuccessStatus: 204,
   //   maxAge: 86400,
   // };
-  app.useStaticAssets(join(__dirname, '..','..', 'public'));
+  app.useStaticAssets(join(__dirname, "..", "..", "public"));
   app.enableCors({
-    origin:''
+    origin: "",
   });
   app.use(cookieParser());
   app.use(compression());
@@ -112,7 +108,7 @@ async function bootstrap() {
              */
           ],
           styleSrc: ["'self'", "https:", "http:", "'unsafe-inline'"],
-          imgSrc: ["'self'", "blob:", "validator.swagger.io","*"],
+          imgSrc: ["'self'", "blob:", "validator.swagger.io", "*"],
           fontSrc: ["'self'", "https:", "data:"],
           childSrc: ["'self'", "blob:"],
           styleSrcAttr: ["'self'", "'unsafe-inline'", "http:"],
@@ -128,7 +124,7 @@ async function bootstrap() {
       permittedCrossDomainPolicies: { permittedPolicies: "none" }, // Prevents Adobe Flash and Acrobat from loading cross-domain data.
       referrerPolicy: { policy: "no-referrer" }, // Protects against referrer leakage.
       xssFilter: true, // Enables the basic XSS protection in older browsers.
-    
+
       // Configures Cross-Origin settings to strengthen resource isolation and mitigate certain side-channel attacks.  crossOriginEmbedderPolicy: true,
       crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
       crossOriginResourcePolicy: { policy: "same-site" },
@@ -149,7 +145,7 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe({ transform: true, stopAtFirstError: true }));
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-  app.use('/api/v1/stripe/webhook', bodyParser.raw({ type: '*/*' }))
+  app.use("/api/v1/stripe/webhook", bodyParser.raw({ type: "*/*" }));
   /* FIXME:
     ########################## 
     ##### Set-up Swagger #####
@@ -169,7 +165,7 @@ async function bootstrap() {
         tagsSorter: "alpha",
       },
     });
-  }  
+  }
 
   // FIXME:
   // Session Management

@@ -1,4 +1,4 @@
-import { registerDecorator, ValidationOptions, ValidationArguments } from "class-validator";
+import { registerDecorator, ValidationOptions } from "class-validator";
 
 export function IsNotAdmin(validationOptions?: ValidationOptions) {
   return function (object: Object, propertyName: string) {

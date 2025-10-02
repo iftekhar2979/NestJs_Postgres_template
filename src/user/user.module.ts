@@ -18,20 +18,24 @@ import { PassportModule } from "@nestjs/passport";
  *      TypeOrmModule - it is an ORM and enables easy access to database.
  */
 @Module({
-  imports: [forwardRef(() => AuthModule), TypeOrmModule.forFeature([User,Verification]), MailModule, 
-   PassportModule.register({ defaultStrategy: "jwt" }),
-      JwtModule.registerAsync({
-        imports: [ConfigModule],
-        inject: [ConfigService],
-        useFactory: (configService: ConfigService) => {
-          return {
-            secret: configService.get<string>("JWT_SECRET"),
-            signOptions: {
-              expiresIn: configService.get<string>("EXPIRES_IN"),
-            },
-          };
-        },
-      }),],
+  imports: [
+    forwardRef(() => AuthModule),
+    TypeOrmModule.forFeature([User, Verification]),
+    MailModule,
+    PassportModule.register({ defaultStrategy: "jwt" }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        return {
+          secret: configService.get<string>("JWT_SECRET"),
+          signOptions: {
+            expiresIn: configService.get<string>("EXPIRES_IN"),
+          },
+        };
+      },
+    }),
+  ],
   controllers: [UserController],
   providers: [UserService],
   exports: [UserService],

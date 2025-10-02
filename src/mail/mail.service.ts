@@ -2,6 +2,8 @@ import { MailerService } from "@nestjs-modules/mailer";
 import { Injectable } from "@nestjs/common";
 import { FROM_EMAIL, ORG_NAME } from "./constants";
 import { User } from "../user/entities/user.entity";
+import { Offer } from "src/offers/entities/offer.entity";
+import { Product } from "src/products/entities/products.entity";
 
 @Injectable()
 export class MailService {
@@ -45,27 +47,15 @@ export class MailService {
     this._from = value;
   }
 
-  constructor(private readonly mailService: MailerService) {}
+  constructor(private readonly _mailService: MailerService) {}
 
-  /* 
-    NOTE:
-        I have put the 2 lines for each mail, wherever you need confirmation of sending mail, un-comment the former with a return and comment the latter 
-
-        You may choose to refactor all the mail methods into a single master method/class and while calling you may pass the template name and context object to use in templates
-    */
-
-  /**
-   * sends confirmation mail to user's email address with account activation URL
-   * @param user user object containing user information
-   * @param url account activation URL
-   */
   async sendUserConfirmationMail(user: User, url: string) {
-    const subject = `Welcome to Your Dance Attix! Hi ${user.firstName}, Here's Your Account Activation Code`;
-    // await this.mailService.sendMail({
-    this.mailService.sendMail({
-      from: { name: this.name, address: this.from },
+    const subject = `Welcome to Your Pet Attix! Hi ${user.firstName}, Here's Your Account Activation Code`;
+    // await this._mailService.sendMail({
+    this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
       to: user.email,
-      subject: "Registation Confirmation",
+      subject: subject,
       template: "welcome",
       context: {
         subject: "",
@@ -83,9 +73,9 @@ export class MailService {
    * @param url account activation URL
    */
   async sendUserActivationToken(user: User, url: string) {
-    // await this.mailService.sendMail({
-    this.mailService.sendMail({
-      from: { name: this.name, address: this.from },
+    // await this._mailService.sendMail({
+    this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
       to: user.email,
       subject: "",
       template: "account-activation",
@@ -104,9 +94,9 @@ export class MailService {
    * @param url account activation URL
    */
   async sendUserAccountActivationMail(user: User, url: string) {
-    // await this.mailService.sendMail({
-    this.mailService.sendMail({
-      from: { name: this.name, address: this.from },
+    // await this._mailService.sendMail({
+    this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
       to: user.email,
       subject: "",
       template: "confirm-activation",
@@ -125,9 +115,9 @@ export class MailService {
    * @param url reset password URL
    */
   async sendForgotPasswordMail(email: string, url: string) {
-    // await this.mailService.sendMail({
-    this.mailService.sendMail({
-      from: { name: this.name, address: this.from },
+    // await this._mailService.sendMail({
+    this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
       to: email,
       subject: "",
       template: "forgot-password",
@@ -144,9 +134,9 @@ export class MailService {
    * @param user user object containing user information
    */
   async sendPasswordResetConfirmationMail(user: User) {
-    // await this.mailService.sendMail({
-    this.mailService.sendMail({
-      from: { name: this.name, address: this.from },
+    // await this._mailService.sendMail({
+    this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
       to: user.email,
       subject: "",
       template: "reset-password",
@@ -162,9 +152,9 @@ export class MailService {
    * @param user user object containing user information
    */
   async sendPasswordUpdateEmail(user: User) {
-    // await this.mailService.sendMail({
-    this.mailService.sendMail({
-      from: { name: this.name, address: this.from },
+    // await this._mailService.sendMail({
+    this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
       to: user.email,
       subject: `Password Updated!`,
       template: "update-password",
@@ -181,9 +171,9 @@ export class MailService {
    * @param user user object containing user information
    */
   async sendUserDeletionMail(user: User) {
-    // await this.mailService.sendMail({
-    this.mailService.sendMail({
-      from: { name: this.name, address: this.from },
+    // await this._mailService.sendMail({
+    this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
       to: user.email,
       subject: "",
       template: "account-deletion",
@@ -200,9 +190,9 @@ export class MailService {
    * @param user user object containing user information
    */
   async sendConfirmationOnUpdatingUser(user: User) {
-    // await this.mailService.sendMail({
-    this.mailService.sendMail({
-      from: { name: this.name, address: this.from },
+    // await this._mailService.sendMail({
+    this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
       to: user.email,
       subject: "",
       template: "user-updation",
@@ -210,6 +200,66 @@ export class MailService {
         subject: "",
         header: "",
         firstName: user.firstName,
+      },
+    });
+  }
+  async sendOfferConfirmation(buyer: User, seller: User, offer: Offer, product: Product) {
+    const subject = `Got a new offer from Pet Attix!`;
+    this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
+      to: seller.email,
+      subject,
+      template: "offer-sending", // must match offer-sending.pug
+      context: {
+        subject,
+        header: "You received a new offer!",
+        buyerFirstName: buyer.firstName,
+        buyerLastName: buyer.lastName,
+        sellerFirstName: seller.firstName,
+        sellerLastName: seller.lastName,
+        productName: product.product_name,
+        sellingPrice: product.selling_price, // added this
+        offerPrice: offer.price,
+      },
+    });
+  }
+  async acceptOfferConfirmation(buyer: User, seller: User, offer: Offer, product: Product) {
+    const subject = `Offer has been accepted by seller from Pet Attix!`;
+    this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
+      to: buyer.email,
+      subject,
+      template: "offer-accepting", // must match offer-sending.pug
+      context: {
+        subject,
+        header: "",
+        buyerFirstName: buyer.firstName,
+        buyerLastName: buyer.lastName,
+        sellerFirstName: seller.firstName,
+        sellerLastName: seller.lastName,
+        productName: product.product_name,
+        sellingPrice: product.selling_price, // added this
+        offerPrice: offer.price,
+      },
+    });
+  }
+  async offerRejection(buyer: User, seller: User, offer: Offer, product: Product) {
+    const subject = `Offer has been accepted by seller from Pet Attix!`;
+    this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
+      to: buyer.email,
+      subject,
+      template: "offer-rejected", // must match offer-sending.pug
+      context: {
+        subject,
+        header: "",
+        buyerFirstName: buyer.firstName,
+        buyerLastName: buyer.lastName,
+        sellerFirstName: seller.firstName,
+        sellerLastName: seller.lastName,
+        productName: product.product_name,
+        sellingPrice: product.selling_price, // added this
+        offerPrice: offer.price,
       },
     });
   }
