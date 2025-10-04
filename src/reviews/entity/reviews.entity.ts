@@ -34,10 +34,15 @@ export class Reviews {
   @Column()
   rating: number;
 
+  // @ManyToOne(() => User, (user) => user.reviews)
+  // @JoinColumn({ name: "user_id" })
+  // user: User;
+
   @ManyToOne(() => User, (user) => user.reviews)
   @JoinColumn({ name: "user_id" })
   user: User;
+
   @ManyToOne(() => User, (user) => user.reviews)
-  @JoinColumn({ name: "user_id" })
+  @JoinColumn({ name: "reviewer_id" }) // <-- different column
   reviewer: User;
 }
