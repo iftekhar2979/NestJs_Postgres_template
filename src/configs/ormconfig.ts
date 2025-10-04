@@ -38,8 +38,8 @@ export function createOrmConfig(): DataSourceOptions & TypeOrmModuleOptions {
       type: redisStore,
       options: {
         socket: {
-          host: "localhost",
-          port: 6379,
+          host: configService.get<string>("REDIS_IP"),
+          port: configService.get<string>("REDIS_PORT"),
         },
       },
     },
