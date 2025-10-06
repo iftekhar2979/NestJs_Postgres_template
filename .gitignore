@@ -5,12 +5,11 @@
 /public/uploads
 # files
 # NOTE: Un-comment this in real projects
-# .env*
+.env*
 
-
+# .env
 .env.stage.dev
 .env.stage.test
-
 # Logs
 logs
 *.log

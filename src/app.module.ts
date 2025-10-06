@@ -69,7 +69,7 @@ import { SettingService } from "./setting/setting.service";
       store: redisStore,
       prefix: "",
       host: process.env.REDIS_IP || "localhost", // Use environment variable or default to localhost
-      port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379, // Use environment variable or default to 6379
+      port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6378, // Use environment variable or default to 6379
       ttl: 600,
       max: 100,
     }),
@@ -77,7 +77,7 @@ import { SettingService } from "./setting/setting.service";
     BullModule.forRoot({
       redis: {
         host: process.env.REDIS_IP || "localhost", // Use environment variable for Redis connection
-        port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379, // Default Redis port
+        port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6378, // Default Redis port
       },
     }),
     BullModule.registerQueue({
@@ -85,7 +85,7 @@ import { SettingService } from "./setting/setting.service";
     }),
 
     ConfigModule.forRoot({
-      envFilePath: [`.env.stage.dev`],
+      // envFilePath: [`.env.stage.dev`],
       isGlobal: true,
       validationSchema: envSchema,
       // validationOptions: { allowUnknown: false, abortEarly: true },
