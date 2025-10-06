@@ -10,6 +10,11 @@ export const GetUser = createParamDecorator((data: unknown, ctx: ExecutionContex
   // req.user.password = undefined;
   return req.user;
 });
+export const GetUserInformation = createParamDecorator((data: unknown, ctx: ExecutionContext): User => {
+  const req = ctx.switchToHttp().getRequest();
+  // req.user.password = undefined;
+  return req.userInfo;
+});
 export const GetReceiver = createParamDecorator((data: unknown, ctx: ExecutionContext): User => {
   const req = ctx.switchToHttp().getRequest();
   // req.user.password = undefined;
