@@ -569,8 +569,8 @@ export class ProductsService {
     }
     // Check if the product has been favorited by the user
     const isFavorite = product.favorites.some((favorite) => favorite.user.id === userId);
-    const productImage = await this._productImageRepository.find({ where: { id: product.id } });
-    product.images = productImage;
+    // const productImage = await this._productImageRepository.find({ where: { id: product.id } });
+    // product.images = productImage;
     delete product.favorites;
 
     // Return product with favorite status (true or false) and associated images
