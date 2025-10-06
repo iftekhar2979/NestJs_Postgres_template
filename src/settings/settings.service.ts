@@ -14,7 +14,14 @@ export class SettingsService {
   async getSettingByKey(key: string): Promise<Setting> {
     const setting = await this._settingsRepo.findOne({ where: { key } });
     if (!setting) throw new NotFoundException(`Setting '${key}' not found`);
+
     return setting;
+  }
+  async getRawSettingKey(key: string): Promise<string> {
+    const setting = await this._settingsRepo.findOne({ where: { key } });
+    if (!setting) throw new NotFoundException(`Setting '${key}' not found`);
+    // console.log(setting.content);
+    return setting.content;
   }
 
   async updateSetting(key: string, content: string): Promise<Setting> {
