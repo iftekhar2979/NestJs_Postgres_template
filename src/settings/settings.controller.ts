@@ -6,7 +6,14 @@ import { unescapeHtml } from "src/utils/unScapeHtml";
 @Controller("settings")
 export class SettingsController {
   constructor(private readonly _settingsService: SettingsService) {}
-
+  @Get("instructions")
+  @Render("instruction")
+  getInstruction() {
+    return {
+      title: "Instructions",
+      content: "This is a static instruction page.",
+    };
+  }
   @Get()
   getAll() {
     return this._settingsService.getAll();
