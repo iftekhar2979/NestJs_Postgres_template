@@ -40,6 +40,7 @@ async function bootstrap() {
   const seederService = app.get(SeederService);
   await seederService.seedAdminUser();
   await seederService.seedSettings();
+  await seederService.seedCategories();
   app.setGlobalPrefix("/api");
 
   app.enableVersioning({
@@ -172,6 +173,7 @@ async function bootstrap() {
   // expressSession(app);
 
   const port = configService.get<string>("PORT") || 3000;
+
   await app.listen(port, () => {
     console.log("Server started on port: " + port);
   });
