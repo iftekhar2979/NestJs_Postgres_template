@@ -2,28 +2,24 @@ import { ApiProperty } from "@nestjs/swagger";
 import { Exclude } from "class-transformer";
 import {
   Column,
-  CreateDateColumn, 
+  CreateDateColumn,
   DeleteDateColumn,
   Entity,
-  JoinColumn,
   OneToMany,
-  OneToOne,
   PrimaryGeneratedColumn,
-  UpdateDateColumn, 
+  UpdateDateColumn,
 } from "typeorm";
 import { UserRoles } from "../enums/role.enum";
 import { Product } from "src/products/entities/products.entity";
 import { Favorite } from "src/favourites/entities/favourite.entity";
 import { ProductBoosts } from "src/product-boost/entities/product-boost.entity";
-import { UserBehaviour } from "src/bull/processors/BehaviourQueue";
 import { UserBehaviours } from "src/user-behaviour/entities/userBehaviour.entity";
 import { Reviews } from "src/reviews/entity/reviews.entity";
 // import { Verification } from "./verification.entity";
 
-
 export enum USERSTATUS {
-VERIFIED = 'verified',
-NOT_VERIFIED = 'not_verified'
+  VERIFIED = "verified",
+  NOT_VERIFIED = "not_verified",
 }
 /**
  * It describes the schema for user table in database.
@@ -64,13 +60,13 @@ export class User {
   @Column({ unique: true, length: 100 })
   @ApiProperty()
   email: string;
-  @Column({ type: "varchar",  nullable: true })
+  @Column({ type: "varchar", nullable: true })
   @ApiProperty()
   image: string;
-  @Column({ type: "varchar",  nullable: true ,default:'not_verified'})
+  @Column({ type: "varchar", nullable: true, default: "not_verified" })
   @ApiProperty()
   status: USERSTATUS.NOT_VERIFIED;
-  @Column({ type: "int",  default: 0,})
+  @Column({ type: "int", default: 0 })
   @ApiProperty()
   rating: 0;
   /**
@@ -80,9 +76,11 @@ export class User {
   @Exclude({ toPlainOnly: true })
   password: string;
 
-  @Column({ nullable: true ,type:'varchar'})
+  @Column({ nullable: true, type: "varchar" })
   address: string;
-  @Column({ nullable: true ,type:'varchar'})
+  @Column({ nullable: true, type: "varchar" })
+  currency: string;
+  @Column({ nullable: true, type: "varchar" })
   phone: string;
 
   /**
@@ -96,9 +94,9 @@ export class User {
   })
   roles: UserRoles[]; // NOTE: You can change the size to assign multiple roles to a single user.
 
-    @Column({ type: "boolean", default: false })
-    @ApiProperty({ default: false })
-    isActive: boolean;
+  @Column({ type: "boolean", default: false })
+  @ApiProperty({ default: false })
+  isActive: boolean;
 
   @CreateDateColumn()
   @ApiProperty()
@@ -106,7 +104,7 @@ export class User {
 
   /**
    * timestamp for date of user information updation.
-   */ 
+   */
   @UpdateDateColumn()
   @ApiProperty()
   updatedAt: Date;
@@ -122,15 +120,12 @@ export class User {
   products: Product[];
 
   @OneToMany(() => Favorite, (favorite) => favorite.user)
-  favorites: Favorite[]; 
+  favorites: Favorite[];
   @OneToMany(() => UserBehaviours, (behaviour) => behaviour.user)
-  behaviours: UserBehaviours[]; 
+  behaviours: UserBehaviours[];
   @OneToMany(() => Reviews, (reviews) => reviews.user)
-  reviews: UserBehaviours[]; 
+  reviews: UserBehaviours[];
 
   @OneToMany(() => ProductBoosts, (boost) => boost.user)
   boosts: ProductBoosts[];
-
-
 }
- 

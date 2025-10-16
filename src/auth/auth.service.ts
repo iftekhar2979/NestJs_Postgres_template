@@ -85,7 +85,13 @@ export class AuthService {
       });
       const otp = await this._otpService.createOtp(user.id, OtpType.REGISTRATION);
       try {
-        await this._walletRepo.insert({ user_id: user.id, balance: 0.0, version: 1, user: user });
+        await this._walletRepo.insert({
+          user_id: user.id,
+          balance: 0.0,
+          version: 1,
+          user: user,
+          currency: createUserDto.currency,
+        });
         // console.log(wal)
       } catch (err) {
         console.log(err);

@@ -1,16 +1,12 @@
-import {
-  Injectable,
-  ExecutionContext,
-  UnauthorizedException
-} from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { UserService } from 'src/user/user.service';
+import { Injectable, ExecutionContext, UnauthorizedException } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { UserService } from "src/user/user.service";
 
 @Injectable()
 export class JwtAuthenticationGuard {
   constructor(
     private readonly jwtService: JwtService, // Inject JwtService
-    private readonly userService: UserService, // Inject UserService
+    private readonly userService: UserService // Inject UserService
     // @Inject(CACHE_MANAGER) private cacheManager: Cache
     //  private cacheManager: Cache
   ) {}
@@ -18,29 +14,27 @@ export class JwtAuthenticationGuard {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
-    console.log(token)
+    console.log(token);
     if (!token) {
-      throw new UnauthorizedException(
-        'You are not authorized to access this resource!',
-      );
+      throw new UnauthorizedException("You are not authorized to access this resource!");
     }
     try {
       const payload = await this.jwtService.verifyAsync(token);
+      // console.log(payload);
       const user = await this.userService.getUserById(payload.id);
       if (!user) {
-        throw new Error('User is Not Available!');
+        throw new Error("User is Not Available!");
       }
       if (payload.id !== user.id.toString()) {
-        throw new Error(
-          'You are not authorized to access this resource!',
-        );
+        throw new Error("You are not authorized to access this resource!");
       }
       if (user.deletedAt) {
-        throw new Error('User is Not Available!');
+        throw new Error("User is Not Available!");
       }
-
+      // console.log(user);
+      payload.currency = user.currency;
       request.user = payload; // Attach user data to the request
-      request.userInfo=user
+      request.userInfo = user;
       return true;
     } catch (error) {
       console.log(error);
@@ -49,10 +43,10 @@ export class JwtAuthenticationGuard {
   }
 
   private extractTokenFromHeader(request: any): string | null {
-    const bearerToken = request.headers['authorization'];
+    const bearerToken = request.headers["authorization"];
     console.log("Bearer Token :", bearerToken);
-    if (bearerToken && bearerToken.startsWith('Bearer ')) {
-      return bearerToken.split(' ')[1];
+    if (bearerToken && bearerToken.startsWith("Bearer ")) {
+      return bearerToken.split(" ")[1];
     }
     return null;
   }

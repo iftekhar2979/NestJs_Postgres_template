@@ -68,11 +68,9 @@ export class TransectionsService {
         transection_type,
       });
     }
-
     if (status) {
       qb.andWhere("transection.status = :status", { status });
     }
-
     const [transactions, total] = await qb.getManyAndCount();
 
     return {

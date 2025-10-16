@@ -11,6 +11,7 @@ import { Wallets } from "src/wallets/entity/wallets.entity";
 import { BullModule } from "@nestjs/bull";
 import { UserBehaviourModule } from "src/user-behaviour/user-behaviour.module";
 import { Transections } from "src/transections/entity/transections.entity";
+import { CurrencyConverterModule } from "src/currency-converter/currency-converter.module";
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { Transections } from "src/transections/entity/transections.entity";
     UserBehaviourModule,
     NotificationsModule,
     BullModule.registerQueue({ name: "product" }),
+    CurrencyConverterModule,
   ],
 
   // BullModule.registerQueue({name:"behaviour"})],

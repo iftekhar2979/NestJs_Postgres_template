@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { DataSource, Repository } from "typeorm";
 import { Wallets } from "./entity/wallets.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import { User } from "src/user/entities/user.entity";
 import { Transections } from "src/transections/entity/transections.entity";
 import { TransectionType } from "src/transections/enums/transectionTypes";
 import { PaymentStatus } from "src/orders/enums/orderStatus";
@@ -16,11 +15,11 @@ import { StripeService } from "src/stripe/stripe.service";
 export class WalletsService {
   constructor(
     // private stripe: Stripe,
-    private readonly dataSource: DataSource,
-    @InjectRepository(Wallets) private readonly walletRepository: Repository<Wallets>,
-    @InjectRepository(Transections) private readonly transectionRepository: Repository<Transections>,
-    @InjectLogger() private readonly logger: Logger,
-    private readonly stripeService: StripeService
+    private readonly _dataSource: DataSource,
+    @InjectRepository(Wallets) private readonly _walletRepository: Repository<Wallets>,
+    @InjectRepository(Transections) private readonly _transectionRepository: Repository<Transections>,
+    @InjectLogger() private readonly _logger: Logger,
+    private readonly _stripeService: StripeService
   ) {}
 
   // Wallet Recharge Service
@@ -29,35 +28,37 @@ export class WalletsService {
     amount,
     paymentMethod,
     paymentId,
-    user,
   }: {
     userId: string;
     amount: number;
     paymentMethod: string;
     paymentId: string;
-    user: User;
   }) {
     if (amount <= 0) {
       throw new BadRequestException("Amount must be greater than zero");
     }
 
-    // const wallet = await this.walletRepository.insert({
-    //   balance:0,
-    //   version:1,
-    //   user:user
-    // })
-    // const paymentInfo = await this.stripeService.getPaymentIntent(paymentId)
+    const transection = await this._transectionRepository.findOne({
+      where: {
+        user: {
+          id: userId,
+        },
+        paymentId: paymentId,
+      },
+    });
+    if (transection) {
+      throw new BadRequestException("Transection already exist with the payment Id!");
+    }
+    const paymentInfo = await this._stripeService.getPaymentIntent(paymentId);
 
-    // if(paymentInfo.amount_received !== amount){
-    //   throw new BadGatewayException("Payment Intent and amount is not correct")
-    // }
-
-    // console.log(paymentIntent)
+    if (paymentInfo.amount_received !== amount * 100) {
+      throw new BadRequestException("Payment is not verified!");
+    }
     // Start a transaction to ensure data integrity
-    const queryRunner = this.walletRepository.manager.connection.createQueryRunner();
+    const queryRunner = this._walletRepository.manager.connection.createQueryRunner();
     await queryRunner.startTransaction();
     try {
-      const transectionExist = await this.transectionRepository.findOne({ where: { paymentId } });
+      const transectionExist = await this._transectionRepository.findOne({ where: { paymentId } });
       if (transectionExist) {
         throw new BadRequestException("Payment already received with that payment Id");
       }
@@ -98,11 +99,10 @@ export class WalletsService {
 
   async getWalletByUserId(userId: string): Promise<ResponseInterface<Wallets>> {
     // console.log(userId)
-    const wallet = await this.walletRepository.findOne({ where: { user: { id: userId } } });
-    // const bul = await this.bullQueue.add('Added',wallet)
-    console.log(wallet);
+    const wallet = await this._walletRepository.findOne({ where: { user: { id: userId } } });
+    // const bul = await this._bullQueue.add('Added',wallet)
     // console.log(wallet)
-    // this.logger.error("Balance detect",wallet.balance)
+    // this._logger.error("Balance detect",wallet.balance)
     if (!wallet) {
       throw new NotFoundException("Wallet not found");
     }
@@ -114,7 +114,7 @@ export class WalletsService {
       throw new BadRequestException("Amount must be greater than 10");
     }
     // Start a transaction to ensure data integrity
-    const queryRunner = this.walletRepository.manager.connection.createQueryRunner();
+    const queryRunner = this._walletRepository.manager.connection.createQueryRunner();
     await queryRunner.startTransaction();
 
     try {

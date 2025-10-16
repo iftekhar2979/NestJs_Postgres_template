@@ -11,8 +11,8 @@ export class UserBehaviourService {
 
   async createUserBehaviour(data: UserBehaviours) {
     try {
+      console.log("Behaviour", data);
       const behaviour = await this._userBehaviourRepo.insert(data);
-      console.log(behaviour);
       return behaviour;
     } catch (error) {
       console.log(error);
