@@ -28,6 +28,7 @@ export class SeederService {
         lastName: "Admin",
         address: "Nothing",
         phone: "+8801837352979",
+        currency: "GMB",
         email: adminEmail,
         password: adminPassword,
         roles: [UserRoles.ADMIN],

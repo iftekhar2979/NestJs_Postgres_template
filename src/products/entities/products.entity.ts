@@ -140,9 +140,15 @@ export class Product {
   @ManyToOne(() => Offer, (offer) => offer.product, { nullable: true })
   @JoinColumn({ name: "offer_id" })
   offer: Offer; // The related offer for this product
+
+  currency?: string;
 }
 
 export class FavouriteProduct extends Product {
   @ApiProperty({ example: true, description: "Is the product marked as favorite by the current user" })
   is_favorite: boolean;
 }
+
+export const PRODUCT_BOOSTING_COST = 1;
+export const PRODUCT_BOOSTING_DAYS = 3;
+export const DAYS_IN_SECOND = 24 * 60 * 60 * 1000;

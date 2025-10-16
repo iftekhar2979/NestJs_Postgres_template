@@ -54,6 +54,7 @@ import { GeminiModule } from "./gemini/gemini.module";
 import { UserBehaviourModule } from "./user-behaviour/user-behaviour.module";
 import { SettingsModule } from "./settings/settings.module";
 import { SettingService } from "./setting/setting.service";
+import { CurrencyConverterModule } from "./currency-converter/currency-converter.module";
 /**
  * It is the root module for the application in we import all feature modules and configure modules and packages that are common in feature modules. Here we also configure the middlewares.
  *
@@ -152,6 +153,7 @@ import { SettingService } from "./setting/setting.service";
     GeminiModule,
     UserBehaviourModule,
     SettingsModule,
+    CurrencyConverterModule,
   ],
   controllers: [AppController],
   providers: [

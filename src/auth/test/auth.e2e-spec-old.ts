@@ -66,8 +66,9 @@ describe("AuthController (e2e)", () => {
       lastName: "last name",
       email: "test@mail.com",
       password: "Password@123",
-      address:"Dhaka",
-      phone:"+8801837352979"
+      address: "Dhaka",
+      currency: "GBM",
+      phone: "+8801837352979",
     };
 
     it("[404 Not Found] check -- signup route exists", async () => {

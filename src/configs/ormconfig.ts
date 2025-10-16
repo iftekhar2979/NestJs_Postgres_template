@@ -20,7 +20,7 @@ export function createOrmConfig(): DataSourceOptions & TypeOrmModuleOptions {
     password: configService.get<string>("DB_PASSWORD"),
     database: configService.get<string>("DATABASE"),
     entities: [join(__dirname, "..", "**", "**", "*.entity{.ts,.js}")],
-    //   autoLoadEntities: true,
+    // autoLoadEntities: true,
     synchronize: true,
     // dropSchema: true,
     retryAttempts: 1,
