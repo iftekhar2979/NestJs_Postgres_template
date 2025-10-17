@@ -11,6 +11,7 @@ import { ConversationsModule } from "src/conversations/conversations.module";
 import { NotificationsModule } from "src/notifications/notifications.module";
 import { MailModule } from "src/mail/mail.module";
 import { BullModule } from "@nestjs/bull";
+import { CurrencyConverterModule } from "src/currency-converter/currency-converter.module";
 @Module({
   imports: [
     TypeOrmModule.forFeature([Offer]),
@@ -22,6 +23,7 @@ import { BullModule } from "@nestjs/bull";
     ConversationsModule,
     NotificationsModule,
     BullModule.registerQueue({ name: "product" }),
+    CurrencyConverterModule,
   ],
   controllers: [OffersController],
   providers: [OfferService],

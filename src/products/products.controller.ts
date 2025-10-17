@@ -116,7 +116,7 @@ export class ProductsController {
     @GetOptionalFilesDestination() filesDestination: string[]
   ) {
     updateProductDto.images = filesDestination;
-    return this._productsService.updateProduct(id, updateProductDto, user.id);
+    return this._productsService.updateProduct(id, updateProductDto, user.id, user);
   }
   @Put(":id/boosts")
   @UseGuards(JwtAuthenticationGuard)
@@ -146,7 +146,7 @@ export class ProductsController {
     @Param("id", ParseIntPipe) id: number,
     @GetUser() user: User
   ): Promise<ResponseInterface<Product>> {
-    return this._productsService.getProductifFavourites(id, user.id);
+    return this._productsService.getProductifFavourites(id, user.id, user);
   }
   @Delete(":id")
   @UseGuards(JwtAuthenticationGuard)

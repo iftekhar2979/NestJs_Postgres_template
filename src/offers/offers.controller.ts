@@ -20,7 +20,7 @@ export class OffersController {
   @UseGuards(JwtAuthenticationGuard)
   async createOffer(@Body() offer: OfferDto, @GetUser() user: User) {
     const { product_id, price } = offer;
-    return this._offerService.createOffer({ buyer_id: user.id, product_id, price });
+    return this._offerService.createOffer({ buyer_id: user.id, product_id, price }, user);
   }
   @Post(":id/accept")
   @UseGuards(JwtAuthenticationGuard)

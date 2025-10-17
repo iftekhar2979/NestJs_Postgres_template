@@ -24,6 +24,10 @@ export class GetProductsQueryDto {
   @IsOptional()
   @IsString()
   category?: string;
+  @ApiPropertyOptional({ description: "Product category", example: "Phone" })
+  @IsOptional()
+  @IsString()
+  country?: string;
   @ApiPropertyOptional({ description: "My post and others post", example: "own" })
   @IsString()
   type: "own" | "global";

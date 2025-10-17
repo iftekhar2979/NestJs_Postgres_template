@@ -3,7 +3,6 @@ import { Conversations } from "./entities/conversations.entity";
 import { Brackets, DataSource, In, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ParticipantsService } from "src/participants/participants.service";
-import { Order } from "src/orders/entities/order.entity";
 import { User } from "src/user/entities/user.entity";
 import { ProductsService } from "src/products/products.service";
 import { UserService } from "src/user/user.service";
@@ -239,7 +238,6 @@ export class ConversationsService {
   }
   async getAllConversations(user_id: string, term: string, page: number, limit: number) {
     try {
-      console.log(term);
       // Calculate skip and take for pagination
       const skip = (page - 1) * limit;
       const take = limit;
