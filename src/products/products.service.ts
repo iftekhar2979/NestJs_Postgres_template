@@ -15,7 +15,7 @@ import {
 } from "./entities/products.entity";
 import { ProductImage } from "./entities/productImage.entity";
 import { CreateProductDto } from "./dto/CreateProductDto.dto";
-import { ProductStatus } from "./enums/status.enum";
+import { defaultCurrency, ProductStatus } from "./enums/status.enum";
 import { GetAdminProductQuery, GetProductsQueryDto } from "./dto/GetProductDto.dto";
 import { Pagination, pagination } from "src/shared/utils/pagination";
 import { UpdateProductDto } from "./dto/updatingProduct.dto";
@@ -100,17 +100,21 @@ export class ProductsService {
     // let productBoostingCost = PRODUCT_BOOSTING_COST;
     const isBoosted = String(createProductDto.is_boosted).toLowerCase() === "true";
     const isNegotiable = String(createProductDto.is_negotiable).toLowerCase() === "true";
-    const sellingPrice = parseFloat(createProductDto.selling_price);
+    let sellingPrice = parseFloat(createProductDto.selling_price);
     const quantity = parseInt(createProductDto.quantity, 10);
 
     if (isNaN(sellingPrice) || isNaN(quantity)) {
       throw new BadRequestException("Invalid numeric values for price or quantity");
     }
-    await this._currencyConverterService.getRates();
     const productBoostingCost = await this._currencyConverterService.convert(
-      "GBP",
+      defaultCurrency,
       user.currency.toUpperCase(),
       PRODUCT_BOOSTING_COST
+    );
+    sellingPrice = await this._currencyConverterService.convert(
+      user.currency.toUpperCase(),
+      defaultCurrency,
+      sellingPrice
     );
     if (isBoosted && wallets.balance <= FeeWithCommision(productBoostingCost)) {
       throw new ForbiddenException(
@@ -283,7 +287,7 @@ export class ProductsService {
     return array;
   }
   async findAllWithFilters(query: GetProductsQueryDto) {
-    const { term, size, category, price, page = "1", limit = "10", userId, user, type } = query;
+    const { term, size, category, price, page = "1", limit = "10", userId, user, type, country } = query;
 
     // console.log(term)
     const where: any = {};
@@ -291,6 +295,9 @@ export class ProductsService {
     // Text Search
     if (term) {
       where.product_name = ILike(`%${term}%`);
+    }
+    if (country) {
+      where.user = { address: ILike(`%${country}%`) };
     }
 
     if (category) {
@@ -339,7 +346,7 @@ export class ProductsService {
     // }
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
-    if (term || category || price || type !== "own") {
+    if ((term || category || price) && type !== "own") {
       this._queue
         .add("user-behaviour", { userId: user.id, search: term, category, price, size })
         .catch((err) => console.error("Failed to queue user-behaviour job:", err));
@@ -365,16 +372,22 @@ export class ProductsService {
     // const productImages = await this._productImageRepository.find({
     //   where: { product_id: In(productIds) },
     // });
-    await this._currencyConverterService.getRates();
+    const protectionFeeExtraCharge = await this._currencyConverterService.convert(
+      user.currency.toUpperCase(),
+      defaultCurrency,
+      0.8
+    );
+
     await Promise.all(
       data.map(async (product) => {
         const price = parseFloat(product.selling_price as unknown as string);
         const convertedPrice = await this._currencyConverterService.convert(
-          "GBP",
+          defaultCurrency,
           user.currency.toUpperCase(),
           price
         );
-        product.selling_price = convertedPrice + FeeWithCommision(price);
+        product.selling_price = convertedPrice;
+        product.buyer_protection = FeeWithCommision(convertedPrice, 10) + protectionFeeExtraCharge;
         product.currency = user.currency.toUpperCase();
         // product.images = productImages?.filter((item) => item.product_id);
       })
@@ -480,7 +493,7 @@ export class ProductsService {
       },
     });
 
-    await this._currencyConverterService.getRates();
+    await this._currencyConverterService.getRates(defaultCurrency);
     // console.log()
     console.log("Cron Job : ", expiredBoostedProducts);
     for (const product of expiredBoostedProducts) {
@@ -494,7 +507,8 @@ export class ProductsService {
   async updateProduct(
     id: number,
     updateDto: UpdateProductDto,
-    user_id: string
+    user_id: string,
+    user: User
   ): Promise<{ message: string; statusCode: number; data: Product }> {
     const product = await this._productRepository.findOne({
       where: { id, user_id, status: ProductStatus.AVAILABLE },
@@ -503,11 +517,17 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException(`Product with id ${id} not found.`);
     }
+    const productSellingPrice = Number(updateDto.selling_price);
 
+    const productPrice = await this._currencyConverterService.convert(
+      user.currency,
+      defaultCurrency,
+      productSellingPrice
+    );
     try {
       Object.assign(product, {
         ...updateDto,
-        selling_price: Number(updateDto.selling_price),
+        selling_price: productPrice,
         quantity: Number(updateDto.quantity),
         is_negotiable: updateDto.is_negotiable === "true",
         images: updateDto.images.length > 0 ? updateDto.images : product.images,
@@ -562,7 +582,7 @@ export class ProductsService {
       console.log(error);
     }
   }
-  async getProductifFavourites(id: number, userId?: string): Promise<any> {
+  async getProductifFavourites(id: number, userId?: string, user?: User): Promise<any> {
     const product = await this.getProduct(id);
     // If the product doesn't exist, throw an exception
     if (!product) {
@@ -582,6 +602,17 @@ export class ProductsService {
     }
     // Check if the product has been favorited by the user
     const isFavorite = product.favorites.some((favorite) => favorite.user.id === userId);
+
+    if (user.currency) {
+      const price = parseFloat(product.selling_price as unknown as string);
+      product.selling_price = await this._currencyConverterService.convert(
+        defaultCurrency,
+        user.currency.toUpperCase(),
+        price
+      );
+
+      product.buyer_protection = FeeWithCommision(product.selling_price, 10);
+    }
     // const productImage = await this._productImageRepository.find({ where: { id: product.id } });
     // product.images = productImage;
     delete product.favorites;

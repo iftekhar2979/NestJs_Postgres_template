@@ -15,10 +15,12 @@ import { UserRoles } from "src/user/enums/role.enum";
 import { NotificationsService } from "src/notifications/notifications.service";
 import { User } from "src/user/entities/user.entity";
 import { Product } from "src/products/entities/products.entity";
-import { ProductStatus } from "src/products/enums/status.enum";
+import { defaultCurrency, ProductStatus } from "src/products/enums/status.enum";
 import { Wallets } from "src/wallets/entity/wallets.entity";
 import { Transections } from "src/transections/entity/transections.entity";
 import { TransectionType } from "src/transections/enums/transectionTypes";
+import { FeeWithCommision } from "src/shared/utils/utils";
+import { ConverterService } from "src/currency-converter/currency-converter.service";
 @Injectable()
 export class OrdersService {
   constructor(
@@ -27,7 +29,9 @@ export class OrdersService {
     private readonly _dataSource: DataSource,
     @InjectRepository(Product) private _productRepository: Repository<Product>,
     @InjectRepository(Wallets) private _walletRepository: Repository<Wallets>,
-    @InjectRepository(Transections) private _transectionRespositoy: Repository<Transections>
+    @InjectRepository(Transections) private _transectionRespositoy: Repository<Transections>,
+
+    private readonly _currencyConverterService: ConverterService
   ) {}
   async createOrderFromOffer(offer: Offer): Promise<Order> {
     try {
@@ -49,7 +53,7 @@ export class OrdersService {
         seller: offer.seller,
         seller_id: offer.seller.id,
         product: offer.product,
-        protectionFee: (offer.price * 10) / 100,
+        protectionFee: FeeWithCommision(offer.price, 10) + 0.8,
         total: offer.price,
         accepted_offer: offer,
         offer_id: offer.id,
@@ -104,7 +108,8 @@ export class OrdersService {
   async findByBuyerId(
     buyerId: string,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    user?: User
   ): Promise<ResponseInterface<Order[]>> {
     const [orders, total] = await this._orderRepository.findAndCount({
       where: { buyer_id: buyerId },
@@ -114,6 +119,26 @@ export class OrdersService {
       order: { created_at: "DESC" }, // Optional: newest orders first
     });
 
+    const protectionFeeExtraCharge = await this._currencyConverterService.convert(
+      user.currency.toUpperCase(),
+      defaultCurrency,
+      0.8
+    );
+    await Promise.all(
+      orders.map(async (order) => {
+        const price = parseFloat(order.total as unknown as string);
+        const convertedPrice = await this._currencyConverterService.convert(
+          defaultCurrency,
+          user.currency.toUpperCase(),
+          price
+        );
+        order.product.selling_price =
+          convertedPrice + FeeWithCommision(convertedPrice, 10) + protectionFeeExtraCharge;
+        // product.buyer_protection = FeeWithCommision(convertedPrice, 10) + protectionFeeExtraCharge;
+        // product.currency = user.currency.toUpperCase();
+        // product.images = productImages?.filter((item) => item.product_id);
+      })
+    );
     return {
       message: "Orders retrieved successfully!",
       status: "success",
@@ -146,7 +171,8 @@ export class OrdersService {
   async findBySellerId(
     sellerId: string,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    user?: User
   ): Promise<ResponseInterface<Order[]>> {
     console.log(sellerId);
     const [orders, total] = await this._orderRepository.findAndCount({
@@ -156,9 +182,22 @@ export class OrdersService {
       take: limit,
       order: { created_at: "DESC" },
     });
-    console.log(orders);
     // orsers
 
+    await Promise.all(
+      orders.map(async (order) => {
+        const price = parseFloat(order.total as unknown as string);
+        const convertedPrice = await this._currencyConverterService.convert(
+          defaultCurrency,
+          user.currency.toUpperCase(),
+          price
+        );
+        order.product.selling_price = convertedPrice;
+        // product.buyer_protection = FeeWithCommision(convertedPrice, 10) + protectionFeeExtraCharge;
+        // product.currency = user.currency.toUpperCase();
+        // product.images = productImages?.filter((item) => item.product_id);
+      })
+    );
     return {
       message: "Orders retrieved successfully!",
       status: "success",

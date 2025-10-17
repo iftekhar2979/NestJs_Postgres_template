@@ -16,6 +16,9 @@ import { MailService } from "src/mail/mail.service";
 import { UserService } from "src/user/user.service";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
+import { ConverterService } from "src/currency-converter/currency-converter.service";
+import { defaultCurrency } from "src/products/enums/status.enum";
+import { User } from "src/user/entities/user.entity";
 
 @Injectable()
 export class OfferService {
@@ -28,10 +31,11 @@ export class OfferService {
     private readonly _notificationService: NotificationsService,
     private readonly _mailService: MailService,
     private readonly _userService: UserService,
+    private readonly _currencyConverterService: ConverterService,
     @InjectQueue("product") private readonly _queue: Queue
   ) {}
 
-  async createOffer(payload: SendOfferDto): Promise<ResponseInterface<Offer>> {
+  async createOffer(payload: SendOfferDto, user: User): Promise<ResponseInterface<Offer>> {
     const { buyer_id, product_id, price } = payload;
 
     const existingOffer = await this._offerRepo.count({
@@ -42,7 +46,7 @@ export class OfferService {
       },
     });
     if (existingOffer >= 3) {
-      throw new BadRequestException(`Your ${existingOffer} Existing Offer is Pending .`);
+      throw new BadRequestException(`Your ${existingOffer} existing offer is pending .`);
     }
 
     const userInfo = await this._userService.getUserById(buyer_id);
@@ -50,27 +54,41 @@ export class OfferService {
 
     // console.log(product);
     if (!product) {
-      throw new NotFoundException("Product not found");
+      throw new NotFoundException("product not found");
     }
 
     if (product.user_id === buyer_id) {
       throw new BadRequestException("You cannot make an offer on your own product");
     }
+    console.log("oFFFER hERE 1");
 
+    const offeredPrice = await this._currencyConverterService.convert(
+      user.currency.toUpperCase(),
+      defaultCurrency,
+      price
+    );
+
+    const geniune_price = await this._currencyConverterService.convert(
+      defaultCurrency,
+      user.currency.toUpperCase(),
+      price
+    );
     const offer = this._offerRepo.create({
       buyer_id: buyer_id,
       seller_id: product.user_id,
       product_id: product.id,
-      price,
+      price: offeredPrice,
       status: OfferStatus.PENDING,
     });
     await this._offerRepo.save(offer);
+    console.log("oFFFER hERE 2");
     const conversation = await this._coversationService.getOrCreate({
       productId: product.id,
       userIds: [product.user_id, buyer_id],
       offer: offer,
       offerType: OfferStatus.PENDING,
     });
+    console.log("oFFFER hERE 3");
     //  console.log(conversation)
     await this._notificationService.createNotification({
       userId: product.user_id,
@@ -81,16 +99,16 @@ export class OfferService {
       isImportant: true,
       notificationFor: UserRoles.USER,
     });
-
-    // = await this._mailService.sendOfferConfirmation(userInfo, product.user, offer, product);
+    console.log("oFFFER hERE 4");
+    await this._mailService.sendOfferConfirmation(userInfo, product.user, offer, product);
     // await this._queue.add("user-behaviour", {}, { attempts: 10 });
-    await this._queue.add("mail", {
-      user: userInfo,
-      seller: product.user,
-      offer,
-      product,
-      type: "send_offer",
-    });
+    // await this._queue.add("mail", {
+    //   user: userInfo,
+    //   seller: product.user,
+    //   offer,
+    //   product,
+    //   type: "send_offer",
+    // });
 
     console.log("Mail");
     return { message: "Offer sent Successfully!", status: "success", statusCode: 201, data: offer };
@@ -128,7 +146,7 @@ export class OfferService {
     // console.log(offer)
     const conversation = await this._coversationService.getOrCreate({
       productId: product.id,
-      userIds: [product.user_id, offer.seller.id],
+      userIds: [product.user_id, offer.buyer.id],
       offer: offer,
       offerType: OfferStatus.ACCEPTED,
     });

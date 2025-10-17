@@ -70,13 +70,6 @@ export class UpdateProductDto {
   @IsBooleanString()
   is_negotiable?: string;
 
-  @ApiPropertyOptional({ description: "Size", example: "Medium" })
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(10)
-  size?: string;
-
   @ApiPropertyOptional({ description: "Category", example: "Electronics" })
   @IsOptional()
   @IsString()

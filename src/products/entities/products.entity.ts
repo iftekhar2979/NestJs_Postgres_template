@@ -142,6 +142,7 @@ export class Product {
   offer: Offer; // The related offer for this product
 
   currency?: string;
+  buyer_protection?: number;
 }
 
 export class FavouriteProduct extends Product {

@@ -7,7 +7,7 @@ import { DataSource, Repository } from "typeorm";
 import { CreateDeliveryAddressDto } from "./dto/createDelivery.dto";
 import { Product } from "src/products/entities/products.entity";
 import { Wallets } from "src/wallets/entity/wallets.entity";
-import { ProductStatus } from "src/products/enums/status.enum";
+import { defaultCurrency, ProductStatus } from "src/products/enums/status.enum";
 import { User } from "src/user/entities/user.entity";
 import { Order } from "src/orders/entities/order.entity";
 import { OrderStatus } from "src/orders/enums/orderStatus";
@@ -19,6 +19,8 @@ import {
 } from "src/notifications/entities/notifications.entity";
 import { NotificationsService } from "src/notifications/notifications.service";
 import { UserRoles } from "src/user/enums/role.enum";
+import { FeeWithCommision } from "src/shared/utils/utils";
+import { ConverterService } from "src/currency-converter/currency-converter.service";
 
 @Injectable()
 export class DeliveryService {
@@ -31,7 +33,8 @@ export class DeliveryService {
     @InjectRepository(Order) private _orderRepository: Repository<Order>,
     @InjectRepository(Notifications) private _notificationRepository: Repository<Notifications>,
     private readonly _userService: UserService,
-    private readonly _notificationService: NotificationsService
+    private readonly _notificationService: NotificationsService,
+    private readonly _currencyConverterService: ConverterService
   ) {}
   async createDeliveryAddress({
     createDeliveryAddressDto,
@@ -71,14 +74,25 @@ export class DeliveryService {
     if (!wallets) {
       throw new BadRequestException("User wallet not found");
     }
-    const productSellingPrice = Number(product.selling_price);
+    const productPrice = parseFloat(product.selling_price as unknown as string);
+    const productSellingPrice = await this._currencyConverterService.convert(
+      user.currency.toUpperCase(),
+      defaultCurrency,
+      productPrice
+    );
+    const protectionFeeExtraCharge = await this._currencyConverterService.convert(
+      user.currency.toUpperCase(),
+      defaultCurrency,
+      0.8
+    );
     if (isNaN(productSellingPrice)) {
       throw new BadRequestException("Invalid product price");
     }
+    const protectionFee = FeeWithCommision(productSellingPrice, 10) + 0.8;
     // Calculate protection fee (5% of the product price)
-    const protectionFee = (productSellingPrice * 5) / 100;
-    const totalAmount = productSellingPrice + protectionFee;
-    console.log(totalAmount, wallets);
+    const convertedProtectionFee = FeeWithCommision(productSellingPrice, 10) + protectionFeeExtraCharge;
+    const totalAmount = productSellingPrice + convertedProtectionFee;
+
     // Check if buyer has sufficient balance
     if (wallets.balance < totalAmount) {
       throw new BadRequestException("You don't have enough balance to purchase the product.");

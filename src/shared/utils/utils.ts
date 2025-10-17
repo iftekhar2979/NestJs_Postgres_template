@@ -1,3 +1,3 @@
-export function FeeWithCommision(charge: number) {
-  return charge + (charge + 2.9) / 100;
+export function FeeWithCommision(charge: number, percent: number = 10) {
+  return Number(((charge * percent) / 100).toFixed(2));
 }

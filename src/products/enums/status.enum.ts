@@ -7,3 +7,5 @@ export enum ProductStatus {
   REJECTED = "rejected",
   IN_PROGRESS = "in_progress",
 }
+
+export const defaultCurrency = "GBP";
