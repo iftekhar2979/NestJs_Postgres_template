@@ -373,11 +373,12 @@ export class ProductsService {
     //   where: { product_id: In(productIds) },
     // });
     const protectionFeeExtraCharge = await this._currencyConverterService.convert(
-      user.currency.toUpperCase(),
       defaultCurrency,
+      user.currency.toUpperCase(),
       0.8
     );
-
+    console.log(user.currency.toUpperCase(), defaultCurrency);
+    console.log(protectionFeeExtraCharge);
     await Promise.all(
       data.map(async (product) => {
         const price = parseFloat(product.selling_price as unknown as string);
