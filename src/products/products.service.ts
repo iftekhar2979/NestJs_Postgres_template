@@ -606,13 +606,18 @@ export class ProductsService {
 
     if (user.currency) {
       const price = parseFloat(product.selling_price as unknown as string);
+      const protectionFeeExtraCharge = await this._currencyConverterService.convert(
+        defaultCurrency,
+        user.currency.toUpperCase(),
+        0.8
+      );
       product.selling_price = await this._currencyConverterService.convert(
         defaultCurrency,
         user.currency.toUpperCase(),
         price
       );
-
-      product.buyer_protection = FeeWithCommision(product.selling_price, 10);
+      console.log(protectionFeeExtraCharge);
+      product.buyer_protection = FeeWithCommision(product.selling_price, 10) + protectionFeeExtraCharge;
     }
     // const productImage = await this._productImageRepository.find({ where: { id: product.id } });
     // product.images = productImage;
