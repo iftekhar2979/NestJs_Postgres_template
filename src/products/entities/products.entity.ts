@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToOne,
 } from "typeorm";
 import { IsString, IsNumber, IsBoolean, IsPositive, IsInt, Min, MaxLength, MinLength } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
@@ -17,6 +18,7 @@ import { Favorite } from "src/favourites/entities/favourite.entity";
 import { ProductBoosts } from "src/product-boost/entities/product-boost.entity";
 import { Offer } from "src/offers/entities/offer.entity";
 import { Transections } from "src/transections/entity/transections.entity";
+import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
 
 @Entity("products")
 export class Product {
@@ -119,6 +121,25 @@ export class Product {
   @ApiProperty({ description: "Boost end time for the product" })
   @Column({ type: "timestamp", nullable: true })
   boost_end_time: Date;
+  @Column({ type: "decimal", precision: 10, scale: 2, nullable: true })
+  @ApiProperty({ example: "2.49" })
+  weight: number;
+
+  @Column({ type: "decimal", precision: 10, scale: 2, nullable: true })
+  @ApiProperty({ example: "31.5" })
+  length: number;
+
+  @Column({ type: "int", nullable: true })
+  @ApiProperty({ example: "315" })
+  service_point_id: number;
+
+  @Column({ type: "decimal", precision: 10, scale: 2, nullable: true })
+  @ApiProperty({ example: "27.2" })
+  width: number;
+
+  @Column({ type: "decimal", precision: 10, scale: 2, nullable: true })
+  @ApiProperty({ example: "12.7" })
+  height: number;
 
   @ApiProperty({ example: "2025-08-07T12:00:00Z", description: "Creation timestamp" })
   @CreateDateColumn({ type: "timestamp with time zone" })
@@ -140,7 +161,11 @@ export class Product {
   @ManyToOne(() => Offer, (offer) => offer.product, { nullable: true })
   @JoinColumn({ name: "offer_id" })
   offer: Offer; // The related offer for this product
-
+  @OneToOne(() => CollectionAddress, (address) => address.product, {
+    cascade: true, // saves the collectionAddress automatically
+    eager: true, // loads collectionAddress when fetching product
+  })
+  collectionAddress: CollectionAddress;
   currency?: string;
   buyer_protection?: number;
 }
@@ -151,5 +176,6 @@ export class FavouriteProduct extends Product {
 }
 
 export const PRODUCT_BOOSTING_COST = 1;
+export const DELIVERY_PROTECTION_PERCENTAGE = 10;
 export const PRODUCT_BOOSTING_DAYS = 3;
 export const DAYS_IN_SECOND = 24 * 60 * 60 * 1000;
