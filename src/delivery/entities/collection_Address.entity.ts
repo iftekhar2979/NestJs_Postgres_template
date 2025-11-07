@@ -1,62 +1,59 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from "typeorm";
 
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsString, Max, Min } from 'class-validator';
-import { Order } from 'src/orders/entities/order.entity';
-
-@Entity('collection_address')
+import { ApiProperty } from "@nestjs/swagger";
+import { IsString } from "class-validator";
+import { Product } from "src/products/entities/products.entity";
+//       "name": "John Doe",
+//       "company_name": "Bloom & Petal Florists",
+// "email": "emily.thompson@example.co.uk",
+// "telephone": "+447911123456",
+// "address": "221B Baker Street",
+// "house_number": "221B",
+// "address_2": "",
+// "city": "London",
+// "country": "GB",
+// "postal_code": "NW1 6XE",
+@Entity("collection_address")
 export class CollectionAddress {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column('varchar')
-  forename: string;
+  @Column("varchar", { nullable: true })
+  name: string;
 
-  @Column('varchar')
-  surname: string;
+  @Column("varchar", { nullable: true })
+  company_name: string;
 
-  @Column('varchar')
-  emailAddress: string;
+  @Column("varchar")
+  email: string;
 
-  @Column('varchar')
-  companyName: string;
+  @Column("varchar")
+  telephone: string;
 
-  @Column('varchar')
-  addressLineOne: string;
+  @Column("varchar")
+  address: string;
 
-  @Column('varchar')
+  @Column("varchar")
+  house_number: string;
+
+  @Column("varchar")
+  address_2: string;
+  @Column("varchar")
   city: string;
 
-  @Column('varchar')
-  postcode: string;
+  @ApiProperty({ example: "Bangladesh", description: "County" })
+  @IsString()
+  @Column("varchar", { nullable: true })
+  country: string;
+  @ApiProperty({ example: "", description: "Postal code" })
+  @IsString()
+  @Column("varchar", { nullable: true })
+  postal_code: string;
 
-  @Column('varchar')
-  telephoneNumber: string;
-  @ApiProperty({ example: '112', description: 'County Id' })
-   @IsNumber()
-    @Min(1)
-    @Max(300)
-    @Column('int', )
- country_id: number;
-    @ApiProperty({ example: 'US', description: 'County Code' })
-    @Column('varchar',)
-country_code: string;
-    @ApiProperty({ example: 'Bangladesh', description: 'County' })
-    @IsString()
-    @Column('varchar', { nullable: true })
-    country: string;
-  @ManyToOne(() => Order, (order) => order)
-  @JoinColumn({ name: 'order_id' })
-  order: Order; // Link Collection Address to Order
-
- @Column('int',{nullable:true})
-  Width : number;
-  @ApiProperty({ example: 'Width', description: 'Width' })
- @Column('int',{nullable:true})
-  Weight : number;
- @Column('int',{nullable:true})
-  Length : number;
-  @Column('int',{nullable:true})
-  Height : number;
+  // 🧩 One-to-one relation with Product
+  @OneToOne(() => Product, (product) => product.collectionAddress, {
+    onDelete: "CASCADE",
+  })
+  @JoinColumn({ name: "product_id" }) // creates `product_id` FK column
+  product: Product;
 }
- 
