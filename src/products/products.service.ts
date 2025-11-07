@@ -14,7 +14,7 @@ import {
   PRODUCT_BOOSTING_DAYS,
 } from "./entities/products.entity";
 import { ProductImage } from "./entities/productImage.entity";
-import { CreateProductDto } from "./dto/CreateProductDto.dto";
+import { CARRER_TYPE, CreateProductDto } from "./dto/CreateProductDto.dto";
 import { defaultCurrency, ProductStatus } from "./enums/status.enum";
 import { GetAdminProductQuery, GetProductsQueryDto } from "./dto/GetProductDto.dto";
 import { Pagination, pagination } from "src/shared/utils/pagination";
@@ -37,7 +37,9 @@ import { UserBehaviourService } from "src/user-behaviour/user-behaviour.service"
 import { TransectionType } from "src/transections/enums/transectionTypes";
 import { PaymentStatus } from "src/orders/enums/orderStatus";
 import { ConverterService } from "src/currency-converter/currency-converter.service";
-import { FeeWithCommision } from "src/shared/utils/utils";
+import { FeeWithCommision, validateAddress } from "src/shared/utils/utils";
+import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
+import { UserService } from "src/user/user.service";
 // import {Conver}
 @Injectable()
 export class ProductsService {
@@ -55,7 +57,7 @@ export class ProductsService {
     private readonly _walletsRepo: Repository<Wallets>,
     private readonly _notificationService: NotificationsService,
     private readonly _currencyConverterService: ConverterService,
-
+    private readonly _userService: UserService,
     @InjectRepository(Transections) private readonly _transectionRepository: Repository<Transections>
   ) {}
   // async getProductById({product_id,status,}){
@@ -91,129 +93,174 @@ export class ProductsService {
       status,
     });
   }
+
   async create(createProductDto: CreateProductDto, user: User) {
-    const wallets = await this._walletsRepo.findOne({ where: { user_id: user.id } });
-    if (!wallets) {
-      throw new BadRequestException("Your wallet is not active!");
-    }
-    const boostDays = PRODUCT_BOOSTING_DAYS;
-    // let productBoostingCost = PRODUCT_BOOSTING_COST;
-    const isBoosted = String(createProductDto.is_boosted).toLowerCase() === "true";
-    const isNegotiable = String(createProductDto.is_negotiable).toLowerCase() === "true";
-    let sellingPrice = parseFloat(createProductDto.selling_price);
-    const quantity = parseInt(createProductDto.quantity, 10);
-
-    if (isNaN(sellingPrice) || isNaN(quantity)) {
-      throw new BadRequestException("Invalid numeric values for price or quantity");
-    }
-    const productBoostingCost = await this._currencyConverterService.convert(
-      defaultCurrency,
-      user.currency.toUpperCase(),
-      PRODUCT_BOOSTING_COST
-    );
-    sellingPrice = await this._currencyConverterService.convert(
-      user.currency.toUpperCase(),
-      defaultCurrency,
-      sellingPrice
-    );
-    if (isBoosted && wallets.balance <= FeeWithCommision(productBoostingCost)) {
-      throw new ForbiddenException(
-        `You need at least ${FeeWithCommision(productBoostingCost)} ${user.currency} balance to boost a product`
-      );
-    }
-
-    const queryRunner = this._dataSource.createQueryRunner();
-    await queryRunner.startTransaction();
-
     try {
-      // Create product
-      const product = new Product();
-      product.user_id = user.id;
-      product.product_name = createProductDto.product_name;
-      product.selling_price = sellingPrice;
-      product.category = createProductDto.category;
-      product.quantity = quantity;
-      product.description = createProductDto.description;
-      product.condition = createProductDto.condition;
-      product.size = createProductDto.size;
-      product.brand = createProductDto.brand;
-      product.is_negotiable = isNegotiable;
-      product.status = ProductStatus.PENDING;
-      product.is_boosted = isBoosted;
-      product.boost_start_time = isBoosted ? new Date() : null;
-      product.boost_end_time = isBoosted ? new Date(Date.now() + boostDays * DAYS_IN_SECOND) : null;
-
-      const savedProduct = await queryRunner.manager.save(Product, product);
-
-      // Handle boost transaction
-      if (isBoosted) {
-        wallets.balance -= productBoostingCost;
-        wallets.version += 1;
-
-        const transection = new Transections();
-        transection.amount = productBoostingCost;
-        transection.paymentMethod = "Internal";
-        transection.product = product;
-        transection.user = user;
-        transection.user_id = user.id;
-        transection.status = PaymentStatus.COMPLETED;
-        transection.transection_type = TransectionType.BOOST;
-        transection.paymentId = `TSN-${product.id}-${Math.floor(Math.random() * 1000000)}`;
-        transection.product_id = product.id;
-        transection.wallet = wallets;
-        transection.wallet_id = wallets.id;
-
-        await queryRunner.manager.save(Wallets, wallets);
-        await queryRunner.manager.save(Transections, transection);
+      const wallets = await this._walletsRepo.findOne({ where: { user_id: user.id } });
+      const userInfo = await this._userService.getUser(user.id);
+      if (!wallets) {
+        throw new BadRequestException("Your wallet is not active!");
       }
-
-      // Handle images
-      if (Array.isArray(createProductDto.images) && createProductDto.images.length > 0) {
-        const productImages = createProductDto.images.map((imgUrl: string) => {
-          const img = new ProductImage();
-          img.image = imgUrl;
-          img.product_id = savedProduct.id;
-          img.product = savedProduct;
-          return img;
+      const boostDays = PRODUCT_BOOSTING_DAYS;
+      // let productBoostingCost = PRODUCT_BOOSTING_COST;
+      const isBoosted = String(createProductDto.is_boosted).toLowerCase() === "true";
+      const isNegotiable = String(createProductDto.is_negotiable).toLowerCase() === "true";
+      let sellingPrice = parseFloat(createProductDto.selling_price);
+      const quantity = parseInt(createProductDto.quantity, 10);
+      const weight = parseInt(createProductDto.weight, 10);
+      const height = parseInt(createProductDto.height, 10);
+      const width = parseInt(createProductDto.width, 10);
+      const length = parseInt(createProductDto.length, 10);
+      let service_point_id: number = 0;
+      if (createProductDto.carrer_type == CARRER_TYPE.COLLECTION_TYPE) {
+        // this.validateAddress(createProductDto);
+        validateAddress({
+          dto: createProductDto,
+          requiredFields: ["address", "house_number", "city", "country", "postal_code", "company_name"],
         });
-        await queryRunner.manager.save(ProductImage, productImages);
+        if (createProductDto.service_point_id) {
+          throw new BadRequestException("Service point id should not be included!");
+        }
+      } else {
+        if (!createProductDto.service_point_id) {
+          throw new BadRequestException("Service point id should be included!");
+        }
+        service_point_id = parseFloat(createProductDto.service_point_id);
+      }
+      if (isNaN(sellingPrice) || isNaN(quantity)) {
+        throw new BadRequestException("Invalid numeric values for price or quantity!");
       }
 
-      await queryRunner.commitTransaction();
+      const productBoostingCost = await this._currencyConverterService.convert(
+        defaultCurrency,
+        user.currency.toUpperCase(),
+        PRODUCT_BOOSTING_COST
+      );
+      sellingPrice = await this._currencyConverterService.convert(
+        user.currency.toUpperCase(),
+        defaultCurrency,
+        sellingPrice
+      );
+      if (isBoosted && wallets.balance <= FeeWithCommision(productBoostingCost)) {
+        throw new ForbiddenException(
+          `You need at least ${FeeWithCommision(productBoostingCost)} ${user.currency} balance to boost a product`
+        );
+      }
 
-      // Notification (outside transaction)
-      await this._notificationService.createNotification({
-        userId: user.id,
-        related: NotificationRelated.PRODUCT,
-        msg: `${product.product_name} is listed for your review!`,
-        type: NotificationType.SUCCESS,
-        targetId: savedProduct.id,
-        notificationFor: UserRoles.ADMIN,
-        action: NotificationAction.CREATED,
-        isImportant: true,
-      });
+      const queryRunner = this._dataSource.createQueryRunner();
+      await queryRunner.startTransaction();
 
-      const productWithImages = await this._productRepository.findOne({
-        where: { id: savedProduct.id },
-      });
-      const productImage = await this._productImageRepository.find({
-        where: { product_id: savedProduct.id },
-      });
-      productWithImages.images = productImage;
+      try {
+        // Create product
+        const product = new Product();
+        product.user_id = user.id;
+        product.product_name = createProductDto.product_name;
+        product.selling_price = sellingPrice;
+        product.category = createProductDto.category;
+        product.quantity = quantity;
+        product.description = createProductDto.description;
+        product.condition = createProductDto.condition;
+        product.size = createProductDto.size;
+        product.brand = createProductDto.brand;
+        product.is_negotiable = isNegotiable;
+        product.status = ProductStatus.PENDING;
+        product.is_boosted = isBoosted;
+        product.boost_start_time = isBoosted ? new Date() : null;
+        product.boost_end_time = isBoosted ? new Date(Date.now() + boostDays * DAYS_IN_SECOND) : null;
+        product.weight = weight;
+        product.height = height;
+        product.length = length;
+        product.width = width;
+        product.service_point_id = service_point_id ? service_point_id : null;
+        const savedProduct = await queryRunner.manager.save(Product, product);
 
-      console.log("✅ Product created successfully:", savedProduct.id);
+        // Handle boost transaction
+        if (isBoosted) {
+          wallets.balance -= productBoostingCost;
+          wallets.version += 1;
 
-      return {
-        message: "Product created successfully",
-        data: productWithImages,
-        statusCode: 201,
-      };
+          const transection = new Transections();
+          transection.amount = productBoostingCost;
+          transection.paymentMethod = "Internal";
+          transection.product = product;
+          transection.user = user;
+          transection.user_id = user.id;
+          transection.status = PaymentStatus.COMPLETED;
+          transection.transection_type = TransectionType.BOOST;
+          transection.paymentId = `TSN-${product.id}-${Math.floor(Math.random() * 1000000)}`;
+          transection.product_id = product.id;
+          transection.wallet = wallets;
+          transection.wallet_id = wallets.id;
+
+          await queryRunner.manager.save(Wallets, wallets);
+          await queryRunner.manager.save(Transections, transection);
+        }
+        if (createProductDto.carrer_type == CARRER_TYPE.COLLECTION_TYPE) {
+          const productCollection = new CollectionAddress();
+          productCollection.name = `${userInfo.firstName} ${userInfo.lastName}`;
+          productCollection.email = userInfo.email;
+          productCollection.city = createProductDto.city;
+          productCollection.address = createProductDto.address;
+          productCollection.address_2 = createProductDto.address_2;
+          productCollection.telephone = userInfo.phone;
+          productCollection.country = createProductDto.country;
+          productCollection.company_name = createProductDto.company_name;
+          productCollection.house_number = createProductDto.house_number;
+          productCollection.postal_code = createProductDto.postal_code;
+          productCollection.product = savedProduct;
+          // productCollection.
+          await queryRunner.manager.save(CollectionAddress, productCollection);
+        }
+        // Handle images
+        if (Array.isArray(createProductDto.images) && createProductDto.images.length > 0) {
+          const productImages = createProductDto.images.map((imgUrl: string) => {
+            const img = new ProductImage();
+            img.image = imgUrl;
+            img.product_id = savedProduct.id;
+            img.product = savedProduct;
+            return img;
+          });
+          await queryRunner.manager.save(ProductImage, productImages);
+        }
+
+        await queryRunner.commitTransaction();
+
+        // Notification (outside transaction)
+        await this._notificationService.createNotification({
+          userId: user.id,
+          related: NotificationRelated.PRODUCT,
+          msg: `${product.product_name} is listed for your review!`,
+          type: NotificationType.SUCCESS,
+          targetId: savedProduct.id,
+          notificationFor: UserRoles.ADMIN,
+          action: NotificationAction.CREATED,
+          isImportant: true,
+        });
+
+        const productWithImages = await this._productRepository.findOne({
+          where: { id: savedProduct.id },
+        });
+        const productImage = await this._productImageRepository.find({
+          where: { product_id: savedProduct.id },
+        });
+        productWithImages.images = productImage;
+
+        console.log("✅ Product created successfully:", savedProduct.id);
+
+        return {
+          message: "Product created successfully",
+          data: productWithImages,
+          statusCode: 201,
+        };
+      } catch (error) {
+        await queryRunner.rollbackTransaction();
+        console.error("❌ Error creating product:", error.message, error.stack);
+        throw new BadRequestException(error.message || "Error occurred while creating the product");
+      } finally {
+        await queryRunner.release();
+      }
     } catch (error) {
-      await queryRunner.rollbackTransaction();
-      console.error("❌ Error creating product:", error.message, error.stack);
-      throw new BadRequestException(error.message || "Error occurred while creating the product");
-    } finally {
-      await queryRunner.release();
+      throw new BadRequestException(error.message);
     }
   }
   async findAll(
@@ -407,7 +454,6 @@ export class ProductsService {
     };
   }
   async boostProduct({ productId, user }: { productId: number; user: User }) {
-    console.log(user);
     const product = await this.getProduct(productId); // Assume this fetches the product
     const wallets = await this._walletsRepo.findOne({ where: { user_id: user.id } });
 
