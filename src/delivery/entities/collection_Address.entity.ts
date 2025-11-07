@@ -54,6 +54,6 @@ export class CollectionAddress {
   @OneToOne(() => Product, (product) => product.collectionAddress, {
     onDelete: "CASCADE",
   })
-  @JoinColumn({ name: "product_id" }) // creates `product_id` FK column
+  @JoinColumn({ name: "product_id" }) // FK column in collection_address table
   product: Product;
 }
