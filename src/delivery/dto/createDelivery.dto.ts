@@ -1,55 +1,56 @@
-import { IsString, IsNumber, Min, Max, IsOptional, MinLength, MaxLength } from "class-validator";
+import { IsString, IsNumber, Min, Max, IsOptional, IsEnum } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
+import { CARRER_TYPE } from "src/products/dto/CreateProductDto.dto";
 
 export class CreateDeliveryAddressDto {
-  @ApiProperty({ example: "Company Inc.", description: "Company Name" })
+  @ApiProperty({
+    description: "Career type should be either 'service_point' or 'collection_address'",
+    example: CARRER_TYPE.SERVICE_TYPE,
+    enum: CARRER_TYPE,
+  })
+  @IsEnum(CARRER_TYPE, {
+    message: "career_type must be either 'service_point' or 'collection_address'",
+  })
+  carrer_type: CARRER_TYPE;
+  @ApiProperty({ example: "221B Baker Street" })
   @IsString()
-  @MinLength(2, { message: "Company name must be at least 2 characters long" })
-  @MaxLength(60, { message: "Company name must be less than or equal to 100 characters" })
-  companyName: string;
+  address?: string;
 
-  @ApiProperty({ example: "123 Main St", description: "Address Line One" })
+  @ApiProperty({ example: "221B" })
   @IsString()
-  @MinLength(5, { message: "Address Line One must be at least 5 characters long" })
-  @MaxLength(64, { message: "Address Line One must be less than or equal to 200 characters" })
-  addressLineOne: string;
+  @IsOptional()
+  house_number?: string;
 
-  @ApiProperty({ example: "City", description: "City" })
-  @IsString()
-  @MinLength(2, { message: "City name must be at least 2 characters long" })
-  @MaxLength(100, { message: "City name must be less than or equal to 100 characters" })
-  city: string;
-
-  @ApiProperty({ example: "12345", description: "Postcode" })
-  @IsString()
-  @MinLength(3, { message: "Postcode must be at least 5 characters long" })
-  @MaxLength(10, { message: "Postcode must be less than or equal to 10 characters" })
-  postcode: string;
-
-  @ApiProperty({ example: "1234567890", description: "Telephone Number" })
-  @IsString()
-  @MinLength(10, { message: "Telephone number must be at least 10 characters long" })
-  @MaxLength(20, { message: "Telephone number must be less than or equal to 15 characters" })
-  telephoneNumber: string;
-
-  @ApiProperty({ example: 112, description: "County Id" })
-  @IsNumber()
-  @Min(1, { message: "Country ID must be greater than or equal to 1" })
-  @Max(300, { message: "Country ID must be less than or equal to 300" })
-  country_id: number;
-
-  @ApiProperty({ example: "US", description: "County Code" })
-  @IsString()
-  @MinLength(2, { message: "Country code must be at least 2 characters long" })
-  @MaxLength(3, { message: "Country code must be less than or equal to 3 characters" })
-  country_code: string;
-
-  @ApiProperty({ example: "Bangladesh", description: "Country" })
+  @ApiProperty({ example: "Apartment 4A", required: false })
   @IsOptional()
   @IsString()
-  @MinLength(3, { message: "Country name must be at least 3 characters long" })
-  @MaxLength(100, { message: "Country name must be less than or equal to 100 characters" })
-  country: string;
+  address_2?: string;
+
+  @ApiProperty({ example: "London" })
+  @IsString()
+  city?: string;
+
+  @ApiProperty({ example: "GB" })
+  @IsString()
+  country?: string;
+
+  @ApiProperty({ example: "NW1 6XE" })
+  @IsString()
+  postal_code?: string;
+
+  @ApiProperty({ example: "Ximera Hrm Ltd." })
+  @IsString()
+  @IsOptional()
+  company_name?: string;
+
+  @ApiProperty({ example: "England", required: false })
+  @IsString()
+  country_state?: string;
+
+  @ApiProperty({ example: "England", required: false })
+  @IsOptional()
+  @IsNumber()
+  service_point_id?: number;
 }
 
 export class CreateCollectionAddressDto extends CreateDeliveryAddressDto {
