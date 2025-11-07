@@ -57,7 +57,7 @@ export class OrdersService {
         total: offer.price,
         accepted_offer: offer,
         offer_id: offer.id,
-        delivery: null,
+        deliveryInfo: null,
         delivery_id: null,
       });
       // console.log("ORDERInfo", order);
