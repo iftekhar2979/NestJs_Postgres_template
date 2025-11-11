@@ -18,7 +18,7 @@ import {
   ApiOperation,
   ApiQuery,
 } from "@nestjs/swagger";
-import { GetFileDestination, GetUser } from "../auth/decorators/get-user.decorator";
+import { GetFileDestination, GetUser, GetUserInformation } from "../auth/decorators/get-user.decorator";
 import { User } from "./entities/user.entity";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { AccountActivatedGuard } from "./guards/account-activation.guard";
@@ -29,6 +29,8 @@ import { multerConfig } from "src/common/multer/multer.config";
 import { JwtAuthenticationGuard } from "src/auth/guards/session-auth.guard";
 import { GetUsersQueryDto } from "./dto/get-user.query.dto";
 import { UpdateUserProfileDto } from "./dto/update-profile.dto";
+import { CreateUserAddressDto } from "./dto/create-user-address.dto";
+import { UserAddressService } from "./userAddress.service";
 
 /**
  * UserController is responsible for handling incoming requests specific to User and returning responses to the client.
@@ -39,7 +41,10 @@ import { UpdateUserProfileDto } from "./dto/update-profile.dto";
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: "In case user is not logged in" })
 export class UserController {
-  constructor(private readonly _userService: UserService) {}
+  constructor(
+    private readonly _userService: UserService,
+    private readonly _userAddressService: UserAddressService
+  ) {}
 
   @Get("all")
   @ApiOperation({ summary: "Get all users with role USER (paginated + searchable)" })
@@ -169,5 +174,20 @@ export class UserController {
       status: "success",
       statuscode: 200,
     };
+  }
+
+  @Patch("drop-off/address")
+  @UseGuards(JwtAuthenticationGuard)
+  async updateUserDropOffAddress(
+    @GetUser() user: User,
+    @GetUserInformation() userInfo: User,
+    @Body() dto: CreateUserAddressDto
+  ) {
+    return await this._userAddressService.createAddress(userInfo, dto);
+  }
+  @Get("drop-off/address")
+  @UseGuards(JwtAuthenticationGuard)
+  async getUserDropOffAddress(@GetUser() user: User) {
+    return await this._userAddressService.findByUserId(user.id);
   }
 }

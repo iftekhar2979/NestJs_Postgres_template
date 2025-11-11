@@ -1,38 +1,38 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsObject, IsOptional, IsPositive, IsString, MaxLength, MinLength } from 'class-validator';
+import { ApiProperty } from "@nestjs/swagger";
+import { IsNumber, IsObject, IsOptional, IsPositive, IsString, MaxLength, MinLength } from "class-validator";
 
 export class CreateShipmentDto {
-  @ApiProperty({example:"Order Id"})
+  @ApiProperty({ example: "Order Id" })
   @IsNumber()
   @IsPositive()
-  order_id: number
-  @ApiProperty({example:"Quote ID"})
+  order_id: number;
+  @ApiProperty({ example: "Quote ID" })
   @IsNumber()
   @IsPositive()
-  QuoteID: number
-  @ApiProperty({example:"Quote ID"})
+  QuoteID: number;
+  @ApiProperty({ example: "Quote ID" })
   @IsNumber()
   @IsPositive()
-  ServiceID: number
-  @ApiProperty({ example: 'SUCCESS', description: 'Status of the shipment' })
+  ServiceID: number;
+  @ApiProperty({ example: "SUCCESS", description: "Status of the shipment" })
   @IsString()
   @IsOptional()
-  Status ?: string;
-  @ApiProperty({ example: 'TP-0445469', description: 'Order reference for the shipment' })
-  @IsString({message: 'Order reference must be a string'})
+  Status?: string;
+  @ApiProperty({ example: "TP-0445469", description: "Order reference for the shipment" })
+  @IsString({ message: "Order reference must be a string" })
   @IsOptional()
-  @MinLength(1, { message: 'Order reference must be at least 1 character long' })
-  @MaxLength(50, { message: 'Order reference must not exceed 50 characters' })
-  orderReference ?: string;
+  @MinLength(1, { message: "Order reference must be at least 1 character long" })
+  @MaxLength(50, { message: "Order reference must not exceed 50 characters" })
+  orderReference?: string;
 
-  @ApiProperty({ example: '[URL STRING]', description: 'Tracking URL for the shipment' })
+  @ApiProperty({ example: "[URL STRING]", description: "Tracking URL for the shipment" })
   @IsString()
   @IsOptional()
-  @MinLength(1, { message: 'Tracking URL must be at least 1 character long' })
-  @MaxLength(255, { message: 'Tracking URL must not exceed 255 characters' })
-  trackingURL ?: string;
+  @MinLength(1, { message: "Tracking URL must be at least 1 character long" })
+  @MaxLength(255, { message: "Tracking URL must not exceed 255 characters" })
+  trackingURL?: string;
 
-  @ApiProperty({ description: 'Order Invoice for the shipment' })
+  @ApiProperty({ description: "Order Invoice for the shipment" })
   @IsObject()
   @IsOptional()
   orderInvoice: {
@@ -41,10 +41,10 @@ export class CreateShipmentDto {
     TotalGross: number;
   };
 
-  @ApiProperty({ description: 'Labels for the shipment' })
+  @ApiProperty({ description: "Labels for the shipment" })
   @IsObject()
   @IsOptional()
-  labels ?: {
+  labels?: {
     LabelRole: string;
     LabelFormat: string;
     AirWaybillReference: string;
@@ -54,11 +54,9 @@ export class CreateShipmentDto {
   @ApiProperty()
   @IsObject()
   @IsOptional()
-  documents ?: {
+  documents?: {
     DocumentType: string;
     Format: string;
     DownloadURL: string;
   }[];
 }
-
-

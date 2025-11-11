@@ -61,7 +61,8 @@ async function bootstrap() {
   // };
   app.useStaticAssets(join(__dirname, "..", "..", "public"));
   app.enableCors({
-    origin: "",
+    origin: ["http://127.0.0.1:5500", "http://localhost:5500"],
+    // credentials: true,
   });
   app.use(cookieParser());
   app.use(compression());
