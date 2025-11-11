@@ -6,6 +6,7 @@ import {
   DeleteDateColumn,
   Entity,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
@@ -15,6 +16,7 @@ import { Favorite } from "src/favourites/entities/favourite.entity";
 import { ProductBoosts } from "src/product-boost/entities/product-boost.entity";
 import { UserBehaviours } from "src/user-behaviour/entities/userBehaviour.entity";
 import { Reviews } from "src/reviews/entity/reviews.entity";
+import { UserAddress } from "./userAddresses.entity";
 // import { Verification } from "./verification.entity";
 
 export enum USERSTATUS {
@@ -69,9 +71,6 @@ export class User {
   @Column({ type: "int", default: 0 })
   @ApiProperty()
   rating: 0;
-  /**
-   * hashed password of user.
-   */
   @Column({ nullable: true })
   @Exclude({ toPlainOnly: true })
   password: string;
@@ -83,16 +82,13 @@ export class User {
   @Column({ nullable: true, type: "varchar" })
   phone: string;
 
-  /**
-   * role of user. default is UserRoles.USER.
-   */
   @Column("enum", { array: true, enum: UserRoles, default: `{${UserRoles.USER}}` })
   @ApiProperty({
     enum: UserRoles,
     default: [UserRoles.USER],
     description: `String array, containing enum values, either ${UserRoles.USER} or ${UserRoles.ADMIN}`,
   })
-  roles: UserRoles[]; // NOTE: You can change the size to assign multiple roles to a single user.
+  roles: UserRoles[];
 
   @Column({ type: "boolean", default: false })
   @ApiProperty({ default: false })
@@ -102,16 +98,10 @@ export class User {
   @ApiProperty()
   createdAt: Date;
 
-  /**
-   * timestamp for date of user information updation.
-   */
   @UpdateDateColumn()
   @ApiProperty()
   updatedAt: Date;
 
-  /**
-   * timestamp for date of user soft-delete
-   */
   @DeleteDateColumn()
   @ApiProperty()
   deletedAt: Date;
@@ -128,4 +118,6 @@ export class User {
 
   @OneToMany(() => ProductBoosts, (boost) => boost.user)
   boosts: ProductBoosts[];
+  @OneToOne(() => UserAddress, (address) => address.user, { cascade: true })
+  addressDetails: UserAddress;
 }
