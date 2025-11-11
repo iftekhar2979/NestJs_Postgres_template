@@ -1,27 +1,26 @@
 import { Injectable, ExecutionContext, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
+import { InjectLogger } from "src/shared/decorators/logger.decorator";
 import { UserService } from "src/user/user.service";
+import { Logger } from "winston";
 
 @Injectable()
 export class JwtAuthenticationGuard {
   constructor(
-    private readonly jwtService: JwtService, // Inject JwtService
-    private readonly userService: UserService // Inject UserService
-    // @Inject(CACHE_MANAGER) private cacheManager: Cache
-    //  private cacheManager: Cache
+    private readonly _jwtService: JwtService, // Inject JwtService
+    private readonly _userService: UserService, // Inject UserService
+    @InjectLogger() private readonly _logger: Logger
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
-    console.log(token);
     if (!token) {
       throw new UnauthorizedException("You are not authorized to access this resource!");
     }
     try {
-      const payload = await this.jwtService.verifyAsync(token);
-      // console.log(payload);
-      const user = await this.userService.getUserById(payload.id);
+      const payload = await this._jwtService.verifyAsync(token);
+      const user = await this._userService.getUserById(payload.id);
       if (!user) {
         throw new Error("User is Not Available!");
       }
@@ -31,9 +30,8 @@ export class JwtAuthenticationGuard {
       if (user.deletedAt) {
         throw new Error("User is Not Available!");
       }
-      // console.log(user);
       payload.currency = user.currency;
-      request.user = payload; // Attach user data to the request
+      request.user = payload;
       request.userInfo = user;
       return true;
     } catch (error) {
@@ -45,6 +43,9 @@ export class JwtAuthenticationGuard {
   private extractTokenFromHeader(request: any): string | null {
     const bearerToken = request.headers["authorization"];
     console.log("Bearer Token :", bearerToken);
+    // console.log("Bearer Token :", request);
+    // this._logger.log(`Request`, request);
+    // console.log(request);
     if (bearerToken && bearerToken.startsWith("Bearer ")) {
       return bearerToken.split(" ")[1];
     }
