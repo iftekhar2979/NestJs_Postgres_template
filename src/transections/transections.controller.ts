@@ -85,6 +85,8 @@ export class TransectionsController {
   }
 
   @Get("earnings")
+  @UseGuards(JwtAuthenticationGuard, RolesGuard)
+  @Roles(UserRoles.ADMIN, UserRoles.USER)
   @ApiQuery({ name: "year", required: true, type: Number, example: 2025 })
   async getMonthlyEarnings(@Query("year") year: number) {
     return this._transectionsService.getMonthlyEarnings(Number(year));
