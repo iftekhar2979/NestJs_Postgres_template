@@ -10,6 +10,8 @@ import { JwtModule } from "@nestjs/jwt";
 import { ConfigModule } from "@nestjs/config";
 import { ConfigService } from "@nestjs/config";
 import { PassportModule } from "@nestjs/passport";
+import { UserAddress } from "./entities/userAddresses.entity";
+import { UserAddressService } from "./userAddress.service";
 /**
  * It is a feature module where we keep the controller, service and other code related to user entity and  we import other modules and configure modules and packages that are being used in this module.
  *
@@ -20,7 +22,7 @@ import { PassportModule } from "@nestjs/passport";
 @Module({
   imports: [
     forwardRef(() => AuthModule),
-    TypeOrmModule.forFeature([User, Verification]),
+    TypeOrmModule.forFeature([User, Verification, UserAddress]),
     MailModule,
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
@@ -37,7 +39,7 @@ import { PassportModule } from "@nestjs/passport";
     }),
   ],
   controllers: [UserController],
-  providers: [UserService],
-  exports: [UserService],
+  providers: [UserService, UserAddressService],
+  exports: [UserService, UserAddressService],
 })
 export class UserModule {}

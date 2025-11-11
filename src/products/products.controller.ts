@@ -62,7 +62,6 @@ export class ProductsController {
     @GetFilesDestination() filesDestination: string[]
   ) {
     createProductDto.images = filesDestination;
-    // if(createProductDto)
     return this._productsService.create(createProductDto, user);
   }
 

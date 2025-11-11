@@ -55,6 +55,7 @@ import { UserBehaviourModule } from "./user-behaviour/user-behaviour.module";
 import { SettingsModule } from "./settings/settings.module";
 import { SettingService } from "./setting/setting.service";
 import { CurrencyConverterModule } from "./currency-converter/currency-converter.module";
+import { SendcloudModule } from './sendcloud/sendcloud.module';
 /**
  * It is the root module for the application in we import all feature modules and configure modules and packages that are common in feature modules. Here we also configure the middlewares.
  *
@@ -63,6 +64,7 @@ import { CurrencyConverterModule } from "./currency-converter/currency-converter
  *      {@link ConfigModule} - enables us to access environment variables application wide.
  *      {@link TypeOrmModule} - it is an ORM and enables easy access to database.
  */
+
 @Module({
   imports: [
     CacheModule.register({
@@ -154,6 +156,7 @@ import { CurrencyConverterModule } from "./currency-converter/currency-converter
     UserBehaviourModule,
     SettingsModule,
     CurrencyConverterModule,
+    SendcloudModule,
   ],
   controllers: [AppController],
   providers: [

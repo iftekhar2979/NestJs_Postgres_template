@@ -2,7 +2,13 @@ import { WebSocketGateway, WebSocketServer, OnGatewayConnection } from "@nestjs/
 import { Server, Socket } from "socket.io";
 import { SocketService } from "./socket.service";
 
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: {
+    origin: ["https://kisdate.merinasib.shop", "http://localhost:5500"],
+    // methods: ["GET", "POST"],
+    // credentials: true,
+  },
+})
 export class SocketGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server;
