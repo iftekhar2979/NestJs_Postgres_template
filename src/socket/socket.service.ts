@@ -49,6 +49,7 @@ export class SocketService {
     try {
       const clientId = socket.id;
       const token = socket.handshake.headers.authorization;
+      console.log(socket.handshake.query);
       //   console.log(socket.handshake.headers);
       console.log("Connected", socket.id);
       if (!token) {
@@ -68,7 +69,7 @@ export class SocketService {
         name: payload.firstName,
         socketID: clientId,
       });
-      // console.log(this.connectedClients)
+
       this.connectedClients.set(clientId, socket);
       socket.on("send-message", (data) => {
         this.handleSendMessage(payload, data, socket);
@@ -82,14 +83,38 @@ export class SocketService {
       socket.on("seen", (data: { receiver_id: string; conversation_id: number }) => {
         this.handleMessageSeen(payload.id, data.receiver_id, data.conversation_id);
       });
+      // console.log(socket["user"]);
+      // when we get a call to start a call
+      const user = socket.handshake.query.user as string;
+      this.connectedUsers.set(user, {
+        name: user,
+        socketID: clientId,
+      });
+      socket.on("offer", ({ to, offer }) => {
+        const socketId = this.connectedUsers.get(to)?.socketID;
+        console.log("Offer sent to:", to, "From", user, "Socket ID:", socketId);
+        socket.to(socketId).emit("offer", { from: socket.id, offer, userId: user });
+      });
+
+      socket.on("offer-answer", ({ to, answer }) => {
+        const socketId = this.connectedUsers.get(to)?.socketID;
+        console.log("Offer answered:", to, "Socket ID:", socketId);
+        socket.to(to).emit("offer-answer", { from: socket.id, answer });
+      });
+
+      socket.on("ice-candidate", ({ to, candidate }) => {
+        const socketId = this.connectedUsers.get(to)?.socketID;
+        console.log("Ice Candidate Exachange:", to, "Socket ID:", socketId);
+        socket.to(to).emit("ice-candidate", { from: socket.id, candidate });
+      });
       // console.log(this.connectedUsers);
       socket.on("disconnect", async () => {
-        await this.userService.updateUserUpdatedTimeAndOfflineStatus({ user_id: payload.id });
-        socket.broadcast.emit(`active-users`, {
-          message: `${payload.firstName} is offline .`,
-          isActive: false,
-          id: payload.id,
-        });
+        // await this.userService.updateUserUpdatedTimeAndOfflineStatus({ user_id: payload.id });
+        // socket.broadcast.emit(`active-users`, {
+        //   message: `${payload.firstName} is offline .`,
+        //   isActive: false,
+        //   id: payload.id,
+        // });
       });
       //   socket.on('call-end', (data) => {
       //     this.handleCallEnd(payload, data, socket);
@@ -177,10 +202,10 @@ export class SocketService {
     socket: Socket
   ): Promise<void> {
     try {
+      console.log("Sending Message Event calll", data);
       if (!data.conversation_id || !data.msg || !payload.id) {
         throw new Error("Invalid message data!");
       }
-      console.log(data);
       const conversation_id = data.conversation_id;
       const { sender, receiver, conversation } = await this.participantService.checkEligablity({
         conversation_id,
@@ -213,6 +238,7 @@ export class SocketService {
       await this.messageRepository.save(message);
       conversation.lastmsg = message;
       await this.conversationRepository.save(conversation);
+      socket.emit(`conversation-${conversation_id}`, message);
     } catch (error) {
       // console.log(error)
       console.error("Error handling send-message:", error.message);
