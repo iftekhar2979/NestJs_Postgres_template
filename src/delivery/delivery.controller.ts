@@ -11,7 +11,7 @@ import { Delivery } from "./entities/delivery.entity";
 @Controller("delivery")
 export class DeliveryController {
   constructor(
-    private readonly _shipmentService: ShipmentService,
+    // private readonly _shipmentService: ShipmentService,
     private readonly _deliveryService: DeliveryService
   ) {}
 
@@ -77,25 +77,27 @@ export class DeliveryController {
       user,
     });
   }
-  // @Post(":productID/collection")
-  // @UseGuards(JwtAuthenticationGuard)
-  // @ApiParam({ name: "productID", type: Number, description: "ID of the read the product" })
-  // @ApiResponse({ status: 200, description: "Product updated successfully", type: Delivery })
-  // async updateCollection(
-  //   @Body() createCollectionAddressDto: CreateCollectionAddressDto,
-  //   @GetUser() user: User,
-  //   @Param("productID") product_id: string
-  // ) {
-  //   if (isNaN(parseFloat(product_id))) {
-  //     throw new BadRequestException("Product id is not valid!");
-  //   }
+  @Post(":productId/payment/:shippingId")
+  @UseGuards(JwtAuthenticationGuard)
+  @ApiParam({ name: "productID", type: Number, description: "ID of the read the product" })
+  @ApiResponse({ status: 200, description: "Product updated successfully", type: Delivery })
+  async makePayment(
+    // @Body() createCollectionAddressDto: CreateCollectionAddressDto,
+    // @GetUser() user: User,
+    @GetUser() user: User,
+    @Param("productId") product_id: string,
+    @Param("shippingId") shipping_id: string
+  ) {
+    if (isNaN(parseFloat(product_id))) {
+      throw new BadRequestException("Product id is not valid!");
+    }
 
-  //   return this._shipmentService.createCollectionAddressAndShipment({
-  //     createCollectionAddressDto,
-  //     product_id: Number(product_id),
-  //     user,
-  //   });
-  // }
+    return this._deliveryService.createParcel({
+      user,
+      productId: parseFloat(product_id),
+      shippingMethodId: parseFloat(shipping_id),
+    });
+  }
   // @Post(":productID/shipment")
   // @UseGuards(JwtAuthenticationGuard)
   // @ApiParam({ name: "productID", type: Number, description: "ID of the read the product" })
