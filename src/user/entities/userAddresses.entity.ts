@@ -20,7 +20,7 @@ export class UserAddress {
   @ApiProperty({ description: "User ID associated with the verification" })
   @IsString()
   user_id: string;
-  @OneToOne(() => User) // Assuming User entity exist
+  @OneToOne(() => User) // Assuming User entity
   @JoinColumn({ name: "user_id" })
   @ApiProperty({ type: () => User })
   user: User;
