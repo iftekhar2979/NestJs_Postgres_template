@@ -201,18 +201,15 @@ export class SendcloudService {
     this._logger.log(`Parcel Url`, this.panelUrl);
     this._logger.log("Parcel Payload", payload);
     try {
-      const rawResponse = await fetch(
-        `https://stoplight.io/mocks/sendcloud/sendcloud-public-api:v2/299107074/parcels`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Basic ${this.auth}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      const rawResponse = await fetch(`${this.panelUrl}/parcels`, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${this.auth}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
       // console.log(rawResponse);
       const response = rawResponse.json();
       if (!rawResponse.ok) {
