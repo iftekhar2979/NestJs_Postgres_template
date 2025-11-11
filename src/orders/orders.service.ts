@@ -113,7 +113,7 @@ export class OrdersService {
   ): Promise<ResponseInterface<Order[]>> {
     const [orders, total] = await this._orderRepository.findAndCount({
       where: { buyer_id: buyerId },
-      relations: ["product", "accepted_offer", "delivery", "buyer", "seller"],
+      relations: ["product", "accepted_offer", "deliveryInfo", "buyer", "seller"],
       skip: (page - 1) * limit,
       take: limit,
       order: { created_at: "DESC" }, // Optional: newest orders first
@@ -177,7 +177,7 @@ export class OrdersService {
     console.log(sellerId);
     const [orders, total] = await this._orderRepository.findAndCount({
       where: { seller: { id: sellerId } },
-      relations: ["product", "accepted_offer", "delivery", "buyer", "seller"],
+      relations: ["product", "accepted_offer", "buyer", "seller"],
       skip: (page - 1) * limit,
       take: limit,
       order: { created_at: "DESC" },
