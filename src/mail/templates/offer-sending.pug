@@ -90,10 +90,10 @@ html(lang="en")
 
       // Body
       .body
-        h3 Hi #{buyerFirstName} #{buyerLastName},
+        h3 Hi #{sellerFirstName} #{sellerLastName},
         p
           | I am 
-          span.highlight #{sellerFirstName} #{sellerLastName}
+          span.highlight #{buyerFirstName} #{buyerLastName}
           | , and I'm excited to offer you a special deal on the following product:
         
         .product-info
@@ -106,8 +106,8 @@ html(lang="en")
 
         p Please log in to your account to accept or reject the offer. We look forward to hearing from you soon!
 
-        .cta
-          a(href=ctaUrl) View Offer
+        //- .cta
+        //-   a(href=ctaUrl) View Offer
 
       // Footer
       .footer
