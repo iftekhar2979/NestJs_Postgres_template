@@ -62,6 +62,7 @@ export const multerS3Config = multerS3({
     callback(null, { fieldName: file.fieldname });
   },
   key: (req, file, callback) => {
+    console.log(req);
     // Get today's date in the required format
     const date = new Date().toISOString().split("T")[0].replace(/-/g, "/");
     const uniqueFileName = `${date}/${file.originalname}-${Date.now()}`;
