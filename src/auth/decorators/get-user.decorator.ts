@@ -54,6 +54,7 @@ export const GetFilesDestination = createParamDecorator((data: unknown, ctx: Exe
 export const GetOptionalFilesDestination = createParamDecorator((data: unknown, ctx: ExecutionContext) => {
   const req = ctx.switchToHttp().getRequest();
   const file = req.files;
+  console.log("Files", req.files);
   if (!file) {
     throw new BadRequestException("File not found in request");
   }

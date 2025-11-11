@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  LoggerService,
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -40,6 +41,8 @@ import { ConverterService } from "src/currency-converter/currency-converter.serv
 import { FeeWithCommision, validateAddress } from "src/shared/utils/utils";
 import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
 import { UserService } from "src/user/user.service";
+import { use } from "passport";
+import { InjectLogger } from "src/shared/decorators/logger.decorator";
 // import {Conver}
 @Injectable()
 export class ProductsService {
@@ -58,7 +61,8 @@ export class ProductsService {
     private readonly _notificationService: NotificationsService,
     private readonly _currencyConverterService: ConverterService,
     private readonly _userService: UserService,
-    @InjectRepository(Transections) private readonly _transectionRepository: Repository<Transections>
+    @InjectRepository(Transections) private readonly _transectionRepository: Repository<Transections>,
+    @InjectLogger() private readonly _logger: LoggerService
   ) {}
   // async getProductById({product_id,status,}){
 
@@ -424,8 +428,7 @@ export class ProductsService {
       user.currency.toUpperCase(),
       0.8
     );
-    console.log(user.currency.toUpperCase(), defaultCurrency);
-    console.log(protectionFeeExtraCharge);
+
     await Promise.all(
       data.map(async (product) => {
         const price = parseFloat(product.selling_price as unknown as string);
@@ -551,53 +554,173 @@ export class ProductsService {
     }
   }
 
+  // async updateProduct(
+  //   id: number,
+  //   updateDto: UpdateProductDto,
+  //   user_id: string,
+  //   user: User
+  // ): Promise<{ message: string; statusCode: number; data: Product }> {
+  //   const product = await this._productRepository.findOne({
+  //     where: { id, user_id, status: ProductStatus.AVAILABLE },
+  //   });
+  //   console.log(updateDto);
+  //   if (!product) {
+  //     throw new NotFoundException(`Product with id ${id} not found.`);
+  //   }
+  //   const productSellingPrice = Number(updateDto.selling_price);
+
+  //   const productPrice = await this._currencyConverterService.convert(
+  //     user.currency,
+  //     defaultCurrency,
+  //     productSellingPrice
+  //   );
+  //   try {
+  //     Object.assign(product, {
+  //       ...updateDto,
+  //       selling_price: productPrice,
+  //       quantity: Number(updateDto.quantity),
+  //       is_negotiable: updateDto.is_negotiable === "true",
+  //       images: updateDto.images.length > 0 ? updateDto.images : product.images,
+  //     });
+  //     // Optional: Replace images if new images are provided
+  //     if (updateDto.images && Array.isArray(updateDto.images) && updateDto.images.length > 0) {
+  //       await this._productImageRepository.delete({ product_id: id });
+
+  //       // Add new images
+  //       product.images = updateDto.images.map((imgUrl: string) => {
+  //         const img = new ProductImage();
+  //         img.image = imgUrl; // assuming images are URLs; if files, handle accordingly
+  //         img.product_id = product.id; // link image to product
+  //         return img;
+  //       });
+  //       await this._productImageRepository.insert(product.images);
+  //     }
+  //     await this._productRepository.save(product);
+  //     return { message: "Product updated successfully", statusCode: 200, data: product };
+  //   } catch (error) {
+  //     console.error("Error updating product:", error);
+  //     throw new BadRequestException("Failed to update product.");
+  //   }
+  // }
+
   async updateProduct(
     id: number,
     updateDto: UpdateProductDto,
     user_id: string,
     user: User
   ): Promise<{ message: string; statusCode: number; data: Product }> {
-    const product = await this._productRepository.findOne({
-      where: { id, user_id, status: ProductStatus.AVAILABLE },
-    });
+    this._logger.log(`update product Dto`, updateDto);
+    return await this._dataSource.transaction(async (manager) => {
+      const productRepo = manager.getRepository(Product);
+      const productImageRepo = manager.getRepository(ProductImage);
+      const addressRepo = manager.getRepository(CollectionAddress);
+      console.log(id, user_id);
+      const product = await productRepo.findOne({
+        where: { id, user_id },
+      });
 
-    if (!product) {
-      throw new NotFoundException(`Product with id ${id} not found.`);
-    }
-    const productSellingPrice = Number(updateDto.selling_price);
+      if (!product) {
+        throw new NotFoundException(`Product with id ${id} not found.`);
+      }
 
-    const productPrice = await this._currencyConverterService.convert(
-      user.currency,
-      defaultCurrency,
-      productSellingPrice
-    );
-    try {
+      const sellingPriceInput = Number(updateDto.selling_price);
+
+      console.log(updateDto);
+
+      // Convert selling price → default currency
+      const convertedPrice = await this._currencyConverterService.convert(
+        user.currency.toUpperCase(),
+        defaultCurrency,
+        sellingPriceInput
+      );
+
+      // Buyer protection fee (example formula)
+
+      // Assign product fields
       Object.assign(product, {
         ...updateDto,
-        selling_price: productPrice,
+        selling_price: convertedPrice,
         quantity: Number(updateDto.quantity),
         is_negotiable: updateDto.is_negotiable === "true",
-        images: updateDto.images.length > 0 ? updateDto.images : product.images,
+        is_boosted: updateDto.is_boosted === "true",
+        weight: Number(updateDto.weight),
+        width: Number(updateDto.width),
+        height: Number(updateDto.height),
+        length: Number(updateDto.length),
       });
-      // Optional: Replace images if new images are provided
-      if (updateDto.images && Array.isArray(updateDto.images) && updateDto.images.length > 0) {
-        await this._productImageRepository.delete({ product_id: id });
 
-        // Add new images
-        product.images = updateDto.images.map((imgUrl: string) => {
-          const img = new ProductImage();
-          img.image = imgUrl; // assuming images are URLs; if files, handle accordingly
-          img.product_id = product.id; // link image to product
-          return img;
+      // -----------------------------
+      // IMAGES
+      // -----------------------------
+      // console.log(product);
+      this._logger.log("Product", product);
+      if (updateDto.images && updateDto.images.length > 0) {
+        await productImageRepo.delete({ product_id: id });
+
+        const newImages = updateDto.images.map((imgUrl) => {
+          this._logger.log(`Image url `, imgUrl);
+          const obj = new ProductImage();
+          obj.product = product;
+          obj.product_id = id;
+          obj.image = imgUrl;
+          return obj;
         });
-        await this._productImageRepository.insert(product.images);
+
+        const productImage = await productImageRepo.insert(newImages);
       }
-      await this._productRepository.save(product);
-      return { message: "Product updated successfully", statusCode: 200, data: product };
-    } catch (error) {
-      console.error("Error updating product:", error);
-      throw new BadRequestException("Failed to update product.");
-    }
+
+      // -----------------------------
+      // ADDRESS / CARRIER LOGIC
+      // -----------------------------
+      if (updateDto.carrer_type === "collection_address") {
+        // Create/Update collection address
+        const addressData = {
+          product: product,
+          address: updateDto.address,
+          address_2: updateDto.address_2,
+          house_number: updateDto.house_number,
+          city: updateDto.city,
+          postal_code: updateDto.postal_code,
+          country: updateDto.country,
+          company_name: updateDto.company_name,
+        };
+
+        console.log(product.collectionAddress);
+        if (product.collectionAddress) {
+          await addressRepo.update(product.collectionAddress.id, addressData);
+        } else {
+          const newAddress = addressRepo.create(addressData);
+          product.collectionAddress = await addressRepo.save(newAddress);
+        }
+
+        // If collection_address → service point must be null
+        product.service_point_id = null;
+      }
+
+      // If courier drop-off or pickup
+      if (updateDto.carrer_type !== "collection_address") {
+        // If they choose shipping with service point
+        if (updateDto.service_point_id) {
+          product.service_point_id = Number(updateDto.service_point_id);
+        } else {
+          product.service_point_id = null;
+        }
+      }
+
+      // -----------------------------
+      // Store protection fee
+      // -----------------------------
+      // product.protectionFee = buyerProtectionFee;
+
+      // Save final product
+      await productRepo.save(product);
+
+      return {
+        message: "Product updated successfully",
+        statusCode: 200,
+        data: product,
+      };
+    });
   }
 
   async getProduct(id: number): Promise<Product> {

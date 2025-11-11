@@ -78,6 +78,21 @@ export class DeliveryService {
         where: { id: product_id },
         relations: ["user", "offer"],
       });
+      const order = await this._orderRepository.findOne({
+        where: { product: { id: product_id } },
+        relations: ["deliveryInfo"],
+      });
+      // console.log(order);
+      const deliveryInfo = order.deliveryInfo;
+
+      if (deliveryInfo && order.status === OrderStatus.DELIVERY_FILLED) {
+        return {
+          message: "Please make the payment .",
+          status: "success",
+          data: product,
+          statusCode: 200,
+        };
+      }
       const userInfo = await this._userService.getUserById(user.id);
       // Check if product exists and the current user can purchase it
       if (!product) {

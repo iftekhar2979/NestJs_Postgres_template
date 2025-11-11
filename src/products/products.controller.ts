@@ -36,12 +36,17 @@ import { User } from "src/user/entities/user.entity";
 import { Roles } from "src/user/decorators/roles.decorator";
 import { RolesGuard } from "src/auth/guards/roles-auth.guard";
 import { UserRoles } from "src/user/enums/role.enum";
+import { InjectLogger } from "src/shared/decorators/logger.decorator";
+import { Logger } from "winston";
 
 @Controller("products")
 @ApiTags("Products")
 @ApiBearerAuth()
 export class ProductsController {
-  constructor(private readonly _productsService: ProductsService) {}
+  constructor(
+    @InjectLogger() private readonly _logger: Logger,
+    private readonly _productsService: ProductsService
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthenticationGuard)
@@ -114,6 +119,8 @@ export class ProductsController {
     @GetUser() user,
     @GetOptionalFilesDestination() filesDestination: string[]
   ) {
+    console.log(files);
+    this._logger.log(`Files`, files);
     updateProductDto.images = filesDestination;
     return this._productsService.updateProduct(id, updateProductDto, user.id, user);
   }

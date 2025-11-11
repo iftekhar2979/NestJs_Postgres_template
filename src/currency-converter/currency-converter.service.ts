@@ -28,7 +28,7 @@ export class ConverterService {
   // Step 2: Convert using cached data
   async convert(from: string, to: string, amount: number): Promise<number> {
     const rates = await this.getRates(from);
-    // console.log(rates[from], rates[to]);
+    console.log(rates[from], rates[to]);
     // Convert both currencies relative to GBP
     if (!rates[from] || !rates[to]) {
       throw new Error(`Unknown currency: ${!rates[from] ? from : to}`);
