@@ -21,6 +21,9 @@ import { AuthModule } from "src/auth/auth.module";
 import { UserModule } from "src/user/user.module";
 import { HttpModule } from "@nestjs/axios";
 import { CurrencyConverterModule } from "src/currency-converter/currency-converter.module";
+import { SendcloudModule } from "src/sendcloud/sendcloud.module";
+import { Favorite } from "src/favourites/entities/favourite.entity";
+import { FavouritesModule } from "src/favourites/favourites.module";
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -36,6 +39,7 @@ import { CurrencyConverterModule } from "src/currency-converter/currency-convert
       Transections,
       Order,
       Notifications,
+      Favorite,
     ]),
     OrdersModule,
     HttpModule,
@@ -43,8 +47,11 @@ import { CurrencyConverterModule } from "src/currency-converter/currency-convert
     AuthModule,
     UserModule,
     CurrencyConverterModule,
+    SendcloudModule,
+    FavouritesModule,
+    // ShipmentService,
   ],
   controllers: [DeliveryController],
-  providers: [DeliveryService, ShipmentService],
+  providers: [DeliveryService],
 })
 export class DeliveryModule {}
