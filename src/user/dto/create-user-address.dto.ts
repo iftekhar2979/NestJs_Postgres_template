@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional, IsString, IsNumber } from "class-validator";
+import { IsOptional, IsString, IsNumber, MinLength, MaxLength } from "class-validator";
 
 export class CreateUserAddressDto {
   @ApiProperty({ example: "221B Baker Street" })
@@ -21,6 +21,8 @@ export class CreateUserAddressDto {
 
   @ApiProperty({ example: "GB" })
   @IsString()
+  @MaxLength(5, { message: "Country should contains only iso code " })
+  @MinLength(2, { message: "Country should contains only iso code " })
   country: string;
 
   @ApiProperty({ example: "NW1 6XE" })

@@ -187,17 +187,19 @@ export class SendcloudService {
         },
 
         // ✅ Automatic label generation
-        request_label: true,
+        request_label: false,
         request_label_async: false,
         apply_shipping_rules: false,
       },
     };
 
+    console.log(data)
     // ✅ Only add if exists
     if (data.to.service_point_id) {
       console.log("Service point");
       payload.parcel.to_service_point = data.to.service_point_id;
     }
+    console.log(payload)
     this._logger.log(`Parcel Url`, this.panelUrl);
     this._logger.log("Parcel Payload", payload);
     try {

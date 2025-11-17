@@ -15,7 +15,7 @@ export class SeederService {
     // private readonly settingService: SettingsService,
     @InjectRepository(Setting) private _settingModel: Repository<Setting>,
     @InjectRepository(Category) private _categoryRepository: Repository<Category>
-  ) {}
+  ) { }
 
   async seedAdminUser() {
     const adminEmail = "admin@petAttix.com"; // Use a valid email
@@ -28,7 +28,7 @@ export class SeederService {
         lastName: "Admin",
         address: "Nothing",
         phone: "+8801837352979",
-        currency: "GMB",
+        currency: "GBM",
         email: adminEmail,
         password: adminPassword,
         roles: [UserRoles.ADMIN],
