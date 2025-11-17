@@ -54,7 +54,7 @@ export class DeliveryService {
     private readonly _configService: ConfigService,
     private readonly _sendCloudService: SendcloudService,
     private readonly _favouriteService: FavouritesService
-  ) {}
+  ) { }
   async createDeliveryAddress({
     createDeliveryAddressDto,
     product_id,
@@ -82,17 +82,19 @@ export class DeliveryService {
         where: { product: { id: product_id } },
         relations: ["deliveryInfo"],
       });
-      // console.log(order);
-      const deliveryInfo = order.deliveryInfo;
-
-      if (deliveryInfo && order.status === OrderStatus.DELIVERY_FILLED) {
-        return {
-          message: "Please make the payment .",
-          status: "success",
-          data: product,
-          statusCode: 200,
-        };
+      console.log(order);
+      // const deliveryInfo = order.deliveryInfo;
+      if (order) {
+        if (order.deliveryInfo && order.status === OrderStatus.DELIVERY_FILLED) {
+          return {
+            message: "Please make the payment .",
+            status: "success",
+            data: product,
+            statusCode: 200,
+          };
+        }
       }
+
       const userInfo = await this._userService.getUserById(user.id);
       // Check if product exists and the current user can purchase it
       if (!product) {
@@ -180,16 +182,23 @@ export class DeliveryService {
           this._logger.log(`New Order Created `, order.id);
           const deliveryInfo =
             createDeliveryAddressDto.carrer_type === CARRER_TYPE.SERVICE_TYPE
-              ? { order, service_point_id }
+              ? {
+                order, service_point_id, name: `${userInfo.firstName} ${userInfo.lastName}`,
+                email: userInfo.email,
+                company_name: createDeliveryAddressDto.company_name,
+                telephone: userInfo.phone,
+                // service_point_id: null,
+                ...createDeliveryAddressDto,
+              }
               : {
-                  order,
-                  name: `${userInfo.firstName} ${userInfo.lastName}`,
-                  email: userInfo.email,
-                  company_name: createDeliveryAddressDto.company_name,
-                  telephone: userInfo.phone,
-                  service_point_id: null,
-                  ...createDeliveryAddressDto,
-                };
+                order,
+                name: `${userInfo.firstName} ${userInfo.lastName}`,
+                email: userInfo.email,
+                company_name: createDeliveryAddressDto.company_name,
+                telephone: userInfo.phone,
+                service_point_id: null,
+                ...createDeliveryAddressDto,
+              };
           const deliveryAddress = this._deliveryAddressRepository.create(deliveryInfo);
           await queryRunner.manager.save(deliveryAddress);
           this._logger.log(`New Delivery Created `, deliveryAddress.id);
@@ -208,20 +217,20 @@ export class DeliveryService {
             createDeliveryAddressDto.carrer_type === CARRER_TYPE.SERVICE_TYPE
               ? { order: existingOrder, service_point_id }
               : {
-                  order: existingOrder,
-                  name: `${userInfo.firstName} ${userInfo.lastName}`,
-                  email: userInfo.email,
-                  company_name: createDeliveryAddressDto.company_name,
-                  telephone: userInfo.phone,
-                  ...createDeliveryAddressDto,
-                };
+                order: existingOrder,
+                name: `${userInfo.firstName} ${userInfo.lastName}`,
+                email: userInfo.email,
+                company_name: createDeliveryAddressDto.company_name,
+                telephone: userInfo.phone,
+                ...createDeliveryAddressDto,
+              };
           const deliveryAddress = this._deliveryAddressRepository.create(deliveryInfo);
           await queryRunner.manager.save(deliveryAddress);
 
           existingOrder.deliveryInfo = deliveryAddress;
           await queryRunner.manager.save(Order, existingOrder);
         }
-
+        console.log(product)
         // Handle notifications
         const notifications = [
           {
@@ -306,6 +315,18 @@ export class DeliveryService {
 
     const deliveryInfo = order.deliveryInfo;
 
+    if (!collectionInfo.postal_code) {
+      throw new BadRequestException("Collection postal code not filled")
+    }
+    if (!collectionInfo.country) {
+      throw new BadRequestException("Collection country not filled")
+    }
+    if (!deliveryInfo.country) {
+      throw new BadRequestException("Delivery postal code not filled")
+    }
+    if (!deliveryInfo.country) {
+      throw new BadRequestException("Delivery country not filled")
+    }
     const shippingMethods = await this._sendCloudService.getShippingMethods({
       from: {
         postal_code: collectionInfo.postal_code,
@@ -389,6 +410,7 @@ export class DeliveryService {
       },
       shippingId
     );
+    // console.log(pricing)
     if (pricing.length === 0) {
       throw new BadRequestException("Shipping Method is not valid");
     }
@@ -547,7 +569,7 @@ export class DeliveryService {
           action: NotificationAction.CREATED,
           type: NotificationType.SUCCESS,
           msg: `You purchased the ${product.product_name} successfully.`,
-          target_id: product.id,
+          target_id: order.product.id,
           notificationFor: UserRoles.USER,
           isImportant: true,
         },
@@ -557,8 +579,8 @@ export class DeliveryService {
           related: NotificationRelated.ORDER,
           action: NotificationAction.CREATED,
           type: NotificationType.SUCCESS,
-          msg: `You got sale on Product : ${product.product_name} `,
-          target_id: product.id,
+          msg: `You got sale on  ${product.product_name} `,
+          target_id: order.product.id,
           notificationFor: UserRoles.USER,
           isImportant: true,
         },
@@ -569,7 +591,7 @@ export class DeliveryService {
           action: NotificationAction.CREATED,
           type: NotificationType.SUCCESS,
           msg: `${product.product_name} is going to be sold.`,
-          target_id: product.id,
+          target_id: order.product.id,
           notificationFor: UserRoles.ADMIN,
           isImportant: true,
         },
