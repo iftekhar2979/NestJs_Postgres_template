@@ -63,7 +63,7 @@ export class ProductsService {
     private readonly _userService: UserService,
     @InjectRepository(Transections) private readonly _transectionRepository: Repository<Transections>,
     @InjectLogger() private readonly _logger: LoggerService
-  ) {}
+  ) { }
   // async getProductById({product_id,status,}){
 
   // }
@@ -605,7 +605,7 @@ export class ProductsService {
 
   async updateProduct(
     id: number,
-    updateDto: UpdateProductDto,
+    updateDto,
     user_id: string,
     user: User
   ): Promise<{ message: string; statusCode: number; data: Product }> {
@@ -625,7 +625,7 @@ export class ProductsService {
 
       const sellingPriceInput = Number(updateDto.selling_price);
 
-      console.log(updateDto);
+      // console.log(updateDto);
 
       // Convert selling price → default currency
       const convertedPrice = await this._currencyConverterService.convert(
@@ -636,17 +636,33 @@ export class ProductsService {
 
       // Buyer protection fee (example formula)
 
+      if (updateDto.selling_price) {
+        updateDto.selling_price = convertedPrice
+
+      }
+      if (updateDto.quantity) {
+        updateDto.quantity = Number(updateDto.quantity)
+      }
+      if (updateDto.is_boosted) {
+        updateDto.is_boosted = updateDto.is_boosted === "true"
+      }
+      if (updateDto.weight) {
+
+        updateDto.weight = Number(updateDto.weight)
+
+      }
+      if (updateDto.width) {
+        updateDto.width = Number(updateDto.width)
+      }
+      if (updateDto.height) {
+        updateDto.height = Number(updateDto.height)
+      }
+      if (updateDto.length) {
+        updateDto.length = Number(updateDto.length)
+      }
       // Assign product fields
       Object.assign(product, {
         ...updateDto,
-        selling_price: convertedPrice,
-        quantity: Number(updateDto.quantity),
-        is_negotiable: updateDto.is_negotiable === "true",
-        is_boosted: updateDto.is_boosted === "true",
-        weight: Number(updateDto.weight),
-        width: Number(updateDto.width),
-        height: Number(updateDto.height),
-        length: Number(updateDto.length),
       });
 
       // -----------------------------
@@ -685,7 +701,7 @@ export class ProductsService {
           company_name: updateDto.company_name,
         };
 
-        console.log(product.collectionAddress);
+        // console.log(product.collectionAddress);
         if (product.collectionAddress) {
           await addressRepo.update(product.collectionAddress.id, addressData);
         } else {
