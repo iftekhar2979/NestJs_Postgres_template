@@ -46,7 +46,7 @@ export class ProductsController {
   constructor(
     @InjectLogger() private readonly _logger: Logger,
     private readonly _productsService: ProductsService
-  ) {}
+  ) { }
 
   @Post()
   @UseGuards(JwtAuthenticationGuard)
@@ -66,6 +66,7 @@ export class ProductsController {
     @UploadedFiles() files: { images?: Express.Multer.File[] },
     @GetFilesDestination() filesDestination: string[]
   ) {
+    this._logger.log("Product Upload", filesDestination)
     createProductDto.images = filesDestination;
     return this._productsService.create(createProductDto, user);
   }
@@ -98,7 +99,7 @@ export class ProductsController {
     // console.log(query)
     return this._productsService.findAllWithFilters(query);
   }
-  @Put(":id")
+  @Patch(":id")
   @UseGuards(JwtAuthenticationGuard)
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -108,7 +109,6 @@ export class ProductsController {
       multerConfig
     )
   )
-  @UsePipes(new ValidationPipe({ transform: true }))
   @ApiResponse({ status: 200, description: "Product updated successfully", type: Product })
   @ApiParam({ name: "id", type: Number, description: "ID of the product to update" })
   @ApiBody({ type: UpdateProductDto })
@@ -117,11 +117,12 @@ export class ProductsController {
     @Body() updateProductDto: UpdateProductDto,
     @UploadedFiles() files: { images?: Express.Multer.File[] },
     @GetUser() user,
-    @GetOptionalFilesDestination() filesDestination: string[]
+    @GetFilesDestination() filesDestination: string[]
   ) {
-    console.log(files);
-    this._logger.log(`Files`, files);
+    // console.log(id, files);
+    this._logger.log(`Files`, filesDestination);
     updateProductDto.images = filesDestination;
+    console.log(updateProductDto)
     return this._productsService.updateProduct(id, updateProductDto, user.id, user);
   }
   @Put(":id/boosts")
