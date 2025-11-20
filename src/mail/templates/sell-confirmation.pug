@@ -1,0 +1,164 @@
+doctype html
+html
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Seller Order Confirmation
+    style.
+      body {
+        font-family: Arial, sans-serif;
+        background: #f6f7f9;
+        padding: 20px;
+        color: #222;
+      }
+      .card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+      .header {
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      .section-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 6px;
+      }
+      .label {
+        font-weight: bold;
+      }
+      .images img {
+        width: 150px;
+        height: auto;
+        margin-right: 10px;
+        border-radius: 8px;
+      }
+
+  body
+    .card
+      .header Order Confirmation for Seller
+
+      p Hello #{seller.first_name} #{seller.last_name},
+      p Your product has been successfully purchased. Below are the full details for you to prepare the shipment.
+
+    // ORDER INFORMATION
+    .card
+      .section-title Order Information
+      p 
+        span.label Order ID: 
+        | #{order.id}
+      p 
+        span.label Status: 
+        | #{order.status}
+      p 
+        span.label Payment Status: 
+        | #{order.paymentStatus}
+      p 
+        span.label Parcel ID: 
+        | #{order.parcel_id || "Not Created"}
+      p 
+        span.label Total Amount: 
+        | #{order.total} #{product.currency || "€"}
+
+    // PRODUCT INFORMATION
+    .card
+      .section-title Product Details
+      p 
+        span.label Name: 
+        | #{product.product_name}
+      p 
+        span.label Category:
+        | #{product.category}
+      p 
+        span.label Condition:
+        | #{product.condition}
+      p 
+        span.label Status:
+        | #{product.status}
+      p 
+        span.label Price:
+        | #{product.selling_price} #{product.currency || "€"}
+      p 
+        span.label Quantity:
+        | #{product.quantity}
+
+      .section-title Description
+      p #{product.description}
+
+      .section-title Product Images
+      .images
+        each img in product.images
+          img(src=img.image_url alt="Product Image")
+
+    // BUYER DETAILS
+    .card
+      .section-title Buyer Details
+      p 
+        span.label Name:  
+        | #{buyer.first_name} #{buyer.last_name}
+      p 
+        span.label Email:  
+        | #{buyer.email}
+      p 
+        span.label Phone:  
+        | #{buyer.phone || "N/A"}
+
+    // DELIVERY ADDRESS
+    if order.deliveryInfo
+      .card
+        .section-title Delivery Address
+        p 
+          span.label Address: 
+          | #{order.deliveryInfo.address}
+        p 
+          span.label City: 
+          | #{order.deliveryInfo.city}
+        p 
+          span.label Postal Code: 
+          | #{order.deliveryInfo.postal_code}
+        p 
+          span.label Country: 
+          | #{order.deliveryInfo.country}
+        p 
+          span.label Phone: 
+          | #{order.deliveryInfo.phone}
+
+    // PARCEL INFORMATION (FROM SENDCLOUD)
+    if parcel
+      .card
+        .section-title Parcel Details
+        p 
+          span.label Tracking Number: 
+          | #{parcel.tracking_number}
+        p 
+          span.label Address: 
+          | #{parcel.address}, #{parcel.city}, #{parcel.postal_code}
+        p 
+          span.label Carrier: 
+          | #{parcel.carrier.code}
+        p 
+          span.label Shipment Type: 
+          | #{parcel.shipment.name}
+        p 
+          span.label Weight: 
+          | #{parcel.weight} kg
+
+        .section-title Label Links
+        if parcel.label
+          if parcel.label.normal_printer
+            ul
+              each url, idx in parcel.label.normal_printer
+                li 
+                  a(href=url target="_blank") Normal Label #{idx + 1}
+          if parcel.label.label_printer
+            p 
+              a(href=parcel.label.label_printer target="_blank") Thermal Printer Label
+
+    // FOOTER
+    .card
+      p Thank you for selling with us!
+      p Please prepare the package and attach the label before shipping.

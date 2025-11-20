@@ -12,7 +12,7 @@ import { PreSignedUrlDTO } from "./dto/pre-signed-url.dto";
 export class S3Controller {
   constructor(private readonly s3Service: S3Service) {}
 
-    @Get("test-connection")
+  @Get("test-connection")
   async testConnection() {
     return await this.s3Service.testConnection();
   }
@@ -26,11 +26,11 @@ export class S3Controller {
   @ApiOkResponse({ description: "Get S3 pre-signed URL" })
   async getPreSignedUrl(@Query() preSignedUrlDto: PreSignedUrlDTO) {
     const { fileName, primaryPath, expiresIn } = preSignedUrlDto;
-  
+
     const result = await this.s3Service.getPreSignedUrl(fileName, primaryPath, expiresIn);
 
     return { status: "success", data: result };
-  } 
+  }
 
   @Delete("delete/:key")
   @ApiOperation({

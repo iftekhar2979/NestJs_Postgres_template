@@ -1,4 +1,4 @@
-import { IsUUID, IsInt } from 'class-validator';
+import { IsUUID, IsInt } from "class-validator";
 
 export class AddParticipantDto {
   @IsInt()

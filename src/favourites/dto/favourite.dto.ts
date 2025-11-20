@@ -1,9 +1,9 @@
-import { IsString, IsInt, IsOptional } from 'class-validator';
+import { IsString, IsInt, IsOptional } from "class-validator";
 
 export class CreateFavoriteDto {
   @IsString()
   @IsOptional()
-  userId ?: string;
+  userId?: string;
 
   @IsInt()
   productId: number;

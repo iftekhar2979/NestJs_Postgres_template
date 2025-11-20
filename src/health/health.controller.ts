@@ -45,21 +45,17 @@ export class HealthController {
       () => this.memory.checkRSS("memory_rss", memSize),
     ]);
   }
-  
+
   @Get()
   async getMetrics(@Req() req: any, @Res() res: any) {
     // Track HTTP requests in the custom Prometheus counter
-    res.on('finish', () => {
-      this.metricsService.incrementHttpRequests(
-        req.method,
-        req.originalUrl,
-        res.statusCode.toString(),
-      );
+    res.on("finish", () => {
+      this.metricsService.incrementHttpRequests(req.method, req.originalUrl, res.statusCode.toString());
     });
 
     // Set the content type for Prometheus metrics
     // res.set('Content-Type', promClient.register.contentType);
-       res.set('Content-Type', 'text/plain; version=0.0.4');
+    res.set("Content-Type", "text/plain; version=0.0.4");
     // Return the metrics
     return res.end(await this.metricsService.getMetrics());
   }

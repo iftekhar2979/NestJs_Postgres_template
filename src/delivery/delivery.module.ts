@@ -24,6 +24,8 @@ import { CurrencyConverterModule } from "src/currency-converter/currency-convert
 import { SendcloudModule } from "src/sendcloud/sendcloud.module";
 import { Favorite } from "src/favourites/entities/favourite.entity";
 import { FavouritesModule } from "src/favourites/favourites.module";
+import { BullModule } from "@nestjs/bull";
+// import { BullModule } from "src/bull/bull.module";
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -49,9 +51,11 @@ import { FavouritesModule } from "src/favourites/favourites.module";
     CurrencyConverterModule,
     SendcloudModule,
     FavouritesModule,
+
+    BullModule.registerQueue({ name: "product" }),
     // ShipmentService,
   ],
   controllers: [DeliveryController],
   providers: [DeliveryService],
 })
-export class DeliveryModule {}
+export class DeliveryModule { }

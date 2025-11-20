@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller } from "@nestjs/common";
 
-@Controller('sendcloud')
+@Controller("sendcloud")
 export class SendcloudController {}

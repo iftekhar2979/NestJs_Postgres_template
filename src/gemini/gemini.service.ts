@@ -1,7 +1,6 @@
-
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 @Injectable()
 export class GeminiService {
@@ -9,20 +8,20 @@ export class GeminiService {
   private model: any;
 
   constructor(private configService: ConfigService) {
-    this.genAI = new GoogleGenerativeAI(this.configService.get<string>('GEMINI_API_KEY'));
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    this.genAI = new GoogleGenerativeAI(this.configService.get<string>("GEMINI_API_KEY"));
+    this.model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
   }
-    async analyzeTheProductImage(imageBuffer: Buffer, mimeType: string) {
+  async analyzeTheProductImage(imageBuffer: Buffer, mimeType: string) {
     const imagePart = {
       inlineData: {
-        data: imageBuffer.toString('base64'),
-        mimeType, 
+        data: imageBuffer.toString("base64"),
+        mimeType,
       },
-    }; 
+    };
 
     // Modified prompt to focus on pet-related products
     const prompt = `
-        Analyze the product image of a used pet product and provide details in the following format:
+        Analyze the product image of a pet product and provide details in the following format:
       {
         "product_name": "Name of the pet product",
         "selling_price": 49.99,
@@ -54,7 +53,7 @@ export class GeminiService {
       analysisResult = JSON.parse(jsonString);
 
       // Optionally log the analysis result
-      console.log('Analysis Result:', analysisResult);
+      console.log("Analysis Result:", analysisResult);
     } catch (error) {
       throw new Error(`Failed to parse the response: ${error.message}`);
     }
@@ -62,7 +61,4 @@ export class GeminiService {
     // Return the parsed analysis result
     return analysisResult;
   }
-
-
-  
 }

@@ -55,7 +55,7 @@ import { UserBehaviourModule } from "./user-behaviour/user-behaviour.module";
 import { SettingsModule } from "./settings/settings.module";
 import { SettingService } from "./setting/setting.service";
 import { CurrencyConverterModule } from "./currency-converter/currency-converter.module";
-import { SendcloudModule } from './sendcloud/sendcloud.module';
+import { SendcloudModule } from "./sendcloud/sendcloud.module";
 /**
  * It is the root module for the application in we import all feature modules and configure modules and packages that are common in feature modules. Here we also configure the middlewares.
  *
@@ -72,7 +72,7 @@ import { SendcloudModule } from './sendcloud/sendcloud.module';
       store: redisStore,
       prefix: "",
       host: process.env.REDIS_IP || "localhost", // Use environment variable or default to localhost
-      port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6378, // Use environment variable or default to 6379
+      port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379, // Use environment variable or default to 6379
       ttl: 600,
       max: 100,
     }),
@@ -80,7 +80,7 @@ import { SendcloudModule } from './sendcloud/sendcloud.module';
     BullModule.forRoot({
       redis: {
         host: process.env.REDIS_IP || "localhost", // Use environment variable for Redis connection
-        port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6378, // Default Redis port
+        port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379, // Default Redis port
       },
     }),
     BullModule.registerQueue({

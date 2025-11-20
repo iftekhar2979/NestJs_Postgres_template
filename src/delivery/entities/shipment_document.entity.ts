@@ -1,7 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
-import { Shipment } from './shipments.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from "typeorm";
+import { Shipment } from "./shipments.entity";
 
-@Entity('documents')
+@Entity("documents")
 export class ShipmentDocument {
   @PrimaryGeneratedColumn()
   id: number;
@@ -16,5 +16,5 @@ export class ShipmentDocument {
   downloadURL: string;
 
   @ManyToOne(() => Shipment, (shipment) => shipment.documents)
-  shipment: Shipment;  // Link back to the Shipment
+  shipment: Shipment; // Link back to the Shipment
 }
