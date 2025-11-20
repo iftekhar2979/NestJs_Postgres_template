@@ -23,7 +23,6 @@ export class PreSignedUrlDTO {
   @IsNotEmpty()
   fileName: string;
 
-
   @ApiProperty({ required: true, description: "Primary path name of the files", enum: PrimaryPaths })
   @IsEnum(PrimaryPaths, {
     message: `primaryPath must be one of the following values: ${Object.values(PrimaryPaths).join(", ")}`,

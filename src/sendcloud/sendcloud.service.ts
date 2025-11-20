@@ -193,17 +193,17 @@ export class SendcloudService {
       },
     };
 
-    console.log(data)
+    console.log(data);
     // ✅ Only add if exists
     if (data.to.service_point_id) {
-      console.log("Service point");
+      // console.log("Service point");
       payload.parcel.to_service_point = data.to.service_point_id;
     }
-    console.log(payload)
+    console.log(payload);
     this._logger.log(`Parcel Url`, this.panelUrl);
     this._logger.log("Parcel Payload", payload);
     try {
-      const rawResponse = await fetch(`${this.panelUrl}/parcels`, {
+      const rawResponse = await fetch(`https://stoplight.io/mocks/sendcloud/sendcloud-public-api:v2/299107074/parcels`, {
         method: "POST",
         headers: {
           Authorization: `Basic ${this.auth}`,

@@ -10,7 +10,7 @@ import { UserRoles } from "src/user/enums/role.enum";
 export class NotificationsController {
   constructor(private readonly notificationService: NotificationsService) {}
   @Get()
-  @UseGuards(JwtAuthenticationGuard,)
+  @UseGuards(JwtAuthenticationGuard)
   async getNotifications(
     @GetUser() user: User,
     @Request() req,

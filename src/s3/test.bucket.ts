@@ -7,11 +7,11 @@ const configService = new ConfigService();
 
 // Initialize the MinIO client with credentials and endpoint
 const s3 = new S3Client({
-  endpoint: configService.get<string>("MINIO_ENDPOINT") || "http://localhost:9000",  // MinIO endpoint
-  region: configService.get<string>("AWS_REGION") || "us-east-1",  // MinIO region
+  endpoint: configService.get<string>("MINIO_ENDPOINT") || "http://localhost:9000", // MinIO endpoint
+  region: configService.get<string>("AWS_REGION") || "us-east-1", // MinIO region
   credentials: {
-    accessKeyId: configService.get<string>("MINIO_ACCESS_KEY"),  // MinIO access key from .env
-    secretAccessKey: configService.get<string>("MINIO_SECRET_KEY"),  // MinIO secret key from .env
+    accessKeyId: configService.get<string>("MINIO_ACCESS_KEY"), // MinIO access key from .env
+    secretAccessKey: configService.get<string>("MINIO_SECRET_KEY"), // MinIO secret key from .env
   },
   forcePathStyle: true, // MinIO requires path-style URLs
 });

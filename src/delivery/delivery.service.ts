@@ -36,6 +36,8 @@ import { Transections } from "src/transections/entity/transections.entity";
 import { TransectionType } from "src/transections/enums/transectionTypes";
 import { SendcloudService } from "src/sendcloud/sendcloud.service";
 import { FavouritesService } from "src/favourites/favourites.service";
+import { InjectQueue } from "@nestjs/bull";
+import { Queue } from "bull";
 
 @Injectable()
 export class DeliveryService {
@@ -53,7 +55,8 @@ export class DeliveryService {
     @InjectLogger() private readonly _logger: Logger,
     private readonly _configService: ConfigService,
     private readonly _sendCloudService: SendcloudService,
-    private readonly _favouriteService: FavouritesService
+    private readonly _favouriteService: FavouritesService,
+    @InjectQueue("product") private readonly _queue: Queue
   ) { }
   async createDeliveryAddress({
     createDeliveryAddressDto,
@@ -183,7 +186,9 @@ export class DeliveryService {
           const deliveryInfo =
             createDeliveryAddressDto.carrer_type === CARRER_TYPE.SERVICE_TYPE
               ? {
-                order, service_point_id, name: `${userInfo.firstName} ${userInfo.lastName}`,
+                order,
+                service_point_id,
+                name: `${userInfo.firstName} ${userInfo.lastName}`,
                 email: userInfo.email,
                 company_name: createDeliveryAddressDto.company_name,
                 telephone: userInfo.phone,
@@ -230,7 +235,7 @@ export class DeliveryService {
           existingOrder.deliveryInfo = deliveryAddress;
           await queryRunner.manager.save(Order, existingOrder);
         }
-        console.log(product)
+        // console.log(product);
         // Handle notifications
         const notifications = [
           {
@@ -274,6 +279,8 @@ export class DeliveryService {
         // Commit the transaction
         await queryRunner.commitTransaction();
 
+        // const parcelInfo = await this._sendCloudService.getParcelId()
+        // await this._
         return {
           message: "Order placed successfully and delivery address saved.",
           status: "success",
@@ -316,16 +323,16 @@ export class DeliveryService {
     const deliveryInfo = order.deliveryInfo;
 
     if (!collectionInfo.postal_code) {
-      throw new BadRequestException("Collection postal code not filled")
+      throw new BadRequestException("Collection postal code not filled");
     }
     if (!collectionInfo.country) {
-      throw new BadRequestException("Collection country not filled")
+      throw new BadRequestException("Collection country not filled");
     }
     if (!deliveryInfo.country) {
-      throw new BadRequestException("Delivery postal code not filled")
+      throw new BadRequestException("Delivery postal code not filled");
     }
     if (!deliveryInfo.country) {
-      throw new BadRequestException("Delivery country not filled")
+      throw new BadRequestException("Delivery country not filled");
     }
     const shippingMethods = await this._sendCloudService.getShippingMethods({
       from: {
@@ -366,7 +373,7 @@ export class DeliveryService {
         relations: ["product", "deliveryInfo"],
       });
     }
-    console.log(order.status);
+    // console.log(order.status);
     if (order.product.status === ProductStatus.SOLD) {
       throw new BadRequestException("Product is no longer availible to sells");
     }
@@ -600,7 +607,11 @@ export class DeliveryService {
       // Bulk insert notifications for both user and admin
       await this._notificationService.bulkInsertNotifications(notifications);
       await queryRunner.commitTransaction();
+      // await this._queue.
 
+      await this._queue.add("orderConfirmation", {
+        order, parcelInfo
+      });
       return {
         message: "Payment successfull",
         statusCode: 201,
@@ -619,4 +630,6 @@ export class DeliveryService {
       await queryRunner.release();
     }
   }
+
+
 }

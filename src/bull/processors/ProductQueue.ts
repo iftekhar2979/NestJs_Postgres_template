@@ -13,7 +13,7 @@ export class ImageProcessor {
   constructor(
     private readonly _userBehaviourService: UserBehaviourService,
     private readonly _mailService: MailService
-  ) {}
+  ) { }
   @Process("Product-image") // Listen for jobs of type 'Product-image'
   async handleImageJob(job: Job) {
     console.log("Job Processing");
@@ -68,5 +68,20 @@ export class ImageProcessor {
     } else {
       await this._mailService.offerRejection(user, seller, offer, product);
     }
+  }
+
+  @Process("orderConfirmation")
+  async OrderConfirmation(job: Job) {
+    console.log("User Behavior", job.data);
+    const { parcel, order } = job.data;
+    await this._mailService.sellerOrderConfirmation(order, parcel)
+    await this._mailService.buyerOrderConfirmation(order, parcel)
+    // if (type === "send_offer") {
+    //   await this._mailService.sendOfferConfirmation(user, seller, offer, product);
+    // } else if (type === "accepted_offer") {
+    //   await this._mailService.acceptOfferConfirmation(user, seller, offer, product);
+    // } else {
+    //   await this._mailService.offerRejection(user, seller, offer, product);
+    // }
   }
 }

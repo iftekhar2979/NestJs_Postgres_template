@@ -10,7 +10,7 @@ export class UserAddressService {
   constructor(
     @InjectRepository(UserAddress)
     private readonly _userAddressRepository: Repository<UserAddress>
-  ) { }
+  ) {}
 
   async createAddress(
     user: User,
@@ -26,7 +26,7 @@ export class UserAddressService {
       return { message: "Address saved successfully!", statusCode: 201, data: newAddress };
     }
     Object.assign(address, createDto);
-    console.log("Address", address)
+    console.log("Address", address);
     await this._userAddressRepository.save(address);
     return { message: "Address saved successfully!", statusCode: 201, data: address };
   }

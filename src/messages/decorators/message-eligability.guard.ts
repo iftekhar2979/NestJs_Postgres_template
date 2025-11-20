@@ -1,19 +1,19 @@
 // import { Conversation } from 'src/conversation/conversation.schema';
-import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
-import { ParticipantsService } from 'src/participants/participants.service';
+import { ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
+import { ParticipantsService } from "src/participants/participants.service";
 
 @Injectable()
 export class MessageEligabilityGuard {
-  constructor(private readonly participantService: ParticipantsService,) {}
+  constructor(private readonly participantService: ParticipantsService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const params = request.params;
     // Ensure the user is authenticated
     if (!request.user) {
-      throw new UnauthorizedException('Unauthorized user!');
+      throw new UnauthorizedException("Unauthorized user!");
     }
-// console.log(typeof params.id)
+    // console.log(typeof params.id)
     const user = request.user;
     const participants = await this.participantService.getParticipants(parseFloat(params.id));
     // console.log(participants)
@@ -31,12 +31,10 @@ export class MessageEligabilityGuard {
     }
 
     if (!eligable) {
-      throw new UnauthorizedException('You are not part of this conversation!');
+      throw new UnauthorizedException("You are not part of this conversation!");
     }
     request.receiver = receiver;
- 
+
     return eligable; // Return true if eligible, else false
-
   }
-
 }

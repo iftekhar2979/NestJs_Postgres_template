@@ -1,16 +1,16 @@
 // src/sizes/sizes.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { UpdateSizeDto } from './dto/update-size.dto';
-import { Size } from './entity/sizes.entity';
-import { CreateSizeDto } from './dto/create-sizes.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { UpdateSizeDto } from "./dto/update-size.dto";
+import { Size } from "./entity/sizes.entity";
+import { CreateSizeDto } from "./dto/create-sizes.dto";
 
 @Injectable()
 export class SizesService {
   constructor(
     @InjectRepository(Size)
-    private sizeRepository: Repository<Size>,
+    private sizeRepository: Repository<Size>
   ) {}
 
   async create(createSizeDto: CreateSizeDto): Promise<Size> {

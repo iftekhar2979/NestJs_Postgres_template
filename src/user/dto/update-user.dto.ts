@@ -38,6 +38,4 @@ export class UpdateProfilePictureDto {
   @ApiPropertyOptional({ required: true, description: "Image url is requied" })
   @IsString({ message: "Image url must be string" })
   image: string;
-
-  
 }

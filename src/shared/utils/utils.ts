@@ -9,7 +9,7 @@ export function validateAddress<T extends Record<string, any>>({
   dto: T;
   requiredFields: string[];
 }) {
-  for (const field of requiredFields) { 
+  for (const field of requiredFields) {
     if (!dto[field] || typeof dto[field] !== "string" || !dto[field].trim()) {
       throw new Error(`Invalid or missing field: ${field}`);
     }

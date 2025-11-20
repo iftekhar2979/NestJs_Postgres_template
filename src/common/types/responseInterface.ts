@@ -1,12 +1,12 @@
-export interface  ResponseInterface<T> {
+export interface ResponseInterface<T> {
   status: string;
-  message : string;
-  data?: T;    
+  message: string;
+  data?: T;
   statusCode?: number;
-  pagination ? :{
-    page:number,
-    limit:number,
-    total:number,
-    totalPages:number
-  }
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }

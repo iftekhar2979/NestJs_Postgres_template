@@ -1,10 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { StripeController } from './stripe.controller';
+import { Test, TestingModule } from "@nestjs/testing";
+import { StripeController } from "./stripe.controller";
 
-describe('StripeController', () => {
+describe("StripeController", () => {
   let controller: StripeController;
-  
-  beforeEach(async () => { 
+
+  beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [StripeController],
     }).compile();
@@ -12,7 +12,7 @@ describe('StripeController', () => {
     controller = module.get<StripeController>(StripeController);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(controller).toBeDefined();
   });
 });

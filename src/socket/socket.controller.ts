@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller } from "@nestjs/common";
 
-@Controller('socket')
-export class SocketController {  }
+@Controller("socket")
+export class SocketController {}

@@ -1,6 +1,6 @@
 // src/metrics/metrics.service.ts
-import { Injectable } from '@nestjs/common';
-import * as promClient from 'prom-client';
+import { Injectable } from "@nestjs/common";
+import * as promClient from "prom-client";
 
 @Injectable()
 export class MetricsService {
@@ -12,9 +12,9 @@ export class MetricsService {
 
     // Create a custom counter metric for HTTP requests
     this.httpRequestsTotal = new promClient.Counter({
-      name: 'http_requests_total',
-      help: 'Total number of HTTP requests',
-      labelNames: ['method', 'route', 'status'],
+      name: "http_requests_total",
+      help: "Total number of HTTP requests",
+      labelNames: ["method", "route", "status"],
     });
   }
 

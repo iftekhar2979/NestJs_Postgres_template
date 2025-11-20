@@ -1,7 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { TransglobalController } from './transglobal.controller';
+import { Test, TestingModule } from "@nestjs/testing";
+import { TransglobalController } from "./transglobal.controller";
 
-describe('TransglobalController', () => {
+describe("TransglobalController", () => {
   let controller: TransglobalController;
 
   beforeEach(async () => {
@@ -12,7 +12,7 @@ describe('TransglobalController', () => {
     controller = module.get<TransglobalController>(TransglobalController);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(controller).toBeDefined();
   });
 });

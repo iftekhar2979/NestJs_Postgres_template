@@ -1,21 +1,20 @@
-import { IsString, IsBoolean, IsDecimal, IsArray, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsBoolean, IsDecimal, IsArray, IsOptional, IsNumber } from "class-validator";
 
 export class CreateServiceDto {
+  @IsNumber()
+  serviceID: number;
+  @IsNumber()
+  quoteID: number;
+  @IsNumber()
+  order_id: number;
 
-  @IsNumber()
-  serviceID:number;
-  @IsNumber()
-  quoteID:number;
-  @IsNumber()
-  order_id:number;
-    
   @IsString()
   serviceName: string;
 
   @IsString()
   carrierName: string;
 
- @IsNumber()
+  @IsNumber()
   chargeableWeight: number;
 
   @IsString()
@@ -36,7 +35,7 @@ export class CreateServiceDto {
   @IsNumber()
   totalCostGrossWithCollection: number;
 
-@IsNumber()
+  @IsNumber()
   totalCostGrossWithoutCollection: number;
 
   @IsArray()

@@ -1,6 +1,6 @@
 // src/users/dto/update-profile.dto.ts
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { IsOptional, IsString } from "class-validator";
 
 export class UpdateUserProfileDto {
   @IsOptional()
@@ -25,6 +25,6 @@ export class UpdateUserProfileDto {
 
   @IsOptional()
   @IsString()
-  @ApiPropertyOptional({ description: 'URL or base64 of the profile picture' })
+  @ApiPropertyOptional({ description: "URL or base64 of the profile picture" })
   image?: string;
 }

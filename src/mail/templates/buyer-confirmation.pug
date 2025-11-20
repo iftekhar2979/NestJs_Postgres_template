@@ -1,0 +1,107 @@
+doctype html
+html
+  head
+    meta(charset="UTF-8")
+    style.
+      body {
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        padding: 20px;
+      }
+      .container {
+        max-width: 650px;
+        margin: auto;
+        background: #ffffff;
+        padding: 20px;
+        border-radius: 8px;
+      }
+      .header {
+        background: #4CAF50;
+        padding: 15px;
+        text-align: center;
+        color: #fff;
+        border-radius: 6px;
+        font-size: 20px;
+        font-weight: bold;
+      }
+      .section-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 20px;
+        color: #333;
+      }
+      .info-row {
+        margin-bottom: 8px;
+        font-size: 14px;
+        color: #444;
+      }
+      .product-image {
+        width: 130px;
+        border-radius: 6px;
+        margin-top: 10px;
+      }
+      .footer {
+        margin-top: 30px;
+        font-size: 12px;
+        text-align: center;
+        color: #777;
+      }
+
+  body
+    .container
+      .header #{subject}
+
+      // Buyer Greeting
+      p Hello #{buyerFirstName} #{buyerLastName},
+      p Your order has been successfully confirmed on Pet Attix! 🎉  
+
+      // Order Information
+      .section-title Order Details
+      .info-row Strong Order ID: #{orderId}
+      .info-row Strong Status: #{orderStatus}
+      .info-row Strong Payment Status: #{paymentStatus}
+      if parcelId
+        .info-row Strong Parcel ID: #{parcelId}
+      .info-row Strong Total Paid: $#{totalAmount}
+
+      // Product Information
+      .section-title Product Details
+      .info-row Name: #{productName}
+      .info-row Category: #{productCategory}
+      .info-row Condition: #{productCondition}
+      .info-row Description:
+      p #{productDescription}
+
+      if productImages && productImages.length
+        .info-row Product Image:
+        img.product-image(src=productImages[0].url alt=productName)
+
+      // Delivery Information
+      if delivery
+        .section-title Delivery Address
+        .info-row #{delivery.first_name} #{delivery.last_name}
+        .info-row #{delivery.address}
+        .info-row #{delivery.city}, #{delivery.country}
+        .info-row Postal Code: #{delivery.postal_code}
+        .info-row Phone: #{delivery.phone}
+
+      // Parcel Tracking Information
+      if parcel
+        .section-title Shipping & Tracking
+        .info-row Carrier: #{parcel.carrier.code}
+        .info-row Service: #{parcel.shipment.name}
+        .info-row Weight: #{parcel.weight} kg
+        .info-row Tracking Number: #{parcel.tracking_number}
+        if parcel.label
+          .info-row
+            | Download Label: 
+            a(href=parcel.label.normal_printer[0]) Normal Printer Label
+
+      // Seller Info
+      .section-title Seller Information
+      .info-row #{sellerFirstName} #{sellerLastName}
+
+      // Footer
+      .footer
+        p Thank you for shopping with Pet Attix!
+        p If you have any questions, feel free to contact our support team.

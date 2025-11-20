@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
-import { SseController } from './sse.controller';
+import { Module } from "@nestjs/common";
+import { SseController } from "./sse.controller";
 
 @Module({
-  controllers: [SseController]
+  controllers: [SseController],
 })
 export class SseModule {}

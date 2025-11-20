@@ -18,7 +18,7 @@ import { Wallets } from "src/wallets/entity/wallets.entity";
 
 /**
  * It is a feature module where we keep the controller, service and other code related to authentication and  we import other modules and configure modules and packages that are being used in this module.
- * 
+ *
  * Here, feature modules imported are - DatabaseModule, AuthModule, MailModule and UserModule.
  * other modules are :
  *      {@link TypeOrmModule} - it is an ORM and enables easy access to database.
@@ -29,7 +29,7 @@ import { Wallets } from "src/wallets/entity/wallets.entity";
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([User,Verification,Wallets]),
+    TypeOrmModule.forFeature([User, Verification, Wallets]),
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -45,11 +45,10 @@ import { Wallets } from "src/wallets/entity/wallets.entity";
     }),
     forwardRef(() => UserModule),
     MailModule,
-    OtpModule
+    OtpModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, LocalStrategy, JwtStrategy, GoogleStrategy],
   exports: [AuthService, PassportModule, JwtStrategy, JwtModule],
-
 })
 export class AuthModule {}

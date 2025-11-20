@@ -1,13 +1,13 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class Backend1709103990179 implements MigrationInterface {
-    name = 'Backend1709103990179'
+  name = "Backend1709103990179";
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-          await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
         CREATE TYPE "public"."users_roles_enum" AS ENUM('user', 'admin');
     `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "users" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "googleID" character varying,
@@ -28,12 +28,11 @@ export class Backend1709103990179 implements MigrationInterface {
                 CONSTRAINT "PK_a3ffb1c0c8416b9fc6f907b7433" PRIMARY KEY ("id")
             )
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             DROP TABLE "users"
         `);
-    }
-
+  }
 }

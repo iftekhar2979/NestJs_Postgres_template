@@ -4,6 +4,7 @@ import { FROM_EMAIL, ORG_NAME } from "./constants";
 import { User } from "../user/entities/user.entity";
 import { Offer } from "src/offers/entities/offer.entity";
 import { Product } from "src/products/entities/products.entity";
+import { Order } from "src/orders/entities/order.entity";
 
 @Injectable()
 export class MailService {
@@ -47,7 +48,7 @@ export class MailService {
     this._from = value;
   }
 
-  constructor(private readonly _mailService: MailerService) {}
+  constructor(private readonly _mailService: MailerService) { }
 
   async sendUserConfirmationMail(user: User, url: string) {
     const subject = `Welcome to Your Pet Attix! Hi ${user.firstName}, Here's Your Account Activation Code`;
@@ -263,4 +264,104 @@ export class MailService {
       },
     });
   }
+
+  async sellerOrderConfirmation(order: Order, parcel: any) {
+    const seller = order.seller;
+    const buyer = order.buyer;
+    const product = order.product;
+
+    const subject = `Your product has been sold on Pet Attix!`;
+
+    await this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
+      to: seller.email,
+      subject,
+      template: "sell-confirmation", // seller-confirmation.pug
+      context: {
+        subject,
+
+        // Seller Info
+        sellerFirstName: seller.firstName,
+        sellerLastName: seller.lastName,
+
+        // Buyer Info
+        buyerFirstName: buyer.firstName,
+        buyerLastName: buyer.lastName,
+        buyerEmail: buyer.email,
+        buyerPhone: buyer.phone || "N/A",
+
+        // Order Info
+        orderId: order.id,
+        orderStatus: order.status,
+        paymentStatus: order.paymentStatus,
+        parcelId: order.parcel_id,
+        totalAmount: order.total,
+
+        // Product Info
+        productName: product.product_name,
+        productPrice: product.selling_price,
+        productCategory: product.category,
+        productCondition: product.condition,
+        productQuantity: product.quantity,
+        productDescription: product.description,
+        productImages: product.images,
+
+        // Parcel Info (from SendCloud)
+        parcel: parcel || null,
+      },
+    });
+  }
+
+  async buyerOrderConfirmation(order: Order, parcel: any) {
+    const buyer = order.buyer;
+    const seller = order.seller;
+    const product = order.product;
+
+    const subject = `Your order has been confirmed on Pet Attix!`;
+
+    return this._mailService.sendMail({
+      from: { name: this._name, address: this._from },
+      to: buyer.email,
+      subject,
+      template: "buyer-confirmation", // buyer-confirmation.pug
+      context: {
+        subject,
+
+        // Buyer Info
+        buyerFirstName: buyer.firstName,
+        buyerLastName: buyer.lastName,
+        buyerEmail: buyer.email,
+        buyerPhone: buyer.phone || "N/A",
+
+        // Seller Info
+        sellerFirstName: seller.firstName,
+        sellerLastName: seller.lastName,
+        sellerEmail: seller.email,
+
+        // Order Info
+        orderId: order.id,
+        orderStatus: order.status,
+        paymentStatus: order.paymentStatus,
+        parcelId: order.parcel_id,
+        totalAmount: order.total,
+
+        // Product Info
+        productName: product.product_name,
+        productPrice: product.selling_price,
+        productCategory: product.category,
+        productCondition: product.condition,
+        productQuantity: product.quantity,
+        productDescription: product.description,
+        productImages: product.images,
+
+        // Delivery Info
+        delivery: order.deliveryInfo || null,
+
+        // Parcel Info
+        parcel: parcel || null,
+      },
+    });
+  }
+
+
 }

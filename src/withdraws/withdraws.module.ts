@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
-import { WithdrawsController } from './withdraws.controller';
+import { Module } from "@nestjs/common";
+import { WithdrawsController } from "./withdraws.controller";
 
 @Module({
-  controllers: [WithdrawsController]
+  controllers: [WithdrawsController],
 })
 export class WithdrawsModule {}
