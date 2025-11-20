@@ -38,6 +38,7 @@ import { SendcloudService } from "src/sendcloud/sendcloud.service";
 import { FavouritesService } from "src/favourites/favourites.service";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
+import { MailService } from "src/mail/mail.service";
 
 @Injectable()
 export class DeliveryService {
@@ -56,7 +57,8 @@ export class DeliveryService {
     private readonly _configService: ConfigService,
     private readonly _sendCloudService: SendcloudService,
     private readonly _favouriteService: FavouritesService,
-    @InjectQueue("product") private readonly _queue: Queue
+    @InjectQueue("product") private readonly _queue: Queue,
+    private readonly _mailService: MailService
   ) { }
   async createDeliveryAddress({
     createDeliveryAddressDto,
@@ -111,7 +113,7 @@ export class DeliveryService {
       if (product.status === ProductStatus.SOLD) {
         throw new BadRequestException("Product already sold");
       }
-
+      console.log(product);
       if (product.status !== ProductStatus.AVAILABLE) {
         throw new ForbiddenException("Product is no longer available for purchase.");
       }
@@ -334,7 +336,7 @@ export class DeliveryService {
     if (!deliveryInfo.country) {
       throw new BadRequestException("Delivery country not filled");
     }
-    const shippingMethods = await this._sendCloudService.getShippingMethods({
+    let params = {
       from: {
         postal_code: collectionInfo.postal_code,
         country: collectionInfo.country,
@@ -344,7 +346,12 @@ export class DeliveryService {
         country: deliveryInfo.country,
       },
       product,
-    });
+      service_point_id: null
+    }
+    if (deliveryInfo.service_point_id) {
+      params.service_point_id = deliveryInfo.service_point_id
+    }
+    const shippingMethods = await this._sendCloudService.getShippingMethods(params);
 
     return {
       message: "Shipping methods retrived successfully",
@@ -435,6 +442,7 @@ export class DeliveryService {
         parseFloat(order.protectionFee as unknown as string),
       currency: "GBP",
     };
+    this._logger.log('Delivery Charge', pricingInfo)
     if (!pricingInfo.deliveryCharge) {
       throw new BadRequestException("Please try another shipping method !");
     }
@@ -477,14 +485,14 @@ export class DeliveryService {
           id: productId,
         },
       },
-      relations: ["product", "deliveryInfo"],
+      relations: ["product", "deliveryInfo", "buyer", "seller"],
     });
 
     // console.log(order);
     const wallet = await this._walletRepository.findOne({
       where: {
         user: {
-          id: order.buyer_id,
+          id: user.id,
         },
       },
     });
@@ -604,14 +612,26 @@ export class DeliveryService {
         },
       ];
 
+
+      const ordeInfo = await this._orderRepository.findOne({
+        where: {
+          product: {
+            id: productId,
+          },
+        },
+        relations: ["product", "deliveryInfo", "buyer", "seller"],
+      });
+
+      await this._queue.add("orderConfirmation", {
+        order, parcelInfo: parcelInfo.parcel
+      });
+      // await this._queue 
       // Bulk insert notifications for both user and admin
       await this._notificationService.bulkInsertNotifications(notifications);
       await queryRunner.commitTransaction();
       // await this._queue.
 
-      await this._queue.add("orderConfirmation", {
-        order, parcelInfo
-      });
+
       return {
         message: "Payment successfull",
         statusCode: 201,

@@ -25,6 +25,7 @@ import { SendcloudModule } from "src/sendcloud/sendcloud.module";
 import { Favorite } from "src/favourites/entities/favourite.entity";
 import { FavouritesModule } from "src/favourites/favourites.module";
 import { BullModule } from "@nestjs/bull";
+import { MailModule } from "src/mail/mail.module";
 // import { BullModule } from "src/bull/bull.module";
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { BullModule } from "@nestjs/bull";
     CurrencyConverterModule,
     SendcloudModule,
     FavouritesModule,
+    MailModule,
 
     BullModule.registerQueue({ name: "product" }),
     // ShipmentService,

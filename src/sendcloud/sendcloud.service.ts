@@ -27,9 +27,15 @@ export class SendcloudService {
     from: { country: string; postal_code: string };
     to: { country: string; postal_code: string };
     product?: Product;
+    service_point_id?: number | null
   }) {
-    const url = `${this.panelUrl}/shipping_methods?to_country=${address.to.country}&to_postal_code=${address.to.postal_code}&from_postal_code=${address.from.postal_code}&from_country=${address.from.country}&limit=50`;
 
+    let url = `${this.panelUrl}/shipping_methods?to_country=${address.to.country}&to_postal_code=${address.to.postal_code}&from_postal_code=${address.from.postal_code}&from_country=${address.from.country}&limit=50`;
+
+    if (address.service_point_id) {
+      url = `${this.panelUrl}/shipping_methods?service_point_id=${address.service_point_id}`
+    }
+    console.log(url)
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -75,7 +81,7 @@ export class SendcloudService {
     },
     shippingId: number
   ) {
-    const url = `${this.panelUrl}/shipping-price?shipping_method_id=${shippingId}&to_country=${address.to.country}&to_postal_code=${address.to.postal_code}&from_postal_code=${address.from.postal_code}&from_country=${address.from.country}&weight=${address.product.weight}&weight_unit=kilogram`;
+    const url = `${this.panelUrl}/shipping-price?shipping_method_id=${shippingId}&to_country=${address.to.country}&from_country=${address.from.country}&weight=${address.product.weight}&weight_unit=kilogram`;
     console.log(url);
     const response = await fetch(url, {
       method: "GET",
