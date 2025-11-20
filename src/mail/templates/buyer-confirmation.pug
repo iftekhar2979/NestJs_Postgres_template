@@ -55,53 +55,59 @@ html
       p Hello #{buyerFirstName} #{buyerLastName},
       p Your order has been successfully confirmed on Pet Attix! 🎉  
 
-      // Order Information
+      // ORDER INFORMATION
       .section-title Order Details
       .info-row Strong Order ID: #{orderId}
       .info-row Strong Status: #{orderStatus}
       .info-row Strong Payment Status: #{paymentStatus}
+
       if parcelId
         .info-row Strong Parcel ID: #{parcelId}
-      .info-row Strong Total Paid: $#{totalAmount}
 
-      // Product Information
+      .info-row Strong Total Paid: €#{totalAmount}
+
+      // PRODUCT INFORMATION
       .section-title Product Details
       .info-row Name: #{productName}
       .info-row Category: #{productCategory}
       .info-row Condition: #{productCondition}
+      .info-row Quantity: #{productQuantity}
+
       .info-row Description:
       p #{productDescription}
 
       if productImages && productImages.length
         .info-row Product Image:
-        img.product-image(src=productImages[0].url alt=productName)
+        img.product-image(src=productImages[0].image_url alt=productName)
 
-      // Delivery Information
+      // DELIVERY INFORMATION
       if delivery
         .section-title Delivery Address
-        .info-row #{delivery.first_name} #{delivery.last_name}
+        .info-row #{delivery.firstName} #{delivery.lastName}
         .info-row #{delivery.address}
         .info-row #{delivery.city}, #{delivery.country}
         .info-row Postal Code: #{delivery.postal_code}
         .info-row Phone: #{delivery.phone}
 
-      // Parcel Tracking Information
+      // PARCEL TRACKING INFO
       if parcel
         .section-title Shipping & Tracking
         .info-row Carrier: #{parcel.carrier.code}
         .info-row Service: #{parcel.shipment.name}
         .info-row Weight: #{parcel.weight} kg
         .info-row Tracking Number: #{parcel.tracking_number}
-        if parcel.label
+
+        if parcel.label && parcel.label.normal_printer
           .info-row
             | Download Label: 
-            a(href=parcel.label.normal_printer[0]) Normal Printer Label
+            a(href=parcel.label.normal_printer[0] target="_blank") Normal Printer Label
 
-      // Seller Info
+      // SELLER INFORMATION
       .section-title Seller Information
       .info-row #{sellerFirstName} #{sellerLastName}
+      .info-row Email: #{sellerEmail}
 
-      // Footer
+      // FOOTER
       .footer
         p Thank you for shopping with Pet Attix!
         p If you have any questions, feel free to contact our support team.

@@ -271,7 +271,7 @@ export class MailService {
     const product = order.product;
 
     const subject = `Your product has been sold on Pet Attix!`;
-
+    console.log(seller, buyer, product)
     await this._mailService.sendMail({
       from: { name: this._name, address: this._from },
       to: seller.email,

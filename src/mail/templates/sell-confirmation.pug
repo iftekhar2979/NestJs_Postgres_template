@@ -41,8 +41,7 @@ html
   body
     .card
       .header Order Confirmation for Seller
-
-      p Hello #{seller.first_name} #{seller.last_name},
+      p Hello #{sellerFirstName} #{sellerLastName},
       p Your product has been successfully purchased. Below are the full details for you to prepare the shipment.
 
     // ORDER INFORMATION
@@ -50,99 +49,93 @@ html
       .section-title Order Information
       p 
         span.label Order ID: 
-        | #{order.id}
+        | #{orderId}
+
       p 
         span.label Status: 
-        | #{order.status}
+        | #{orderStatus}
+
       p 
         span.label Payment Status: 
-        | #{order.paymentStatus}
+        | #{paymentStatus}
+
       p 
         span.label Parcel ID: 
-        | #{order.parcel_id || "Not Created"}
+        | #{parcelId || "Not Created"}
+
       p 
-        span.label Total Amount: 
-        | #{order.total} #{product.currency || "€"}
+        span.label Total Amount:
+        | #{totalAmount}
 
     // PRODUCT INFORMATION
     .card
       .section-title Product Details
+
       p 
         span.label Name: 
-        | #{product.product_name}
+        | #{productName}
+
       p 
         span.label Category:
-        | #{product.category}
+        | #{productCategory}
+
       p 
         span.label Condition:
-        | #{product.condition}
-      p 
-        span.label Status:
-        | #{product.status}
+        | #{productCondition}
+
       p 
         span.label Price:
-        | #{product.selling_price} #{product.currency || "€"}
+        | #{productPrice}
+
       p 
         span.label Quantity:
-        | #{product.quantity}
+        | #{productQuantity}
 
       .section-title Description
-      p #{product.description}
+      p #{productDescription}
 
       .section-title Product Images
       .images
-        each img in product.images
+        each img in productImages
           img(src=img.image_url alt="Product Image")
 
     // BUYER DETAILS
     .card
       .section-title Buyer Details
+
       p 
         span.label Name:  
-        | #{buyer.first_name} #{buyer.last_name}
+        | #{buyerFirstName} #{buyerLastName}
+
       p 
         span.label Email:  
-        | #{buyer.email}
+        | #{buyerEmail}
+
       p 
         span.label Phone:  
-        | #{buyer.phone || "N/A"}
-
-    // DELIVERY ADDRESS
-    if order.deliveryInfo
-      .card
-        .section-title Delivery Address
-        p 
-          span.label Address: 
-          | #{order.deliveryInfo.address}
-        p 
-          span.label City: 
-          | #{order.deliveryInfo.city}
-        p 
-          span.label Postal Code: 
-          | #{order.deliveryInfo.postal_code}
-        p 
-          span.label Country: 
-          | #{order.deliveryInfo.country}
-        p 
-          span.label Phone: 
-          | #{order.deliveryInfo.phone}
+        | #{buyerPhone}
 
     // PARCEL INFORMATION (FROM SENDCLOUD)
     if parcel
       .card
         .section-title Parcel Details
+
         p 
           span.label Tracking Number: 
           | #{parcel.tracking_number}
+
         p 
           span.label Address: 
           | #{parcel.address}, #{parcel.city}, #{parcel.postal_code}
+
         p 
           span.label Carrier: 
           | #{parcel.carrier.code}
+
         p 
           span.label Shipment Type: 
           | #{parcel.shipment.name}
+
         p 
           span.label Weight: 
           | #{parcel.weight} kg
@@ -154,6 +147,7 @@ html
               each url, idx in parcel.label.normal_printer
                 li 
                   a(href=url target="_blank") Normal Label #{idx + 1}
+
           if parcel.label.label_printer
             p 
               a(href=parcel.label.label_printer target="_blank") Thermal Printer Label
@@ -161,4 +155,4 @@ html
     // FOOTER
     .card
       p Thank you for selling with us!
-      p Please prepare the package and attach the label before shipping.
+      p Please prepare and attach the shipping label before sending the parcel.
