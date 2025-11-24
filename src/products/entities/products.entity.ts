@@ -19,6 +19,7 @@ import { ProductBoosts } from "src/product-boost/entities/product-boost.entity";
 import { Offer } from "src/offers/entities/offer.entity";
 import { Transections } from "src/transections/entity/transections.entity";
 import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
+import { CARRER_TYPE } from "../dto/CreateProductDto.dto";
 
 @Entity("products")
 export class Product {
@@ -129,9 +130,9 @@ export class Product {
   @ApiProperty({ example: "31.5" })
   length: number;
 
-  @Column({ type: "int", nullable: true })
-  @ApiProperty({ example: "315" })
-  service_point_id: number;
+  @Column({ type: "varchar", nullable: true })
+  @ApiProperty({ example: "drop_off" })
+  carrer_option: CARRER_TYPE;
 
   @Column({ type: "decimal", precision: 10, scale: 2, nullable: true })
   @ApiProperty({ example: "27.2" })

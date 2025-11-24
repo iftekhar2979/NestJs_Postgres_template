@@ -63,7 +63,7 @@ export class ProductsService {
     private readonly _userService: UserService,
     @InjectRepository(Transections) private readonly _transectionRepository: Repository<Transections>,
     @InjectLogger() private readonly _logger: LoggerService
-  ) { }
+  ) {}
   // async getProductById({product_id,status,}){
 
   // }
@@ -115,22 +115,24 @@ export class ProductsService {
       const height = parseInt(createProductDto.height, 10);
       const width = parseInt(createProductDto.width, 10);
       const length = parseInt(createProductDto.length, 10);
-      let service_point_id: number = 0;
+      // let service_point_id: number = 0;
+      console.log(createProductDto);
       if (createProductDto.carrer_type == CARRER_TYPE.COLLECTION_TYPE) {
         // this.validateAddress(createProductDto);
         validateAddress({
           dto: createProductDto,
           requiredFields: ["address", "house_number", "city", "country", "postal_code", "company_name"],
         });
-        if (createProductDto.service_point_id) {
-          throw new BadRequestException("Service point id should not be included!");
-        }
+        createProductDto.carrer_option = CARRER_TYPE.COLLECTION_TYPE;
+        // if (createProductDto.service_point_id) {
+        //   throw new BadRequestException("Service point id should not be included!");
+        // }
       } else {
-        if (!createProductDto.service_point_id) {
-          throw new BadRequestException("Service point id should be included!");
-        }
-        service_point_id = parseFloat(createProductDto.service_point_id);
+        // if (createProductDto.carrer_type) {
+        createProductDto.carrer_option = CARRER_TYPE.SERVICE_TYPE;
+        // }
       }
+      console.log(createProductDto);
       if (isNaN(sellingPrice) || isNaN(quantity)) {
         throw new BadRequestException("Invalid numeric values for price or quantity!");
       }
@@ -175,7 +177,8 @@ export class ProductsService {
         product.height = height;
         product.length = length;
         product.width = width;
-        product.service_point_id = service_point_id ? service_point_id : null;
+        product.carrer_option = createProductDto.carrer_option;
+        // product.service_point_id = service_point_id ? service_point_id : null;
         const savedProduct = await queryRunner.manager.save(Product, product);
 
         // Handle boost transaction
@@ -199,22 +202,22 @@ export class ProductsService {
           await queryRunner.manager.save(Wallets, wallets);
           await queryRunner.manager.save(Transections, transection);
         }
-        if (createProductDto.carrer_type == CARRER_TYPE.COLLECTION_TYPE) {
-          const productCollection = new CollectionAddress();
-          productCollection.name = `${userInfo.firstName} ${userInfo.lastName}`;
-          productCollection.email = userInfo.email;
-          productCollection.city = createProductDto.city;
-          productCollection.address = createProductDto.address;
-          productCollection.address_2 = createProductDto.address_2;
-          productCollection.telephone = userInfo.phone;
-          productCollection.country = createProductDto.country;
-          productCollection.company_name = createProductDto.company_name;
-          productCollection.house_number = createProductDto.house_number;
-          productCollection.postal_code = createProductDto.postal_code;
-          productCollection.product = savedProduct;
-          // productCollection.
-          await queryRunner.manager.save(CollectionAddress, productCollection);
-        }
+        // if (createProductDto.carrer_type == CARRER_TYPE.COLLECTION_TYPE) {
+        const productCollection = new CollectionAddress();
+        productCollection.name = `${userInfo.firstName} ${userInfo.lastName}`;
+        productCollection.email = userInfo.email;
+        productCollection.city = createProductDto.city;
+        productCollection.address = createProductDto.address;
+        productCollection.address_2 = createProductDto.address_2;
+        productCollection.telephone = userInfo.phone;
+        productCollection.country = createProductDto.country;
+        productCollection.company_name = createProductDto.company_name;
+        productCollection.house_number = createProductDto.house_number;
+        productCollection.postal_code = createProductDto.postal_code;
+        productCollection.product = savedProduct;
+        // productCollection.
+        await queryRunner.manager.save(CollectionAddress, productCollection);
+        // }
         // Handle images
         if (Array.isArray(createProductDto.images) && createProductDto.images.length > 0) {
           const productImages = createProductDto.images.map((imgUrl: string) => {
@@ -612,15 +615,19 @@ export class ProductsService {
     this._logger.log(`update product Dto`, updateDto);
     return await this._dataSource.transaction(async (manager) => {
       const productRepo = manager.getRepository(Product);
-      const productImageRepo = manager.getRepository(ProductImage);
+      // if(productRepo)
+      // const productImageRepo = manager.getRepository(ProductImage);
       const addressRepo = manager.getRepository(CollectionAddress);
-      console.log(id, user_id);
+      // console.log(id, user_id);
       const product = await productRepo.findOne({
         where: { id, user_id },
       });
 
       if (!product) {
         throw new NotFoundException(`Product with id ${id} not found.`);
+      }
+      if (product.status !== ProductStatus.PENDING && product.status !== ProductStatus.AVAILABLE) {
+        throw new BadRequestException(`Only available products can be updated.`);
       }
 
       const sellingPriceInput = Number(updateDto.selling_price);
@@ -633,95 +640,112 @@ export class ProductsService {
         defaultCurrency,
         sellingPriceInput
       );
-
+      console.log("Updated-1", updateDto);
       // Buyer protection fee (example formula)
 
       if (updateDto.selling_price) {
-        updateDto.selling_price = convertedPrice
-
+        // updateDto.selling_price = convertedPrice;
+        product.selling_price = convertedPrice;
       }
       if (updateDto.quantity) {
-        updateDto.quantity = Number(updateDto.quantity)
+        // updateDto.quantity = Number(updateDto.quantity);
+        product.quantity = Number(updateDto.quantity);
       }
       if (updateDto.is_boosted) {
-        updateDto.is_boosted = updateDto.is_boosted === "true"
+        updateDto.is_boosted = updateDto.is_boosted === "true";
+        product.is_boosted = updateDto.is_boosted;
       }
       if (updateDto.weight) {
-
-        updateDto.weight = Number(updateDto.weight)
-
+        updateDto.weight = Number(updateDto.weight);
+        product.weight = Number(updateDto.weight);
       }
       if (updateDto.width) {
-        updateDto.width = Number(updateDto.width)
+        updateDto.width = Number(updateDto.width);
+        product.width = Number(updateDto.width);
       }
       if (updateDto.height) {
-        updateDto.height = Number(updateDto.height)
+        updateDto.height = Number(updateDto.height);
+        product.height = Number(updateDto.height);
       }
       if (updateDto.length) {
-        updateDto.length = Number(updateDto.length)
+        updateDto.length = Number(updateDto.length);
+        product.length = Number(updateDto.length);
+      }
+      if (updateDto.size) {
+        product.size = updateDto.size;
+      }
+      if (updateDto.product_name) {
+        product.product_name = updateDto.product_name;
+      }
+      if (updateDto.category) {
+        product.category = updateDto.category;
+      }
+      if (updateDto.brand) {
+        product.brand = updateDto.brand;
+      }
+      if (updateDto.condition) {
+        product.condition = updateDto.condition;
+      }
+      if (updateDto.description) {
+        product.description = updateDto.description;
       }
       // Assign product fields
-      Object.assign(product, {
-        ...updateDto,
-      });
+      // Object.assign(product, {
+      //   ...updateDto,
+      // });
 
       // -----------------------------
       // IMAGES
       // -----------------------------
-      // console.log(product);
-      this._logger.log("Product", product);
-      if (updateDto.images && updateDto.images.length > 0) {
-        await productImageRepo.delete({ product_id: id });
+      console.log("Updated", updateDto);
+      // this._logger.log("Product", updateDto);
 
+      if (updateDto.images && updateDto.images.length > 0) {
+        console.log("Updating images...");
+        await this._productImageRepository.delete({ product: { id: id } });
         const newImages = updateDto.images.map((imgUrl) => {
-          this._logger.log(`Image url `, imgUrl);
           const obj = new ProductImage();
           obj.product = product;
           obj.product_id = id;
+          // obj.productId = product.id;
           obj.image = imgUrl;
           return obj;
         });
-
-        const productImage = await productImageRepo.insert(newImages);
+        this._logger.log(`Edit Product Images`, newImages);
+        await manager.save(ProductImage, newImages);
+        // product.images = newImages
       }
+      const productImages = await this._productImageRepository.find({ where: { product_id: id } });
+      product.images = productImages;
 
       // -----------------------------
       // ADDRESS / CARRIER LOGIC
-      // -----------------------------
       if (updateDto.carrer_type === "collection_address") {
-        // Create/Update collection address
-        const addressData = {
-          product: product,
-          address: updateDto.address,
-          address_2: updateDto.address_2,
-          house_number: updateDto.house_number,
-          city: updateDto.city,
-          postal_code: updateDto.postal_code,
-          country: updateDto.country,
-          company_name: updateDto.company_name,
-        };
-
-        // console.log(product.collectionAddress);
         if (product.collectionAddress) {
-          await addressRepo.update(product.collectionAddress.id, addressData);
-        } else {
-          const newAddress = addressRepo.create(addressData);
-          product.collectionAddress = await addressRepo.save(newAddress);
+          console.log("Updating existing address...");
+          console.log("Before update:", product.collectionAddress);
+
+          // Merge only fields that exist in updateDto
+          for (const key of Object.keys(updateDto)) {
+            if (key in product.collectionAddress) {
+              (product.collectionAddress as any)[key] = (updateDto as any)[key];
+            }
+          }
+
+          const address = await addressRepo.save(product.collectionAddress);
+          console.log("Updated existing address:", address);
         }
-
-        // If collection_address → service point must be null
-        product.service_point_id = null;
       }
-
+      product.carrer_option = updateDto.carrer_type;
       // If courier drop-off or pickup
-      if (updateDto.carrer_type !== "collection_address") {
-        // If they choose shipping with service point
-        if (updateDto.service_point_id) {
-          product.service_point_id = Number(updateDto.service_point_id);
-        } else {
-          product.service_point_id = null;
-        }
-      }
+      // if (updateDto.carrer_type !== "collection_address") {
+      //   // If they choose shipping with service point
+      //   if (updateDto.service_point_id) {
+      //     product.service_point_id = Number(updateDto.service_point_id);
+      //   } else {
+      //     product.service_point_id = null;
+      //   }
+      // }
 
       // -----------------------------
       // Store protection fee

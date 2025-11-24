@@ -36,6 +36,10 @@ export const GetFileDestination = createParamDecorator((data: unknown, ctx: Exec
   return file.path.split("/").slice(1, length).join("/");
 });
 function fileDestinations({ images }: { images: Express.Multer.File[] }): string[] {
+  console.log(images);
+  if (!images) {
+    return [];
+  }
   return images.map((file) => {
     // Normalize to the OS-specific format
     const normalized = path.normalize(file.path);
@@ -56,7 +60,7 @@ export const GetFilesDestination = createParamDecorator((data: unknown, ctx: Exe
   // console.log("file",file.images)
   const image = fileDestinations({ images: file.images });
   // console.log(image)
-  return image
+  return image;
 });
 export const GetOptionalFilesDestination = createParamDecorator((data: unknown, ctx: ExecutionContext) => {
   const req = ctx.switchToHttp().getRequest();
