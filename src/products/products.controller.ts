@@ -46,7 +46,7 @@ export class ProductsController {
   constructor(
     @InjectLogger() private readonly _logger: Logger,
     private readonly _productsService: ProductsService
-  ) { }
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthenticationGuard)
@@ -66,7 +66,7 @@ export class ProductsController {
     @UploadedFiles() files: { images?: Express.Multer.File[] },
     @GetFilesDestination() filesDestination: string[]
   ) {
-    this._logger.log("Product Upload", filesDestination)
+    this._logger.log("Product Upload", createProductDto);
     createProductDto.images = filesDestination;
     return this._productsService.create(createProductDto, user);
   }
@@ -122,7 +122,7 @@ export class ProductsController {
     // console.log(id, files);
     this._logger.log(`Files`, filesDestination);
     updateProductDto.images = filesDestination;
-    console.log(updateProductDto)
+    this._logger.log(`product update dto`, updateProductDto);
     return this._productsService.updateProduct(id, updateProductDto, user.id, user);
   }
   @Put(":id/boosts")
