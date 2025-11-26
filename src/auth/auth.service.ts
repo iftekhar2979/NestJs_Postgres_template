@@ -27,6 +27,8 @@ import { OtpType } from "src/otp/entities/otp.entity";
 import { OtpVerificationDto } from "./dto/otp-verification.dto";
 import { OtpService } from "src/otp/otp.service";
 import { Wallets } from "src/wallets/entity/wallets.entity";
+import { InjectQueue } from "@nestjs/bull";
+import { Queue } from "bull";
 
 @Injectable()
 export class AuthService {
@@ -62,7 +64,9 @@ export class AuthService {
     private readonly _jwtService: JwtService,
     private readonly _mailService: MailService,
     private readonly _configService: ConfigService,
-    @InjectLogger() private readonly _logger: Logger
+    @InjectLogger() private readonly _logger: Logger,
+
+    @InjectQueue("notifications") private readonly _queue: Queue
   ) {
     this._FR_HOST = _configService.get<string>(`FR_BASE_URL`);
   }
@@ -97,6 +101,8 @@ export class AuthService {
         console.log(err);
       }
       this._logger.log("Login the user and send the token and mail", AuthService.name);
+
+      // this._logger.log("Login the user and send the token and mail", AuthService.name);
       const token: string = await this.signTokenSendEmailAndSMS(user, req, otp.otp);
 
       return { user, token };
@@ -187,6 +193,13 @@ export class AuthService {
     userinfo.password = hashedPassword;
     this._logger.log("Saving Updated User", AuthService.name);
     await this._userRepository.save(userinfo);
+    if (user.fcm) {
+      await this._queue.add("push_notification", {
+        token: user?.fcm,
+        title: "Password Reset Successful",
+        body: "Your password has been reset successfully",
+      });
+    }
     return { message: "Password reset successfully", status: "success", data: null };
   }
   async updatePassword(resetPasswordDto: UpdatePassword, user) {
@@ -218,7 +231,7 @@ export class AuthService {
 
     this._logger.log("Searching User with provided email", AuthService.name);
     const user = await this._userRepository.findOne({ where: { email } });
-    // console.log(user)
+    // console.log(user);
     this._logger.log("Verifying User", AuthService.name);
     if (user && (await argon2verify(user.password, password))) {
       const verification = await this._verificationRepository.findOne({ where: { user_id: user.id } });
