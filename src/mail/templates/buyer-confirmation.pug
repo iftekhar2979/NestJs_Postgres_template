@@ -2,112 +2,97 @@ doctype html
 html
   head
     meta(charset="UTF-8")
+    title #{subject}
     style.
-      body {
-        font-family: Arial, sans-serif;
-        background: #f5f5f5;
-        padding: 20px;
-      }
-      .container {
-        max-width: 650px;
-        margin: auto;
-        background: #ffffff;
-        padding: 20px;
-        border-radius: 8px;
-      }
-      .header {
-        background: #4CAF50;
-        padding: 15px;
-        text-align: center;
-        color: #fff;
-        border-radius: 6px;
-        font-size: 20px;
-        font-weight: bold;
-      }
-      .section-title {
-        font-size: 18px;
-        font-weight: bold;
-        margin-top: 20px;
-        color: #333;
-      }
-      .info-row {
-        margin-bottom: 8px;
-        font-size: 14px;
-        color: #444;
-      }
-      .product-image {
-        width: 130px;
-        border-radius: 6px;
-        margin-top: 10px;
-      }
-      .footer {
-        margin-top: 30px;
-        font-size: 12px;
-        text-align: center;
-        color: #777;
-      }
+      body { font-family: Arial, sans-serif; background: #f8f9fa; padding: 20px; }
+      .container { max-width: 700px; margin: auto; background: #fff; padding: 25px; border-radius: 8px; }
+      .title { font-size: 22px; font-weight: bold; margin-bottom: 10px; color: #333; }
+      .section-title { font-size: 18px; font-weight: bold; margin: 20px 0 8px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+      .info-box { margin-bottom: 15px; }
+      .info-box p { margin: 3px 0; }
+      img.product-img { width: 120px; height: auto; border-radius: 8px; margin-right: 10px; }
+      .label-img { width: 100%; max-width: 250px; margin: 10px 0; border: 1px solid #ccc; }
 
   body
     .container
-      .header #{subject}
+      .title Your order is confirmed! 🎉
 
-      // Buyer Greeting
-      p Hello #{buyerFirstName} #{buyerLastName},
-      p Your order has been successfully confirmed on Pet Attix! 🎉  
+      p Hello #{order.buyer.firstName} #{order.buyer.lastName},  
+      p Thank you for your purchase on Pet Attix! Here are your order details:
 
-      // ORDER INFORMATION
+      // ORDER DETAILS
       .section-title Order Details
-      .info-row Strong Order ID: #{orderId}
-      .info-row Strong Status: #{orderStatus}
-      .info-row Strong Payment Status: #{paymentStatus}
+      .info-box
+        p Order ID: #{order.id}
+        p Status: #{order.status.split("_").join(" ")}
+        p Payment Status: #{order.paymentStatus.toUppercase()}
+        p Total Amount: #{pricingInfo.total} #{pricingInfo.currency}
+        p Parcel ID: #{order.parcel_id}
 
-      if parcelId
-        .info-row Strong Parcel ID: #{parcelId}
+      // SELLER DETAILS
+      .section-title Seller Details
+      .info-box
+        p Name: #{order.seller.firstName} #{order.seller.lastName}
+        p Email: #{order.seller.email}
 
-      .info-row Strong Total Paid: €#{totalAmount}
-
-      // PRODUCT INFORMATION
+      // PRODUCT DETAILS
       .section-title Product Details
-      .info-row Name: #{productName}
-      .info-row Category: #{productCategory}
-      .info-row Condition: #{productCondition}
-      .info-row Quantity: #{productQuantity}
+      .info-box
+        p Name: #{order.product.product_name}
+        p Price: #{order.product.selling_price} #{pricingInfo.currency}
+        p Category: #{order.product.category}
+        p Condition: #{order.product.condition}
+        p Quantity: #{order.product.quantity}
+        p Description: #{order.product.description}
 
-      .info-row Description:
-      p #{productDescription}
+        if order.product.images && order.product.images.length
+          p Product Images:
+          each img in order.product.images
+            img.product-img(src=`${process.env.BASE_URL}/${img.image}`)
 
-      if productImages && productImages.length
-        .info-row Product Image:
-        img.product-image(src=productImages[0].image_url alt=productName)
+      // PAYMENT BREAKDOWN
+      .section-title Payment Breakdown
+      .info-box
+        p Currency : #{pricingInfo.currency}
+        p Product Price: #{pricingInfo.productPrice} 
+        p Protection Fee: #{pricingInfo.productProtectionFee} 
+        p Delivery Charge: #{pricingInfo.deliveryCharge} 
+        p Delivery Protection: #{pricingInfo.deliveryProtectionFee} 
+        p Total: #{pricingInfo.total} 
 
-      // DELIVERY INFORMATION
-      if delivery
+      // DELIVERY INFO
+      if order.deliveryInfo
         .section-title Delivery Address
-        .info-row #{delivery.firstName} #{delivery.lastName}
-        .info-row #{delivery.address}
-        .info-row #{delivery.city}, #{delivery.country}
-        .info-row Postal Code: #{delivery.postal_code}
-        .info-row Phone: #{delivery.phone}
+        .info-box
+          p Name: #{order.deliveryInfo.name}
+          p Address: #{order.deliveryInfo.address}
+          p City: #{order.deliveryInfo.city}
+          p Postal Code: #{order.deliveryInfo.postal_code}
+          p Country: #{order.deliveryInfo.country}
 
-      // PARCEL TRACKING INFO
-      if parcel
+      // PARCEL DETAILS (Sendcloud)
+      if parcelInfo.parcel
         .section-title Shipping & Tracking
-        .info-row Carrier: #{parcel.carrier.code}
-        .info-row Service: #{parcel.shipment.name}
-        .info-row Weight: #{parcel.weight} kg
-        .info-row Tracking Number: #{parcel.tracking_number}
+        .info-box
+          p Tracking Number: #{parcelInfo.parcel.tracking_number}
+          p Shipping Method: #{parcelInfo.parcel.shipping_method_checkout_name}
+          p Carrier: #{parcelInfo.parcel.carrier.code}
 
-        if parcel.label && parcel.label.normal_printer
-          .info-row
-            | Download Label: 
-            a(href=parcel.label.normal_printer[0] target="_blank") Normal Printer Label
+          if parcelInfo.parcel.label && parcelInfo.parcel.label.normal_printer
+            p Shipping Labels (A4/Normal Printer):
+            each url in parcelInfo.parcel.label.normal_printer
+              a(href=url target="_blank") View Label
+              br
 
-      // SELLER INFORMATION
-      .section-title Seller Information
-      .info-row #{sellerFirstName} #{sellerLastName}
-      .info-row Email: #{sellerEmail}
+          if parcelInfo.parcel.label && parcelInfo.parcel.label.label_printer
+            p Label Printer Version:
+            a(href=parcelInfo.parcel.label.label_printer target="_blank") View Label Printer Format
 
-      // FOOTER
-      .footer
-        p Thank you for shopping with Pet Attix!
-        p If you have any questions, feel free to contact our support team.
+          if parcelInfo.parcel.documents
+            p Documents:
+            each doc in parcelInfo.parcel.documents
+              a(href=doc.link target="_blank") #{doc.type} (#{doc.size})
+              br
+
+      hr
+      p Thank you for shopping with Pet Attix!
