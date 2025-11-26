@@ -13,8 +13,8 @@ import { User } from "../user/entities/user.entity";
 import { UserModule } from "../user/user.module";
 import { Verification } from "src/user/entities/verification.entity";
 import { OtpModule } from "src/otp/otp.module";
-import { Otp } from "src/otp/entities/otp.entity";
 import { Wallets } from "src/wallets/entity/wallets.entity";
+import { BullModule } from "@nestjs/bull";
 
 /**
  * It is a feature module where we keep the controller, service and other code related to authentication and  we import other modules and configure modules and packages that are being used in this module.
@@ -46,6 +46,7 @@ import { Wallets } from "src/wallets/entity/wallets.entity";
     forwardRef(() => UserModule),
     MailModule,
     OtpModule,
+    BullModule.registerQueue({ name: "notifications" }),
   ],
   controllers: [AuthController],
   providers: [AuthService, LocalStrategy, JwtStrategy, GoogleStrategy],
