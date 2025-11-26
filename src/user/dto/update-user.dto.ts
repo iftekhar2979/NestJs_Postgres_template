@@ -29,6 +29,9 @@ export class UpdateUserDto {
   @IsString({ message: "Last name must be a string" })
   @IsOptional()
   lastName?: string;
+
+  @IsOptional()
+  fcm?: string;
 }
 
 export class UpdateProfilePictureDto {

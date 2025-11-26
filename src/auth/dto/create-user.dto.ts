@@ -21,7 +21,7 @@ export class CreateUserDto {
   @IsNotAdmin()
   @MaxLength(20, { message: "First Name exceeds given length" })
   @MinLength(1, { message: "First name has to be of length 1" })
-  @IsAlpha()
+  // @IsAlpha()
   @IsString({ message: "First name must be a string" })
   @IsNotEmpty({ message: "First name can not be empty" })
   firstName: string;
@@ -33,7 +33,7 @@ export class CreateUserDto {
   @IsNotAdmin()
   @MaxLength(20, { message: "Last Name exceeds given length" })
   @MinLength(1, { message: "Last name has to be of length 1" })
-  @IsAlpha()
+  // @IsAlpha()
   @IsString({ message: "Last name must be a string" })
   @IsNotEmpty({ message: "Last name can not be empty" })
   lastName: string;
