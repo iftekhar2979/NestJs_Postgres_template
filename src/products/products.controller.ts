@@ -22,11 +22,7 @@ import { ApiBearerAuth, ApiBody, ApiParam, ApiQuery, ApiResponse, ApiTags } from
 import { ProductsService } from "./products.service";
 import { Product } from "./entities/products.entity";
 import { CreateProductDto } from "./dto/CreateProductDto.dto";
-import {
-  GetFilesDestination,
-  GetOptionalFilesDestination,
-  GetUser,
-} from "src/auth/decorators/get-user.decorator";
+import { GetFilesDestination, GetUser } from "src/auth/decorators/get-user.decorator";
 import { JwtAuthenticationGuard } from "src/auth/guards/session-auth.guard";
 import { FileFieldsInterceptor } from "@nestjs/platform-express";
 import { multerConfig } from "src/common/multer/multer.config";
@@ -96,7 +92,6 @@ export class ProductsController {
     }
     query.userId = user.id;
     query.user = user;
-    // console.log(query)
     return this._productsService.findAllWithFilters(query);
   }
   @Patch(":id")
@@ -119,7 +114,6 @@ export class ProductsController {
     @GetUser() user,
     @GetFilesDestination() filesDestination: string[]
   ) {
-    // console.log(id, files);
     this._logger.log(`Files`, filesDestination);
     updateProductDto.images = filesDestination;
     this._logger.log(`product update dto`, updateProductDto);
