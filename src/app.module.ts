@@ -17,7 +17,7 @@ import { S3Module } from "./s3/s3.module";
 import { SseModule } from "./sse/sse.module";
 import { OtpModule } from "./otp/otp.module";
 import { ProductsModule } from "./products/products.module";
-import { ElasticsearchModule } from "@nestjs/elasticsearch";
+// import { ElasticsearchModule } from "@nestjs/elasticsearch";
 import { SearchModule } from "./search/search.module";
 import { FavouritesModule } from "./favourites/favourites.module";
 import { OffersModule } from "./offers/offers.module";
@@ -56,6 +56,8 @@ import { SettingsModule } from "./settings/settings.module";
 import { SettingService } from "./setting/setting.service";
 import { CurrencyConverterModule } from "./currency-converter/currency-converter.module";
 import { SendcloudModule } from "./sendcloud/sendcloud.module";
+import { PushNotificationProccessor } from "./bull/processors/pushNotificationQueue";
+import { FirebaseModule } from "./firebase/firebase.module";
 /**
  * It is the root module for the application in we import all feature modules and configure modules and packages that are common in feature modules. Here we also configure the middlewares.
  *
@@ -107,16 +109,16 @@ import { SendcloudModule } from "./sendcloud/sendcloud.module";
     // ElasticsearchModule.register({
     //   node: `${process.env.ELASTICSEARCH_NODE}`, // Your Elasticsearch node URL
     // }),
-    ElasticsearchModule.register({
-      node: "https://localhost:9200",
-      auth: {
-        username: "elastic",
-        password: "zLOt2va9_fUKmX0kN3xD",
-      },
-      tls: {
-        rejectUnauthorized: false, // This is for development purposes only, do not use in production
-      },
-    }),
+    // ElasticsearchModule.register({
+    //   node: "https://localhost:9200",
+    //   auth: {
+    //     username: "elastic",
+    //     password: "zLOt2va9_fUKmX0kN3xD",
+    //   },
+    //   tls: {
+    //     rejectUnauthorized: false, // This is for development purposes only, do not use in production
+    //   },
+    // }),
     ScheduleModule.forRoot(),
     WinstonModule.forRoot(winstonLoggerConfig),
     PostgreSQLDatabaseModule,
@@ -148,6 +150,7 @@ import { SendcloudModule } from "./sendcloud/sendcloud.module";
     ReviewsModule,
     TransglobalModule,
     ProductBoostModule,
+    FirebaseModule,
     StripeModule,
     RedisModule,
     BullModule,
@@ -168,6 +171,7 @@ import { SendcloudModule } from "./sendcloud/sendcloud.module";
     WithdrawsService,
     // BullQueueProcessor,
     ImageProcessor,
+    PushNotificationProccessor,
     SettingService,
     // ProductBoostgService,
   ],

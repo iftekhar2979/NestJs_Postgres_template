@@ -80,6 +80,8 @@ export class User {
   @Column({ nullable: true, type: "varchar" })
   currency: string;
   @Column({ nullable: true, type: "varchar" })
+  fcm: string;
+  @Column({ nullable: true, type: "varchar" })
   phone: string;
 
   @Column("enum", { array: true, enum: UserRoles, default: `{${UserRoles.USER}}` })

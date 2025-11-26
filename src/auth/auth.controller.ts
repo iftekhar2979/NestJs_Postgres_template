@@ -50,6 +50,9 @@ import { JwtAuthenticationGuard } from "./guards/session-auth.guard";
 import { ForgetPasswordGuard } from "./guards/forget-password.guard";
 import { JwtService } from "@nestjs/jwt";
 import { MailService } from "src/mail/mail.service";
+import { FirebaseService } from "src/firebase/firebase.service";
+import { Queue } from "bull";
+import { InjectQueue } from "@nestjs/bull";
 
 /**
  * AuthController is responsible for handling incoming requests specific to Authentication related APIs and returning responses to the client.
@@ -63,7 +66,9 @@ export class AuthController {
     private readonly _jwtService: JwtService,
     private readonly _OtpService: OtpService,
     private readonly _mailService: MailService,
-    private readonly _userService: UserService
+    private readonly _userService: UserService,
+
+    @InjectQueue("notifications") private readonly _queue: Queue
   ) {}
   @Post("signup")
   @ApiOperation({
@@ -129,15 +134,16 @@ export class AuthController {
   @ApiBody({ required: true, type: LoginUserDto })
   async loginPassportLocal(@Req() req: Request) {
     const user = req.user as any;
+    if (req.body.fcm) {
+      await this._userService.updateUserData({ fcm: req.body.fcm }, user);
+      user.fcm = req.body.fcm;
+    }
     const userInfo = await this._authService.userInfo(user);
     const token = await this._authService.signToken(user);
-    console.log("ahad=>", token);
-    console.log(user);
 
     if (!user.email) {
       // console.log(payload)
       const token = await this._authService.userNotAccepted({ existingToken: user });
-      console.log("user====>", token);
 
       throw new HttpException(
         {
@@ -149,6 +155,15 @@ export class AuthController {
       );
     }
     delete user.password;
+
+    console.log("Login", user);
+    if (user.fcm) {
+      await this._queue.add("push_notifications", {
+        token: user.fcm,
+        title: `Welcome back ${user.firstName} ${user.lastName}`,
+        body: `Thank you for logging in again to Pet Attix`,
+      });
+    }
     return {
       status: "success",
       data: { ...user, address: userInfo.address, phone: userInfo.phone },
