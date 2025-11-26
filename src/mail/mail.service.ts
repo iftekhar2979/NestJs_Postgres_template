@@ -1,10 +1,12 @@
 import { MailerService } from "@nestjs-modules/mailer";
-import { Injectable } from "@nestjs/common";
+import { Injectable, LoggerService } from "@nestjs/common";
 import { FROM_EMAIL, ORG_NAME } from "./constants";
 import { User } from "../user/entities/user.entity";
 import { Offer } from "src/offers/entities/offer.entity";
 import { Product } from "src/products/entities/products.entity";
 import { Order } from "src/orders/entities/order.entity";
+import { InjectLogger } from "src/shared/decorators/logger.decorator";
+import { MailDataRequired, default as SendGrid } from "@sendgrid/mail";
 
 @Injectable()
 export class MailService {
@@ -48,13 +50,18 @@ export class MailService {
     this._from = value;
   }
 
-  constructor(private readonly _mailService: MailerService) { }
+  constructor(
+    private readonly _mailService: MailerService,
+    @InjectLogger() private readonly _logger: LoggerService
+  ) {
+    SendGrid.setApiKey(process.env.SENDGRID_API_KEY);
+  }
 
   async sendUserConfirmationMail(user: User, url: string) {
     const subject = `Welcome to Your Pet Attix! Hi ${user.firstName}, Here's Your Account Activation Code`;
     // await this._mailService.sendMail({
     this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
+      // from: { name: this._name, address: this._from },
       to: user.email,
       subject: subject,
       template: "welcome",
@@ -73,10 +80,11 @@ export class MailService {
    * @param user user object containing user information
    * @param url account activation URL
    */
+
   async sendUserActivationToken(user: User, url: string) {
     // await this._mailService.sendMail({
     this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
+      // from: { name: this._name, address: this._from },
       to: user.email,
       subject: "",
       template: "account-activation",
@@ -118,14 +126,14 @@ export class MailService {
   async sendForgotPasswordMail(email: string, url: string) {
     // await this._mailService.sendMail({
     this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
       to: email,
-      subject: "",
+      subject: "Forgot Password Verification code from Pet Attix",
       template: "forgot-password",
       context: {
-        subject: "",
+        subject: "Forgot Password Verification code from Pet Attix",
         header: "",
         url,
+        year: new Date().getFullYear(),
       },
     });
   }
@@ -137,7 +145,6 @@ export class MailService {
   async sendPasswordResetConfirmationMail(user: User) {
     // await this._mailService.sendMail({
     this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
       to: user.email,
       subject: "",
       template: "reset-password",
@@ -207,7 +214,6 @@ export class MailService {
   async sendOfferConfirmation(buyer: User, seller: User, offer: Offer, product: Product) {
     const subject = `Got a new offer from Pet Attix!`;
     this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
       to: seller.email,
       subject,
       template: "offer-sending", // must match offer-sending.pug
@@ -227,7 +233,6 @@ export class MailService {
   async acceptOfferConfirmation(buyer: User, seller: User, offer: Offer, product: Product) {
     const subject = `Offer has been accepted by seller from Pet Attix!`;
     this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
       to: buyer.email,
       subject,
       template: "offer-accepting", // must match offer-sending.pug
@@ -247,7 +252,6 @@ export class MailService {
   async offerRejection(buyer: User, seller: User, offer: Offer, product: Product) {
     const subject = `Offer has been accepted by seller from Pet Attix!`;
     this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
       to: buyer.email,
       subject,
       template: "offer-rejected", // must match offer-sending.pug
@@ -265,103 +269,44 @@ export class MailService {
     });
   }
 
-  async sellerOrderConfirmation(order: Order, parcel: any) {
+  async sellerOrderConfirmation(order: Order, parcelInfo: any, pricingInfo) {
     const seller = order.seller;
     const buyer = order.buyer;
     const product = order.product;
 
     const subject = `Your product has been sold on Pet Attix!`;
-    console.log(seller, buyer, product)
+    this._logger.log(`Sending seller order confirmation email to ${seller.email}`);
+    this._logger.log(` ${seller.email} has been sent the seller order confirmation email.`, {
+      order,
+      parcelInfo,
+      pricingInfo,
+    });
     await this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
       to: seller.email,
       subject,
       template: "sell-confirmation", // seller-confirmation.pug
       context: {
-        subject,
-
-        // Seller Info
-        sellerFirstName: seller.firstName,
-        sellerLastName: seller.lastName,
-
-        // Buyer Info
-        buyerFirstName: buyer.firstName,
-        buyerLastName: buyer.lastName,
-        buyerEmail: buyer.email,
-        buyerPhone: buyer.phone || "N/A",
-
-        // Order Info
-        orderId: order.id,
-        orderStatus: order.status,
-        paymentStatus: order.paymentStatus,
-        parcelId: order.parcel_id,
-        totalAmount: order.total,
-
-        // Product Info
-        productName: product.product_name,
-        productPrice: product.selling_price,
-        productCategory: product.category,
-        productCondition: product.condition,
-        productQuantity: product.quantity,
-        productDescription: product.description,
-        productImages: product.images,
-
-        // Parcel Info (from SendCloud)
-        parcel: parcel || null,
+        order,
+        parcelInfo,
+        pricingInfo,
       },
     });
   }
 
-  async buyerOrderConfirmation(order: Order, parcel: any) {
+  async buyerOrderConfirmation(order: Order, parcelInfo: any, pricingInfo) {
     const buyer = order.buyer;
-    const seller = order.seller;
-    const product = order.product;
 
     const subject = `Your order has been confirmed on Pet Attix!`;
-
+    this._logger.log(`Sending Buyer order confirmation email to ${buyer.email}`);
     return this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
       to: buyer.email,
       subject,
       template: "buyer-confirmation", // buyer-confirmation.pug
       context: {
-        subject,
-
-        // Buyer Info
-        buyerFirstName: buyer.firstName,
-        buyerLastName: buyer.lastName,
-        buyerEmail: buyer.email,
-        buyerPhone: buyer.phone || "N/A",
-
-        // Seller Info
-        sellerFirstName: seller.firstName,
-        sellerLastName: seller.lastName,
-        sellerEmail: seller.email,
-
-        // Order Info
-        orderId: order.id,
-        orderStatus: order.status,
-        paymentStatus: order.paymentStatus,
-        parcelId: order.parcel_id,
-        totalAmount: order.total,
-
-        // Product Info
-        productName: product.product_name,
-        productPrice: product.selling_price,
-        productCategory: product.category,
-        productCondition: product.condition,
-        productQuantity: product.quantity,
-        productDescription: product.description,
-        productImages: product.images,
-
-        // Delivery Info
-        delivery: order.deliveryInfo || null,
-
-        // Parcel Info
-        parcel: parcel || null,
+        order,
+        parcelInfo,
+        pricingInfo,
       },
     });
   }
-
-
 }
