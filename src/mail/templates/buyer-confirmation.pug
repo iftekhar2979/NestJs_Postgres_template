@@ -2,7 +2,6 @@ doctype html
 html
   head
     meta(charset="UTF-8")
-    title #{subject}
     style.
       body { font-family: Arial, sans-serif; background: #f8f9fa; padding: 20px; }
       .container { max-width: 700px; margin: auto; background: #fff; padding: 25px; border-radius: 8px; }
@@ -17,82 +16,73 @@ html
     .container
       .title Your order is confirmed! 🎉
 
-      p Hello #{order.buyer.firstName} #{order.buyer.lastName},  
+      p Hello #{buyer.firstName} #{buyer.lastName},  
       p Thank you for your purchase on Pet Attix! Here are your order details:
 
       // ORDER DETAILS
       .section-title Order Details
       .info-box
-        p Order ID: #{order.id}
-        p Status: #{order.status.split("_").join(" ")}
-        p Payment Status: #{order.paymentStatus.toUppercase()}
-        p Total Amount: #{pricingInfo.total} #{pricingInfo.currency}
-        p Parcel ID: #{order.parcel_id}
+        p Order ID: #{id}
+        p Status: #{status.split("_").join(" ")}
+        p Payment Status: #{paymentStatus.toUpperCase()}
+        p Parcel ID: #{parcel_id}
 
       // SELLER DETAILS
       .section-title Seller Details
       .info-box
-        p Name: #{order.seller.firstName} #{order.seller.lastName}
-        p Email: #{order.seller.email}
+        p Name: #{sellerName}
+        p Email: #{sellerEmail}
 
       // PRODUCT DETAILS
       .section-title Product Details
       .info-box
-        p Name: #{order.product.product_name}
-        p Price: #{order.product.selling_price} #{pricingInfo.currency}
-        p Category: #{order.product.category}
-        p Condition: #{order.product.condition}
-        p Quantity: #{order.product.quantity}
-        p Description: #{order.product.description}
+        p Name: #{productName}
+        p Category: #{productCategory}
+        p Condition: #{productCondition}
+        p Description: #{productDescription}
 
-        if order.product.images && order.product.images.length
+        if productImages.length > 0
           p Product Images:
-          each img in order.product.images
+          each img in productImages
             img.product-img(src=`${process.env.BASE_URL}/${img.image}`)
 
       // PAYMENT BREAKDOWN
       .section-title Payment Breakdown
       .info-box
-        p Currency : #{pricingInfo.currency}
-        p Product Price: #{pricingInfo.productPrice} 
-        p Protection Fee: #{pricingInfo.productProtectionFee} 
-        p Delivery Charge: #{pricingInfo.deliveryCharge} 
-        p Delivery Protection: #{pricingInfo.deliveryProtectionFee} 
-        p Total: #{pricingInfo.total} 
+        p Currency: #{currency}
+        p Product Price: #{productPrice} 
+        p Protection Fee: #{productProtectionFee} 
+        p Delivery Charge: #{deliveryCharge} 
+        p Delivery Protection: #{deliveryProtectionFee} 
+        p Total: #{total} 
 
       // DELIVERY INFO
-      if order.deliveryInfo
-        .section-title Delivery Address
-        .info-box
-          p Name: #{order.deliveryInfo.name}
-          p Address: #{order.deliveryInfo.address}
-          p City: #{order.deliveryInfo.city}
-          p Postal Code: #{order.deliveryInfo.postal_code}
-          p Country: #{order.deliveryInfo.country}
+      .section-title Delivery Address
+      .info-box
+        p Name: #{deliveryInfoName}
+        p Address: #{deliveryAddress}
+        p City: #{deliveryCity}
+        p Postal Code: #{deliveryPostalCode}
+        p Country: #{deliveryCountry}
 
-      // PARCEL DETAILS (Sendcloud)
-      if parcelInfo.parcel
-        .section-title Shipping & Tracking
-        .info-box
-          p Tracking Number: #{parcelInfo.parcel.tracking_number}
-          p Shipping Method: #{parcelInfo.parcel.shipping_method_checkout_name}
-          p Carrier: #{parcelInfo.parcel.carrier.code}
+      // PARCEL DETAILS
+      .section-title Shipping & Tracking
+      .info-box
+        p Tracking Number: #{trackingNumber}
+        p Shipping Method: #{shippingMethod}
+        p Carrier: #{carrierCode}
 
-          if parcelInfo.parcel.label && parcelInfo.parcel.label.normal_printer
-            p Shipping Labels (A4/Normal Printer):
-            each url in parcelInfo.parcel.label.normal_printer
-              a(href=url target="_blank") View Label
-              br
+        if parcelLabel.length > 0
+          p Shipping Labels (A4/Normal Printer):
+          each url in parcelLabel
+            a(href=url target="_blank") View Label
+            br
 
-          if parcelInfo.parcel.label && parcelInfo.parcel.label.label_printer
-            p Label Printer Version:
-            a(href=parcelInfo.parcel.label.label_printer target="_blank") View Label Printer Format
-
-          if parcelInfo.parcel.documents
-            p Documents:
-            each doc in parcelInfo.parcel.documents
-              a(href=doc.link target="_blank") #{doc.type} (#{doc.size})
-              br
+        if parcelDocuments.length > 0
+          p Documents:
+          each doc in parcelDocuments
+            a(href=doc.link target="_blank") #{doc.type} (#{doc.size})
+            br
 
       hr
       p Thank you for shopping with Pet Attix!

@@ -2,7 +2,6 @@ doctype html
 html
   head
     meta(charset="UTF-8")
-    title #{subject}
     style.
       body { font-family: Arial, sans-serif; background: #f8f9fa; padding: 20px; }
       .container { max-width: 700px; margin: auto; background: #fff; padding: 25px; border-radius: 8px; }
@@ -17,62 +16,57 @@ html
     .container
       .title Your product has been sold 🎉
 
-      p Hello #{order.seller.firstName} #{order.seller.lastName},  
+      p Hello #{sellerName},  
       p Your product has been purchased on Pet Attix! Below are the details:
 
       // ORDER DETAILS
       .section-title Order Details
       .info-box
-        p Order ID: #{order.id}
-          p Status: #{order.status}
-        p Payment Status: #{order.paymentStatus}
-        p Parcel ID: #{order.parcelId}
+        p Order ID: #{id}
+        p Status: #{status}
+        p Payment Status: #{paymentStatus}
+        p Parcel ID: #{parcelId}
 
       // BUYER DETAILS
       .section-title Buyer Details
       .info-box
-        p Name: #{order.buyer.firstName} #{order.buyer.lastName}
-        p Email: #{order.buyer.email}
-        p Phone: #{order.buyer.phone}
+        p Name: #{buyerName}
+        p Email: #{buyerEmail}
+        p Phone: #{buyerPhone}
 
       // PRODUCT DETAILS
       .section-title Product Details
       .info-box
-        p Name: #{product.product_name}
-        p Price: #{product.selling_price} GBP
-        p Category: #{product.category}
-        p Condition: #{product.condition}
-        p Description: #{product.description}
+        p Name: #{productName}
+        p Price: #{productPrice} #{currency}
+        p Category: #{productCategory}
+        p Condition: #{productCondition}
+        p Description: #{productDescription}
 
-      if order.product.images && order.product.images.length
+      if productImages.length > 0
         .info-box
           p Product Images:
           each img in productImages
             img.product-img(src=`${process.env.BASE_URL}/${img.image}`)
 
       // SENDCLOUD PARCEL DETAILS
-      if parcelInfo.parcel
-        .section-title Shipping & Label Details
-        .info-box
-          p Tracking Number: #{parcelInfo.parcel.tracking_number}
-          p Shipping Method: #{parcelInfo.parcel.shipping_method_checkout_name}
-          p Carrier: #{parcel.parcel.carrier.code}
+      .section-title Shipping & Label Details
+      .info-box
+        p Tracking Number: #{trackingNumber}
+        p Shipping Method: #{shippingMethod}
+        p Carrier: #{carrierCode}
 
-          if parcel.parcel.label && parcel.parcel.label.normal_printer
-            p Shipping Labels (A4/Normal Printer):
-            each url in parcel.parcel.label.normal_printer
-              a(href=url target="_blank") View Label
-              br
+        if parcelLabel.length > 0
+          p Shipping Labels (A4/Normal Printer):
+          each url in parcelLabel
+            a(href=url target="_blank") View Label
+            br
 
-          if parcel.parcel.label.label_printer
-            p Label Printer URL:
-            a(href=parcel.parcel.label.label_printer target="_blank") View Label Printer Format
-
-          if parcel.parcel.documents
-            p Download Documents:
-            each doc in parcel.parcel.documents
-              a(href=doc.link target="_blank") #{doc.type} (#{doc.size})
-              br
+        if parcelDocuments.length > 0
+          p Download Documents:
+          each doc in parcelDocuments
+            a(href=doc.link target="_blank") #{doc.type} (#{doc.size})
+            br
 
       hr
       p Thank you for selling with Pet Attix!
