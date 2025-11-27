@@ -19,6 +19,8 @@ import { runMigrations } from "./migration-runner";
 import { join } from "path";
 import { SeederService } from "./seeder/seeder.service";
 import bodyParser from "body-parser";
+import { MailerService } from "@nestjs-modules/mailer";
+import { order, parcelInfo, pricingInfo } from "../emailmock.js";
 
 /**
  * function for bootstraping the nest application
@@ -37,6 +39,19 @@ async function bootstrap() {
     logger: ["error", "fatal", "log", "verbose", "warn", "debug"],
   });
   const configService = app.get<ConfigService>(ConfigService);
+
+  // const { order, parcelInfo, pricingInfo } = await import("./emailmock");
+  // await emailService.sendMail({
+  //   to: "salminrashid556@gmail.com",
+  //   subject: "Test Email from NestJS App",
+  //   text: "This is a test email sent from sendgrid",
+  //   template: "welcome",
+  //   context: {
+  //     firstName: "Joo",
+  //     lastName: "Dani & perl",
+  //   },
+  // });
+
   const seederService = app.get(SeederService);
   await seederService.seedAdminUser();
   await seederService.seedSettings();

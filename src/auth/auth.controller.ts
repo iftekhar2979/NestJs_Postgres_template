@@ -26,7 +26,7 @@ import { LocalAuthGuard } from "./guards/local-auth.guard";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
-import { GetUser } from "./decorators/get-user.decorator";
+import { GetUser, GetUserInformation } from "./decorators/get-user.decorator";
 import { UpdateMyPasswordDto } from "./dto/update-password.dto";
 import {
   ApiBadRequestResponse,
@@ -140,7 +140,16 @@ export class AuthController {
     }
     const userInfo = await this._authService.userInfo(user);
     const token = await this._authService.signToken(user);
-
+    // if (!userInfo.addressDetails) {
+    //   throw new HttpException(
+    //     {
+    //       status: "error",
+    //       message: "Address Information required",
+    //       token,
+    //     },
+    //     HttpStatus.FORBIDDEN // This sets the 406 HTTP status code
+    //   );
+    // }
     if (!user.email) {
       // console.log(payload)
       const token = await this._authService.userNotAccepted({ existingToken: user });
@@ -166,7 +175,12 @@ export class AuthController {
     }
     return {
       status: "success",
-      data: { ...user, address: userInfo.address, phone: userInfo.phone },
+      data: {
+        ...user,
+        address: userInfo.address,
+        phone: userInfo.phone,
+        addressDetails: userInfo.addressDetails,
+      },
       token,
       statusCode: 200,
     };
@@ -180,12 +194,13 @@ export class AuthController {
     summary: "Api to Resend the otp.",
   })
   @ApiUnauthorizedResponse({ description: "Session Expired!" })
-  async resendOtp(@Req() req: Request) {
+  async resendOtp(@Req() req: Request, @GetUserInformation() userInfo: User) {
     const user = req.user as User;
+
     if (!user) {
       throw new NotFoundException("User not found");
     }
-    return await this._authService.resendOtp({ user });
+    return await this._authService.resendOtp({ user: userInfo });
   }
   @Post("forgot-password")
   // @UseGuards(JwtAuthGuard)

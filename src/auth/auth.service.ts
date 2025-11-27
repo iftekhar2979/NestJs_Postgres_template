@@ -142,9 +142,9 @@ export class AuthService {
       await this._otpService.updateOtpAttempts(userInfo.id, verification.attempts + 1);
       throw new BadRequestException("Invalid OTP");
     }
-    if (verification.type !== verification_type) {
-      throw new BadRequestException("Wrong Verification Request");
-    }
+    // if (verification.type !== verification_type) {
+    //   throw new BadRequestException("Wrong Verification Request");
+    // }
     if (!verification || (await verification).expiresAt < new Date()) {
       throw new NotFoundException("OTP expired");
     }
@@ -239,7 +239,7 @@ export class AuthService {
         await this._otpService.createOtp(user.id, OtpType.REGISTRATION);
         const token = this._jwtService.sign({ id: user.id, verification_type: OtpType.REGISTRATION });
         return token;
-        // throw new NotAcceptableException("Please verify your email to login")
+        // throw new NotAcceptableException("Please verify your email to login"
       }
       this._logger.log("User Verified", AuthService.name);
       return user;
@@ -315,7 +315,11 @@ export class AuthService {
     return this._jwtService.sign(payload);
   }
   async userInfo(user: User) {
-    return await this._userRepository.findOne({ where: { id: user.id }, select: { password: false } });
+    return await this._userRepository.findOne({
+      where: { id: user.id },
+      select: { password: false },
+      relations: ["addressDetails"],
+    });
   }
 
   async signTokenSendEmailAndSMS(user: User, req: Request, verificationCode: string) {
@@ -328,10 +332,11 @@ export class AuthService {
 
     return token;
   }
-  async resendOtp({ user, otpType }: { user?: any; otpType?: OtpType }) {
-    if (!user.verification_type || otpType === OtpType.REGISTRATION) {
-      const otp = await this._otpService.createOtp(user.id, OtpType.REGISTRATION);
-      await this._mailService.sendUserConfirmationMail(user.email, `${otp.otp}`);
+  async resendOtp({ user, otpType, userInfo }: { userInfo?: any; user?: any; otpType?: OtpType }) {
+    console.log(user.status);
+    if (!user.verification_type || otpType !== OtpType.REGISTRATION) {
+      const otp = await this._otpService.createOtp(user.id, OtpType.FORGOT_PASSWORD);
+      await this._queue.add("mail_notification", { user, otp: otp.otp });
       return { message: "OTP resent successfully", status: "success", data: null };
     }
 
@@ -341,8 +346,8 @@ export class AuthService {
     if (existingOtp?.createdAt) {
       const otpCreatedAt = existingOtp.createdAt.getTime();
       const timeDifference = Date.now() - otpCreatedAt;
-      if (timeDifference < 1000 * 60) {
-        throw new BadRequestException("You can only request a new OTP after 1 minute.");
+      if (timeDifference < 2 * 1000 * 60) {
+        throw new BadRequestException("You can only request a new OTP after 2 minute.");
       }
 
       await this._otpService.removeOtpByUserId(user.id);
