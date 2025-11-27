@@ -54,15 +54,13 @@ export class StripeController {
           const { user, amount, email, name } = session.metadata;
 
           // console.log(session.metadata)
-          //   await this.walletService.rechargeWallet({userId:user.id, amount,paymentMethod:"Stripe"})
+          // await this.walletService.rechargeWallet({userId:user.id, amount,paymentMethod:"Stripe"})
           // Perform necessary actions after successful payment
           break;
 
         case "checkout.session.async_payment_failed":
           const invoice = event.data.object;
           throw new HttpException("Webhook event verification failed", HttpStatus.BAD_REQUEST);
-          // Handle failed payment
-          break;
 
         // Handle other event types here...
 

@@ -1,7 +1,7 @@
-import { Delivery } from "./entities/delivery.entity";
+// import { Delivery } from "./entities/delivery.entity";
 import { DeliveryAddress } from "./entities/delivery_information.entity";
 import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import { Shipment } from "./entities/shipments.entity";

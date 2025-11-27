@@ -93,6 +93,8 @@ export class TransectionsController {
   }
 
   @Get("statistics")
+  @UseGuards(JwtAuthenticationGuard, RolesGuard)
+  @Roles(UserRoles.ADMIN, UserRoles.USER)
   @ApiQuery({ name: "year", required: true, type: Number, example: 2025 })
   async getStatistices() {
     return this._transectionsService.getStatistics();
