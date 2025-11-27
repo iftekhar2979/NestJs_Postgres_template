@@ -1,12 +1,6 @@
 import { UserService } from "./../user/user.service";
 // import { NotificationService } from 'src/notification/notification.service';
-import {
-  BadGatewayException,
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { DeliveryAddress } from "./entities/delivery_information.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
@@ -39,6 +33,7 @@ import { FavouritesService } from "src/favourites/favourites.service";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
 import { MailService } from "src/mail/mail.service";
+import { createDirectPurchaseNotifications, createOrderNotifications } from "./utils/notification";
 
 @Injectable()
 export class DeliveryService {
@@ -58,8 +53,9 @@ export class DeliveryService {
     private readonly _sendCloudService: SendcloudService,
     private readonly _favouriteService: FavouritesService,
     @InjectQueue("product") private readonly _queue: Queue,
-    private readonly _mailService: MailService
-  ) { }
+
+    @InjectQueue("notifications") private readonly _notificationQueue: Queue
+  ) {}
   async createDeliveryAddress({
     createDeliveryAddressDto,
     product_id,
@@ -87,10 +83,13 @@ export class DeliveryService {
         where: { product: { id: product_id } },
         relations: ["deliveryInfo"],
       });
-      console.log(order);
+      console.log("Order", order);
       // const deliveryInfo = order.deliveryInfo;
       if (order) {
         if (order.deliveryInfo && order.status === OrderStatus.DELIVERY_FILLED) {
+          delete createDeliveryAddressDto.carrer_type;
+          delete createDeliveryAddressDto.country_state;
+          await this._deliveryAddressRepository.update(order.deliveryInfo.id, createDeliveryAddressDto);
           return {
             message: "Please make the payment .",
             status: "success",
@@ -164,11 +163,6 @@ export class DeliveryService {
 
         // Retrieve the buyer's wallet and check balance
 
-        await this._favouriteService.removeFavorite({
-          userId: user.id,
-          productId: product.id,
-          manager: queryRunner.manager,
-        });
         product.status = ProductStatus.IN_PROGRESS;
         await queryRunner.manager.save(Product, product);
 
@@ -188,24 +182,24 @@ export class DeliveryService {
           const deliveryInfo =
             createDeliveryAddressDto.carrer_type === CARRER_TYPE.SERVICE_TYPE
               ? {
-                order,
-                service_point_id,
-                name: `${userInfo.firstName} ${userInfo.lastName}`,
-                email: userInfo.email,
-                company_name: createDeliveryAddressDto.company_name,
-                telephone: userInfo.phone,
-                // service_point_id: null,
-                ...createDeliveryAddressDto,
-              }
+                  order,
+                  service_point_id,
+                  name: `${userInfo.firstName} ${userInfo.lastName}`,
+                  email: userInfo.email,
+                  company_name: createDeliveryAddressDto.company_name,
+                  telephone: userInfo.phone,
+                  // service_point_id: null,
+                  ...createDeliveryAddressDto,
+                }
               : {
-                order,
-                name: `${userInfo.firstName} ${userInfo.lastName}`,
-                email: userInfo.email,
-                company_name: createDeliveryAddressDto.company_name,
-                telephone: userInfo.phone,
-                service_point_id: null,
-                ...createDeliveryAddressDto,
-              };
+                  order,
+                  name: `${userInfo.firstName} ${userInfo.lastName}`,
+                  email: userInfo.email,
+                  company_name: createDeliveryAddressDto.company_name,
+                  telephone: userInfo.phone,
+                  service_point_id: null,
+                  ...createDeliveryAddressDto,
+                };
           const deliveryAddress = this._deliveryAddressRepository.create(deliveryInfo);
           await queryRunner.manager.save(deliveryAddress);
           this._logger.log(`New Delivery Created `, deliveryAddress.id);
@@ -224,65 +218,28 @@ export class DeliveryService {
             createDeliveryAddressDto.carrer_type === CARRER_TYPE.SERVICE_TYPE
               ? { order: existingOrder, service_point_id }
               : {
-                order: existingOrder,
-                name: `${userInfo.firstName} ${userInfo.lastName}`,
-                email: userInfo.email,
-                company_name: createDeliveryAddressDto.company_name,
-                telephone: userInfo.phone,
-                ...createDeliveryAddressDto,
-              };
+                  order: existingOrder,
+                  name: `${userInfo.firstName} ${userInfo.lastName}`,
+                  email: userInfo.email,
+                  company_name: createDeliveryAddressDto.company_name,
+                  telephone: userInfo.phone,
+                  ...createDeliveryAddressDto,
+                };
           const deliveryAddress = this._deliveryAddressRepository.create(deliveryInfo);
           await queryRunner.manager.save(deliveryAddress);
 
           existingOrder.deliveryInfo = deliveryAddress;
           await queryRunner.manager.save(Order, existingOrder);
         }
-        // console.log(product);
         // Handle notifications
-        const notifications = [
-          {
-            user: user,
-            userId: user.id,
-            related: NotificationRelated.ORDER,
-            action: NotificationAction.CREATED,
-            type: NotificationType.SUCCESS,
-            msg: `Your Order is in progress. After payment confirmation you the product will purchased .`,
-            target_id: product.id,
-            notificationFor: UserRoles.USER,
-            isImportant: true,
-          },
-          {
-            userId: product.user.id,
-            user: product.user,
-            related: NotificationRelated.ORDER,
-            action: NotificationAction.CREATED,
-            type: NotificationType.SUCCESS,
-            msg: `You have a direct purchase for ${product.product_name} `,
-            target_id: product.id,
-            notificationFor: UserRoles.USER,
-            isImportant: true,
-          },
-          {
-            userId: product.user.id,
-            user: product.user,
-            related: NotificationRelated.ORDER,
-            action: NotificationAction.CREATED,
-            type: NotificationType.SUCCESS,
-            msg: `${product.product_name} is going to be sold.`,
-            target_id: product.id,
-            notificationFor: UserRoles.ADMIN,
-            isImportant: true,
-          },
-        ];
+        const notifications = createDirectPurchaseNotifications({ product, user, isImportant: true });
 
         // Bulk insert notifications for both user and admin
-        await this._notificationService.bulkInsertNotifications(notifications);
+        await this._notificationQueue.add("multiple_notification_saver", notifications);
 
         // Commit the transaction
         await queryRunner.commitTransaction();
 
-        // const parcelInfo = await this._sendCloudService.getParcelId()
-        // await this._
         return {
           message: "Order placed successfully and delivery address saved.",
           status: "success",
@@ -303,7 +260,8 @@ export class DeliveryService {
       throw new BadRequestException(error.message);
     }
   }
-  async getDeliveryPricing({ productId, user }: { productId: number; user: User }) {
+
+  async getDeliveryPricing({ productId, user }: { productId: number; user?: User }) {
     const order = await this._orderRepository.findOne({
       where: {
         product: {
@@ -319,38 +277,43 @@ export class DeliveryService {
       throw new BadRequestException("Delivery Information not filled yet!");
     }
     const product = order.product;
-
+    console.log(product);
     const collectionInfo = product.collectionAddress;
 
     const deliveryInfo = order.deliveryInfo;
+    this._logger.log("Delivery Info", deliveryInfo);
+    this._logger.log("Collection Info", collectionInfo);
+    if (product.collectionAddress && !deliveryInfo.service_point_id) {
+      if (!collectionInfo.postal_code) {
+        throw new BadRequestException("Collection postal code not filled");
+      }
+      if (!collectionInfo.country) {
+        throw new BadRequestException("Collection country not filled");
+      }
+      if (!deliveryInfo.country) {
+        throw new BadRequestException("Delivery postal code not filled");
+      }
+      if (!deliveryInfo.country) {
+        throw new BadRequestException("Delivery country not filled");
+      }
+    }
 
-    if (!collectionInfo.postal_code) {
-      throw new BadRequestException("Collection postal code not filled");
-    }
-    if (!collectionInfo.country) {
-      throw new BadRequestException("Collection country not filled");
-    }
-    if (!deliveryInfo.country) {
-      throw new BadRequestException("Delivery postal code not filled");
-    }
-    if (!deliveryInfo.country) {
-      throw new BadRequestException("Delivery country not filled");
-    }
-    let params = {
+    const params = {
       from: {
-        postal_code: collectionInfo.postal_code,
-        country: collectionInfo.country,
+        postal_code: collectionInfo?.postal_code || "",
+        country: collectionInfo?.country || "",
       },
       to: {
-        postal_code: deliveryInfo.postal_code,
-        country: deliveryInfo.country,
+        postal_code: deliveryInfo?.postal_code || "",
+        country: deliveryInfo?.country || "",
       },
       product,
-      service_point_id: null
-    }
+      service_point_id: null,
+    };
     if (deliveryInfo.service_point_id) {
-      params.service_point_id = deliveryInfo.service_point_id
+      params.service_point_id = deliveryInfo.service_point_id;
     }
+
     const shippingMethods = await this._sendCloudService.getShippingMethods(params);
 
     return {
@@ -382,55 +345,66 @@ export class DeliveryService {
     }
     // console.log(order.status);
     if (order.product.status === ProductStatus.SOLD) {
-      throw new BadRequestException("Product is no longer availible to sells");
+      throw new Error("Product is no longer availible to sells");
     }
     if (order.status === OrderStatus.SHIPMENT_READY) {
-      throw new BadRequestException("Product status not valid to payment!");
+      throw new Error("Product status not valid to payment!");
     }
     if (order.paymentStatus === PaymentStatus.COMPLETED) {
-      throw new BadRequestException("Already sold product can't be requested for purchase!");
+      throw new Error("Already sold product can't be requested for purchase!");
     }
+
     if (order.status !== OrderStatus.DELIVERY_FILLED) {
-      throw new BadRequestException("Delivery Information not filled yet!");
+      throw new Error("Delivery Information not filled yet!");
     }
     const product = order.product;
 
     const collectionInfo = product.collectionAddress;
 
     const deliveryInfo = order.deliveryInfo;
-    if (order.buyer_id !== user.id) {
-      throw new Error(`You are not authorized to pay for the product .`);
-    }
-    if (product.user.id === user.id) {
-      throw new Error(`You are the product owner . You can't make your own parcels `);
-    }
-    if (!collectionInfo) {
-      throw new Error(`Delivery address not filled yet !`);
-    }
-    if (!collectionInfo) {
-      throw new Error(`Collection address not found!`);
-    }
-    const pricing = await this._sendCloudService.getEstimateOfSingleShipping(
-      {
-        from: {
-          postal_code: collectionInfo.postal_code,
-          country: collectionInfo.country,
-        },
-        to: {
-          postal_code: deliveryInfo.postal_code,
-          country: deliveryInfo.country,
-        },
-        product,
+    this._logger.log("Collection Addres , Delivery Service point", {
+      deliveryInfo,
+      collection: product.collectionAddress,
+    });
+    const params = {
+      from: {
+        postal_code: collectionInfo.postal_code,
+        country: collectionInfo.country,
       },
-      shippingId
-    );
+      to: {
+        postal_code: deliveryInfo.postal_code,
+        country: deliveryInfo.country,
+      },
+      product,
+      service_point_id: null,
+    };
+    if (!deliveryInfo.service_point_id) {
+      if (order.buyer_id !== user.id) {
+        throw new BadRequestException(`You are not authorized to pay for the product .`);
+      }
+      if (product.user.id === user.id) {
+        throw new BadRequestException(`You are the product owner . You can't make your own parcels `);
+      }
+      if (!collectionInfo) {
+        throw new Error(`Collection address not filled yet !`);
+      }
+      if (!collectionInfo) {
+        throw new Error(`Collection address not found!`);
+      }
+    } else {
+      params.service_point_id = deliveryInfo.service_point_id;
+    }
+    console.log(params);
+    const pricing = await this._sendCloudService.getEstimateOfSingleShipping(params, shippingId);
     // console.log(pricing)
     if (pricing.length === 0) {
-      throw new BadRequestException("Shipping Method is not valid");
+      throw new BadRequestException(
+        "Currently the shipping method is not available . Please try another one !"
+      );
     }
     const shippingMethodPrice = parseFloat(pricing[0].price);
     const fee = (shippingMethodPrice * DELIVERY_PROTECTION_PERCENTAGE) / 100;
-    const pricingInfo = {
+    let pricingInfo = {
       deliveryCharge: shippingMethodPrice,
       deliveryProtectionFee: fee,
       productPrice: parseFloat(order.total as unknown as string),
@@ -441,13 +415,45 @@ export class DeliveryService {
         parseFloat(order.total as unknown as string) +
         parseFloat(order.protectionFee as unknown as string),
       currency: "GBP",
-    };
-    this._logger.log('Delivery Charge', pricingInfo)
+    } as any;
+    this._logger.log("Delivery Charge", pricingInfo);
     if (!pricingInfo.deliveryCharge) {
-      throw new BadRequestException("Please try another shipping method !");
+      throw new BadRequestException(
+        "Currently the shipping method is not available . Please try another one !"
+      );
     }
-    const shippingMethodInfo = await this._sendCloudService.getSpecificShippingMethods(shippingId);
 
+    // console.log(order);
+    console.time("Shipping Method Fetch Time");
+    const shippingMethodInfo = await this._sendCloudService.getSpecificShippingMethods(shippingId);
+    console.timeEnd("Shipping Method Fetch Time");
+    console.time("Currency Conversion Time");
+    // console.log(user);
+    pricingInfo = (await this._currencyConverterService.convertMultiple(
+      defaultCurrency,
+      user.currency.toUpperCase(),
+      {
+        productPrice: pricingInfo.productPrice,
+        productProtectionFee: pricingInfo.productProtectionFee,
+        deliveryCharge: pricingInfo.deliveryCharge,
+        deliveryProtectionFee: pricingInfo.deliveryProtectionFee,
+      }
+    )) as {
+      productPrice: number;
+      productProtectionFee: number;
+      deliveryCharge: number;
+      deliveryProtectionFee: number;
+      total?: number;
+    };
+    const total =
+      pricingInfo.productPrice +
+      pricingInfo.productProtectionFee +
+      pricingInfo.deliveryCharge +
+      pricingInfo.deliveryProtectionFee;
+    console.log(total);
+    pricingInfo.total = total;
+    pricingInfo.currency = user.currency.toUpperCase();
+    console.timeEnd("Currency Conversion Time");
     return {
       message: " shipping estimation retrived successfully",
       statusCode: 200,
@@ -537,6 +543,11 @@ export class DeliveryService {
     const queryRunner = this._dataSource.createQueryRunner();
     await queryRunner.startTransaction();
 
+    await this._favouriteService.removeFavorite({
+      userId: user.id,
+      productId: product.id,
+      manager: queryRunner.manager,
+    });
     try {
       wallet.balance -= pricingInfo.total;
       wallet.version++;
@@ -574,63 +585,22 @@ export class DeliveryService {
       this._logger.log(`Parcel Informations`, parcelInfo);
       order.parcel_id = parcelInfo.parcel.id;
       order.status = OrderStatus.SHIPMENT_READY;
+
       await queryRunner.manager.save(Transections, transaction);
       await queryRunner.manager.save(Order, order);
-      const notifications = [
-        {
-          user: user,
-          userId: user.id,
-          related: NotificationRelated.ORDER,
-          action: NotificationAction.CREATED,
-          type: NotificationType.SUCCESS,
-          msg: `You purchased the ${product.product_name} successfully.`,
-          target_id: order.product.id,
-          notificationFor: UserRoles.USER,
-          isImportant: true,
-        },
-        {
-          userId: product.user.id,
-          user: product.user,
-          related: NotificationRelated.ORDER,
-          action: NotificationAction.CREATED,
-          type: NotificationType.SUCCESS,
-          msg: `You got sale on  ${product.product_name} `,
-          target_id: order.product.id,
-          notificationFor: UserRoles.USER,
-          isImportant: true,
-        },
-        {
-          userId: product.user.id,
-          user: product.user,
-          related: NotificationRelated.ORDER,
-          action: NotificationAction.CREATED,
-          type: NotificationType.SUCCESS,
-          msg: `${product.product_name} is going to be sold.`,
-          target_id: order.product.id,
-          notificationFor: UserRoles.ADMIN,
-          isImportant: true,
-        },
-      ];
-
-
-      const ordeInfo = await this._orderRepository.findOne({
-        where: {
-          product: {
-            id: productId,
-          },
-        },
-        relations: ["product", "deliveryInfo", "buyer", "seller"],
-      });
+      const notifications = createOrderNotifications({ user, order, product, isImportant: true });
+      this._logger.log("Order Info before mail ", { order, parcelInfo, pricingInfo });
 
       await this._queue.add("orderConfirmation", {
-        order, parcelInfo: parcelInfo.parcel
+        order,
+        parcelInfo,
+        pricingInfo,
       });
-      // await this._queue 
+      await this._notificationQueue.add("multiple_notification_saver", notifications);
       // Bulk insert notifications for both user and admin
-      await this._notificationService.bulkInsertNotifications(notifications);
+      // await this._notificationService.bulkInsertNotifications(notifications);
       await queryRunner.commitTransaction();
       // await this._queue.
-
 
       return {
         message: "Payment successfull",
@@ -650,6 +620,4 @@ export class DeliveryService {
       await queryRunner.release();
     }
   }
-
-
 }
