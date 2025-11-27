@@ -112,7 +112,7 @@ export class OrdersService {
     user?: User
   ): Promise<ResponseInterface<Order[]>> {
     const [orders, total] = await this._orderRepository.findAndCount({
-      where: { buyer_id: buyerId },
+      where: { buyer_id: buyerId, status: OrderStatus.SHIPMENT_READY },
       relations: ["product", "accepted_offer", "deliveryInfo", "buyer", "seller"],
       skip: (page - 1) * limit,
       take: limit,

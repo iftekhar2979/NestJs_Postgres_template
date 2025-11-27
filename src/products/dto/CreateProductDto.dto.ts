@@ -7,6 +7,8 @@ import {
   MaxLength,
   IsBooleanString,
   IsEnum,
+  isBoolean,
+  IsBoolean,
 } from "class-validator";
 
 export enum CARRER_TYPE {
@@ -140,8 +142,7 @@ export class CreateProductDto {
   @IsString()
   country_state?: string;
 
-  @ApiProperty({ example: "England", required: false })
+  @ApiProperty({ example: true, required: false })
   @IsOptional()
-  @IsNumberString()
-  service_point_id?: string;
+  carrer_option?: CARRER_TYPE;
 }
