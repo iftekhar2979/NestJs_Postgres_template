@@ -105,7 +105,6 @@ export class MailService {
   async sendUserAccountActivationMail(user: User, url: string) {
     // await this._mailService.sendMail({
     this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
       to: user.email,
       subject: "",
       template: "confirm-activation",
@@ -162,7 +161,6 @@ export class MailService {
   async sendPasswordUpdateEmail(user: User) {
     // await this._mailService.sendMail({
     this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
       to: user.email,
       subject: `Password Updated!`,
       template: "update-password",
@@ -181,7 +179,6 @@ export class MailService {
   async sendUserDeletionMail(user: User) {
     // await this._mailService.sendMail({
     this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
       to: user.email,
       subject: "",
       template: "account-deletion",
@@ -200,7 +197,6 @@ export class MailService {
   async sendConfirmationOnUpdatingUser(user: User) {
     // await this._mailService.sendMail({
     this._mailService.sendMail({
-      from: { name: this._name, address: this._from },
       to: user.email,
       subject: "",
       template: "user-updation",
@@ -263,50 +259,218 @@ export class MailService {
         sellerFirstName: seller.firstName,
         sellerLastName: seller.lastName,
         productName: product.product_name,
-        sellingPrice: product.selling_price, // added this
+        sellingPrice: product.selling_price,
         offerPrice: offer.price,
       },
     });
   }
 
-  async sellerOrderConfirmation(order: Order, parcelInfo: any, pricingInfo) {
-    const seller = order.seller;
-    const buyer = order.buyer;
-    const product = order.product;
+  // async sellerOrderConfirmation(order: Order, parcelInfo: any, pricingInfo) {
+  //   const seller = order.seller;
+  //   const buyer = order.buyer;
+  //   const product = order.product;
+
+  //   const subject = `Your product has been sold on Pet Attix!`;
+  //   this._logger.log(`Sending seller order confirmation email to ${seller.email}`);
+  //   this._logger.log(` ${seller.email} has been sent the seller order confirmation email.`, {
+  //     order,
+  //     parcelInfo,
+  //     pricingInfo,
+  //   });
+  //   // console.log(first)
+  //   await this._mailService.sendMail({
+  //     to: seller.email,
+  //     subject,
+  //     template: "sell-confirmation", // seller-confirmation.pug
+  //     context: {
+  //       order: order,
+  //       parcelInfo: parcelInfo,
+  //       pricingInfo: pricingInfo,
+  //     },
+  //   });
+  // }
+
+  // async buyerOrderConfirmation(order: Order, parcelInfo: any, pricingInfo) {
+  //   const buyer = order.buyer;
+  //   console.log("Order Confirmation", parcelInfo, order, pricingInfo);
+  //   const subject = `Your order has been confirmed on Pet Attix!`;
+
+  //   this._logger.log(`Sending seller order confirmation email to ${buyer.email}`);
+  //   this._logger.log(` ${buyer.email} has been sent the buyer order confirmation email.`, {
+  //     order,
+  //     parcelInfo,
+  //     pricingInfo,
+  //   });
+  //   return this._mailService.sendMail({
+  //     to: buyer.email,
+  //     subject,
+  //     template: "buyer-confirmation", // buyer-confirmation.
+  //     context: {
+  //       order: order,
+  //       parcelInfo: parcelInfo,
+  //       pricingInfo: pricingInfo,
+  //     },
+  //   });
+  // }
+
+  async sellerOrderConfirmation(order, parcelInfo, pricingInfo) {
+    // Destructure the necessary properties from the order, parcelInfo, and pricingInfo
+    const { seller, buyer, id, status, paymentStatus, parcelId, product } = order;
+    const { currency, productPrice, productProtectionFee, deliveryCharge, deliveryProtectionFee, total } =
+      pricingInfo;
+    const { parcel } = parcelInfo;
+
+    // Set default values in case any properties are missing
+    const productName = product?.product_name || "No product name available";
+    const productCategory = product?.category || "Category not available";
+    const productCondition = product?.condition || "Condition not specified";
+    const productDescription = product?.description || "No description available";
+    const productImages = product?.images || [];
+
+    const sellerName = `${seller?.firstName || "N/A"} ${seller?.lastName || "N/A"}`;
+    const sellerEmail = seller?.email || "seller@petattix.com";
+
+    const buyerName = `${buyer?.firstName || "N/A"} ${buyer?.lastName || "N/A"}`;
+    const buyerEmail = buyer?.email || "buyer@petattix.com";
+    const buyerPhone = buyer?.phone || "N/A";
+
+    const trackingNumber = parcel?.tracking_number || "N/A";
+    const shippingMethod = parcel?.shipping_method_checkout_name || "N/A";
+    const carrierCode = parcel?.carrier?.code || "N/A";
+    const parcelLabel = parcel?.label?.normal_printer || [];
+    const parcelDocuments = parcel?.documents || [];
 
     const subject = `Your product has been sold on Pet Attix!`;
-    this._logger.log(`Sending seller order confirmation email to ${seller.email}`);
-    this._logger.log(` ${seller.email} has been sent the seller order confirmation email.`, {
+
+    this._logger.log(`Sending seller order confirmation email to ${seller?.email}`);
+    this._logger.log(`Order confirmation email sent to ${seller?.email}`, {
       order,
       parcelInfo,
       pricingInfo,
     });
-    await this._mailService.sendMail({
-      to: seller.email,
-      subject,
-      template: "sell-confirmation", // seller-confirmation.pug
-      context: {
-        order,
-        parcelInfo,
-        pricingInfo,
-      },
-    });
+
+    try {
+      // Send the email with destructured context
+      await this._mailService.sendMail({
+        to: seller?.email,
+        subject,
+        template: "sell-confirmation", // Use the sell-confirmation template
+        context: {
+          subject,
+          sellerName,
+          sellerEmail,
+          buyerName,
+          buyerEmail,
+          buyerPhone,
+          id,
+          status,
+          paymentStatus,
+          parcelId,
+          productName,
+          productCategory,
+          productCondition,
+          productDescription,
+          productImages,
+          currency,
+          productPrice,
+          productProtectionFee,
+          deliveryCharge,
+          deliveryProtectionFee,
+          total,
+          trackingNumber,
+          shippingMethod,
+          carrierCode,
+          parcelLabel,
+          parcelDocuments,
+        },
+      });
+
+      console.log(`Email sent to ${seller?.email}`);
+    } catch (error) {
+      console.error("Error sending email:", error);
+    }
   }
 
-  async buyerOrderConfirmation(order: Order, parcelInfo: any, pricingInfo) {
-    const buyer = order.buyer;
+  async buyerOrderConfirmation(order, parcelInfo, pricingInfo) {
+    // Destructure the necessary properties from the order, parcelInfo, and pricingInfo
+    const { buyer, id, status, paymentStatus, parcel_id, seller, product, deliveryInfo } = order;
+    const { currency, total, productPrice, productProtectionFee, deliveryCharge, deliveryProtectionFee } =
+      pricingInfo;
+    const { parcel } = parcelInfo;
+
+    // If any of the values are missing or undefined, you can set defaults here or leave them undefined
+    const productName = product?.product_name || "No product name available";
+    const productCategory = product?.category || "Category not available";
+    const productCondition = product?.condition || "Condition not specified";
+    const productDescription = product?.description || "No description available";
+    const productImages = product?.images || [];
+
+    const sellerName = `${seller?.firstName || "N/A"} ${seller?.lastName || "N/A"}`;
+    const sellerEmail = seller?.email || "seller@petattix.com";
+
+    const deliveryInfoName = deliveryInfo?.name || "N/A";
+    const deliveryAddress = deliveryInfo?.address || "N/A";
+    const deliveryCity = deliveryInfo?.city || "N/A";
+    const deliveryPostalCode = deliveryInfo?.postal_code || "N/A";
+    const deliveryCountry = deliveryInfo?.country || "N/A";
+
+    const trackingNumber = parcel?.tracking_number || "N/A";
+    const shippingMethod = parcel?.shipping_method_checkout_name || "N/A";
+    const carrierCode = parcel?.carrier?.code || "N/A";
+    const parcelLabel = parcel?.label?.normal_printer || [];
+    const parcelDocuments = parcel?.documents || [];
 
     const subject = `Your order has been confirmed on Pet Attix!`;
-    this._logger.log(`Sending Buyer order confirmation email to ${buyer.email}`);
-    return this._mailService.sendMail({
-      to: buyer.email,
-      subject,
-      template: "buyer-confirmation", // buyer-confirmation.pug
-      context: {
-        order,
-        parcelInfo,
-        pricingInfo,
-      },
+
+    this._logger.log(`Sending buyer order confirmation email to ${buyer?.email}`);
+    this._logger.log(`Order confirmation email sent to ${buyer?.email}`, {
+      order,
+      parcelInfo,
+      pricingInfo,
     });
+
+    try {
+      // Send the email with destructured context
+      await this._mailService.sendMail({
+        to: buyer?.email,
+        subject,
+        template: "buyer-confirmation", // Use the buyer-confirmation template
+        context: {
+          subject,
+          buyer: buyer || {},
+          id,
+          status,
+          paymentStatus,
+          parcel_id,
+          sellerName,
+          sellerEmail,
+          productName,
+          productCategory,
+          productCondition,
+          productDescription,
+          productImages,
+          currency,
+          total,
+          productPrice,
+          productProtectionFee,
+          deliveryCharge,
+          deliveryProtectionFee,
+          deliveryInfoName,
+          deliveryAddress,
+          deliveryCity,
+          deliveryPostalCode,
+          deliveryCountry,
+          trackingNumber,
+          shippingMethod,
+          carrierCode,
+          parcelLabel,
+          parcelDocuments,
+        },
+      });
+
+      console.log(`Email sent to ${buyer?.email}`);
+    } catch (error) {
+      console.error("Error sending email:", error);
+    }
   }
 }
