@@ -1,13 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Favorite } from "./entities/favourite.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, EntityManager, Repository } from "typeorm";
+import { DataSource, EntityManager, In, Repository } from "typeorm";
 import { Product } from "src/products/entities/products.entity";
 import { User } from "src/user/entities/user.entity";
 import { CreateFavoriteDto } from "./dto/favourite.dto";
 import { ResponseInterface } from "src/common/types/responseInterface";
 import { pagination } from "src/shared/utils/pagination";
 import { UserService } from "src/user/user.service";
+import { ProductStatus } from "src/products/enums/status.enum";
 
 @Injectable()
 export class FavouritesService {
@@ -41,12 +42,12 @@ export class FavouritesService {
 
     if (existingFavorite) {
       // If the product is already a favorite, remove it
-      const favourite = await this.favoriteRepo.remove(existingFavorite);
+      await this.favoriteRepo.delete({ id: existingFavorite.id });
       return {
         message: "Product removed from favourite",
         status: "success",
         statusCode: 200,
-        data: await this.favoriteRepo.save(favourite),
+        data: { ...existingFavorite },
       };
     } else {
       // If the product is not a favorite, add it
@@ -63,7 +64,6 @@ export class FavouritesService {
   // Get user's favorites with pagination
   async getUserFavorites(userId: string, page: number = 1, limit: number = 10) {
     // Check if the user exists
-    console.log("User id", userId);
     // const user = await this.userService.getUserById(userId);
     // if (!user) {
     //   throw new NotFoundException("User not found");
@@ -74,10 +74,18 @@ export class FavouritesService {
 
     // Get the paginated list of favorites
     const [favorites, total] = await this.favoriteRepo.findAndCount({
-      where: { user: { id: userId } },
+      where: {
+        user: {
+          id: userId,
+        },
+        product: {
+          status: In([ProductStatus.IN_PROGRESS, ProductStatus.AVAILABLE]),
+        },
+      },
       relations: ["product"], // Get the product details as well
       skip: skip,
       take: take,
+      order: { created_at: "DESC" },
     });
 
     // Calculate the total number of pages
