@@ -54,10 +54,10 @@ import { MailModule } from "src/mail/mail.module";
     FavouritesModule,
     MailModule,
 
-    BullModule.registerQueue({ name: "product" }),
+    BullModule.registerQueue({ name: "product" }, { name: "notifications" }),
     // ShipmentService,
   ],
   controllers: [DeliveryController],
   providers: [DeliveryService],
 })
-export class DeliveryModule { }
+export class DeliveryModule {}
