@@ -12,15 +12,16 @@ import { BullModule } from "@nestjs/bull";
 import { UserBehaviourModule } from "src/user-behaviour/user-behaviour.module";
 import { Transections } from "src/transections/entity/transections.entity";
 import { CurrencyConverterModule } from "src/currency-converter/currency-converter.module";
+import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, ProductImage, Wallets, Transections]),
+    TypeOrmModule.forFeature([Product, ProductImage, Wallets, Transections, CollectionAddress]),
     AuthModule,
     UserModule,
     UserBehaviourModule,
     NotificationsModule,
-    BullModule.registerQueue({ name: "product" }),
+    BullModule.registerQueue({ name: "product" }, { name: "notifications" }),
     CurrencyConverterModule,
   ],
 

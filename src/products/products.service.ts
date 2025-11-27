@@ -19,7 +19,6 @@ import { CARRER_TYPE, CreateProductDto } from "./dto/CreateProductDto.dto";
 import { defaultCurrency, ProductStatus } from "./enums/status.enum";
 import { GetAdminProductQuery, GetProductsQueryDto } from "./dto/GetProductDto.dto";
 import { Pagination, pagination } from "src/shared/utils/pagination";
-import { UpdateProductDto } from "./dto/updatingProduct.dto";
 import { ResponseInterface } from "src/common/types/responseInterface";
 import { NotificationsService } from "src/notifications/notifications.service";
 import {
@@ -41,7 +40,6 @@ import { ConverterService } from "src/currency-converter/currency-converter.serv
 import { FeeWithCommision, validateAddress } from "src/shared/utils/utils";
 import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
 import { UserService } from "src/user/user.service";
-import { use } from "passport";
 import { InjectLogger } from "src/shared/decorators/logger.decorator";
 // import {Conver}
 @Injectable()
@@ -52,12 +50,15 @@ export class ProductsService {
 
     private readonly _dataSource: DataSource,
     @InjectQueue("product") private readonly _queue: Queue,
+    @InjectQueue("notifications") private readonly _notificationQueue: Queue,
     //  @InjectQueue("behaviour") private readonly userBehaviour:Queue ,
     private readonly _userBehaviourService: UserBehaviourService,
     @InjectRepository(ProductImage)
     private readonly _productImageRepository: Repository<ProductImage>,
     @InjectRepository(Wallets)
     private readonly _walletsRepo: Repository<Wallets>,
+    @InjectRepository(CollectionAddress)
+    private readonly _collectionRepo: Repository<CollectionAddress>,
     private readonly _notificationService: NotificationsService,
     private readonly _currencyConverterService: ConverterService,
     private readonly _userService: UserService,
@@ -116,7 +117,6 @@ export class ProductsService {
       const width = parseInt(createProductDto.width, 10);
       const length = parseInt(createProductDto.length, 10);
       // let service_point_id: number = 0;
-      console.log(createProductDto);
       if (createProductDto.carrer_type == CARRER_TYPE.COLLECTION_TYPE) {
         // this.validateAddress(createProductDto);
         validateAddress({
@@ -132,7 +132,6 @@ export class ProductsService {
         createProductDto.carrer_option = CARRER_TYPE.SERVICE_TYPE;
         // }
       }
-      console.log(createProductDto);
       if (isNaN(sellingPrice) || isNaN(quantity)) {
         throw new BadRequestException("Invalid numeric values for price or quantity!");
       }
@@ -232,9 +231,8 @@ export class ProductsService {
 
         await queryRunner.commitTransaction();
 
-        // Notification (outside transaction)
-        await this._notificationService.createNotification({
-          userId: user.id,
+        await this._notificationQueue.add("notification_saver", {
+          user: userInfo,
           related: NotificationRelated.PRODUCT,
           msg: `${product.product_name} is listed for your review!`,
           type: NotificationType.SUCCESS,
@@ -243,7 +241,32 @@ export class ProductsService {
           action: NotificationAction.CREATED,
           isImportant: true,
         });
-
+        await this._notificationQueue.add("notification_saver", {
+          user: userInfo,
+          related: NotificationRelated.PRODUCT,
+          msg: `You product ${product.product_name} is listed for admins review!`,
+          type: NotificationType.SUCCESS,
+          targetId: savedProduct.id,
+          notificationFor: UserRoles.USER,
+          action: NotificationAction.CREATED,
+          isImportant: true,
+          title: `You product ${product.product_name} is listed for admins review!`,
+          body: `You will be notified once it is approved.`,
+        });
+        if (isBoosted) {
+          await this._notificationQueue.add("notification_saver", {
+            user: userInfo,
+            related: NotificationRelated.WALLET,
+            msg: `${product.product_name} is boosted for ${boostDays} days with ${productBoostingCost} GBP!`,
+            type: NotificationType.SUCCESS,
+            targetId: savedProduct.id,
+            notificationFor: UserRoles.USER,
+            action: NotificationAction.CREATED,
+            isImportant: true,
+            title: `${product.product_name} is boosted for ${boostDays} days with ${productBoostingCost} GBP!`,
+            body: `It will will be visible to more buyers until ${product.boost_end_time.toLocaleDateString()}`,
+          });
+        }
         const productWithImages = await this._productRepository.findOne({
           where: { id: savedProduct.id },
         });
@@ -374,30 +397,6 @@ export class ProductsService {
       where.status = ProductStatus.AVAILABLE;
     }
 
-    if (!term || !category || type !== "own") {
-      // if(behaviorData && behaviorData.search){
-      //   where.product_name = ILike(`%${behaviorData.search}%`)
-      // }
-      // if(behaviorData && behaviorData.category){
-      //   where.category = ILike(`%${behaviorData.category}%`)
-      // }
-      // Adjust filters based on user behavior
-      // if (behaviorData.searchTerms.length > 0) {
-      //   where.product_name = ILike(`%${behaviorData.searchTerms.join(' ')}%`);  // Combine search terms
-      // }
-    }
-    // if (behaviorData.categories.length > 0) {
-    //   where.category = In(behaviorData.categories);  // Match any of the aggregated categories
-    // }
-
-    // if (behaviorData.brand.length > 0) {
-    //   where.size = In(behaviorData.brand);  // Match any of the aggregated sizes
-    // }
-
-    // if (behaviorData.priceRanges.length > 0) {
-    //   const [minPrice, maxPrice] = behaviorData.priceRanges[0].split('-').map(Number);  // Just use the first available range
-    //   where.selling_price = Between(minPrice || 0, maxPrice || Number.MAX_SAFE_INTEGER);
-    // }
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
     if ((term || category || price) && type !== "own") {
@@ -546,7 +545,7 @@ export class ProductsService {
       },
     });
 
-    await this._currencyConverterService.getRates(defaultCurrency);
+    await this._currencyConverterService.getRates();
     // console.log()
     console.log("Cron Job : ", expiredBoostedProducts);
     for (const product of expiredBoostedProducts) {
@@ -557,55 +556,6 @@ export class ProductsService {
     }
   }
 
-  // async updateProduct(
-  //   id: number,
-  //   updateDto: UpdateProductDto,
-  //   user_id: string,
-  //   user: User
-  // ): Promise<{ message: string; statusCode: number; data: Product }> {
-  //   const product = await this._productRepository.findOne({
-  //     where: { id, user_id, status: ProductStatus.AVAILABLE },
-  //   });
-  //   console.log(updateDto);
-  //   if (!product) {
-  //     throw new NotFoundException(`Product with id ${id} not found.`);
-  //   }
-  //   const productSellingPrice = Number(updateDto.selling_price);
-
-  //   const productPrice = await this._currencyConverterService.convert(
-  //     user.currency,
-  //     defaultCurrency,
-  //     productSellingPrice
-  //   );
-  //   try {
-  //     Object.assign(product, {
-  //       ...updateDto,
-  //       selling_price: productPrice,
-  //       quantity: Number(updateDto.quantity),
-  //       is_negotiable: updateDto.is_negotiable === "true",
-  //       images: updateDto.images.length > 0 ? updateDto.images : product.images,
-  //     });
-  //     // Optional: Replace images if new images are provided
-  //     if (updateDto.images && Array.isArray(updateDto.images) && updateDto.images.length > 0) {
-  //       await this._productImageRepository.delete({ product_id: id });
-
-  //       // Add new images
-  //       product.images = updateDto.images.map((imgUrl: string) => {
-  //         const img = new ProductImage();
-  //         img.image = imgUrl; // assuming images are URLs; if files, handle accordingly
-  //         img.product_id = product.id; // link image to product
-  //         return img;
-  //       });
-  //       await this._productImageRepository.insert(product.images);
-  //     }
-  //     await this._productRepository.save(product);
-  //     return { message: "Product updated successfully", statusCode: 200, data: product };
-  //   } catch (error) {
-  //     console.error("Error updating product:", error);
-  //     throw new BadRequestException("Failed to update product.");
-  //   }
-  // }
-
   async updateProduct(
     id: number,
     updateDto,
@@ -613,154 +563,166 @@ export class ProductsService {
     user: User
   ): Promise<{ message: string; statusCode: number; data: Product }> {
     this._logger.log(`update product Dto`, updateDto);
-    return await this._dataSource.transaction(async (manager) => {
-      const productRepo = manager.getRepository(Product);
-      // if(productRepo)
-      // const productImageRepo = manager.getRepository(ProductImage);
-      const addressRepo = manager.getRepository(CollectionAddress);
-      // console.log(id, user_id);
-      const product = await productRepo.findOne({
-        where: { id, user_id },
-      });
-
-      if (!product) {
-        throw new NotFoundException(`Product with id ${id} not found.`);
-      }
-      if (product.status !== ProductStatus.PENDING && product.status !== ProductStatus.AVAILABLE) {
-        throw new BadRequestException(`Only available products can be updated.`);
-      }
-
-      const sellingPriceInput = Number(updateDto.selling_price);
-
-      // console.log(updateDto);
-
-      // Convert selling price → default currency
-      const convertedPrice = await this._currencyConverterService.convert(
-        user.currency.toUpperCase(),
-        defaultCurrency,
-        sellingPriceInput
-      );
-      console.log("Updated-1", updateDto);
-      // Buyer protection fee (example formula)
-
-      if (updateDto.selling_price) {
-        // updateDto.selling_price = convertedPrice;
-        product.selling_price = convertedPrice;
-      }
-      if (updateDto.quantity) {
-        // updateDto.quantity = Number(updateDto.quantity);
-        product.quantity = Number(updateDto.quantity);
-      }
-      if (updateDto.is_boosted) {
-        updateDto.is_boosted = updateDto.is_boosted === "true";
-        product.is_boosted = updateDto.is_boosted;
-      }
-      if (updateDto.weight) {
-        updateDto.weight = Number(updateDto.weight);
-        product.weight = Number(updateDto.weight);
-      }
-      if (updateDto.width) {
-        updateDto.width = Number(updateDto.width);
-        product.width = Number(updateDto.width);
-      }
-      if (updateDto.height) {
-        updateDto.height = Number(updateDto.height);
-        product.height = Number(updateDto.height);
-      }
-      if (updateDto.length) {
-        updateDto.length = Number(updateDto.length);
-        product.length = Number(updateDto.length);
-      }
-      if (updateDto.size) {
-        product.size = updateDto.size;
-      }
-      if (updateDto.product_name) {
-        product.product_name = updateDto.product_name;
-      }
-      if (updateDto.category) {
-        product.category = updateDto.category;
-      }
-      if (updateDto.brand) {
-        product.brand = updateDto.brand;
-      }
-      if (updateDto.condition) {
-        product.condition = updateDto.condition;
-      }
-      if (updateDto.description) {
-        product.description = updateDto.description;
-      }
-      // Assign product fields
-      // Object.assign(product, {
-      //   ...updateDto,
-      // });
-
-      // -----------------------------
-      // IMAGES
-      // -----------------------------
-      console.log("Updated", updateDto);
-      // this._logger.log("Product", updateDto);
-
-      if (updateDto.images && updateDto.images.length > 0) {
-        console.log("Updating images...");
-        await this._productImageRepository.delete({ product: { id: id } });
-        const newImages = updateDto.images.map((imgUrl) => {
-          const obj = new ProductImage();
-          obj.product = product;
-          obj.product_id = id;
-          // obj.productId = product.id;
-          obj.image = imgUrl;
-          return obj;
-        });
-        this._logger.log(`Edit Product Images`, newImages);
-        await manager.save(ProductImage, newImages);
-        // product.images = newImages
-      }
-      const productImages = await this._productImageRepository.find({ where: { product_id: id } });
-      product.images = productImages;
-
-      // -----------------------------
-      // ADDRESS / CARRIER LOGIC
-      if (updateDto.carrer_type === "collection_address") {
-        if (product.collectionAddress) {
-          console.log("Updating existing address...");
-          console.log("Before update:", product.collectionAddress);
-
-          // Merge only fields that exist in updateDto
-          for (const key of Object.keys(updateDto)) {
-            if (key in product.collectionAddress) {
-              (product.collectionAddress as any)[key] = (updateDto as any)[key];
-            }
-          }
-
-          const address = await addressRepo.save(product.collectionAddress);
-          console.log("Updated existing address:", address);
-        }
-      }
-      product.carrer_option = updateDto.carrer_type;
-      // If courier drop-off or pickup
-      // if (updateDto.carrer_type !== "collection_address") {
-      //   // If they choose shipping with service point
-      //   if (updateDto.service_point_id) {
-      //     product.service_point_id = Number(updateDto.service_point_id);
-      //   } else {
-      //     product.service_point_id = null;
-      //   }
-      // }
-
-      // -----------------------------
-      // Store protection fee
-      // -----------------------------
-      // product.protectionFee = buyerProtectionFee;
-
-      // Save final product
-      await productRepo.save(product);
-
-      return {
-        message: "Product updated successfully",
-        statusCode: 200,
-        data: product,
-      };
+    // return await this._dataSource.transaction(async (manager) => {
+    //   const productRepo = manager.getRepository(Product);
+    //   // if(productRepo)
+    //   // const productImageRepo = manager.getRepository(ProductImage);
+    //   const addressRepo = manager.getRepository(CollectionAddress);
+    // console.log(id, user_id);
+    const product = await this._productRepository.findOne({
+      where: { id, user_id },
     });
+
+    if (!product) {
+      throw new NotFoundException(`Product with id ${id} not found.`);
+    }
+    // console.log(product);
+    if (
+      product.status !== ProductStatus.PENDING &&
+      product.status !== ProductStatus.AVAILABLE &&
+      product.status !== ProductStatus.IN_PROGRESS
+    ) {
+      throw new BadRequestException(`Only available products can be updated.`);
+    }
+
+    const sellingPriceInput = Number(updateDto.selling_price);
+
+    // console.log(updateDto);
+
+    // Convert selling price → default currency
+    const convertedPrice = await this._currencyConverterService.convert(
+      user.currency.toUpperCase(),
+      defaultCurrency,
+      sellingPriceInput
+    );
+    console.log("Updated-1", updateDto);
+    // Buyer protection fee (example formula)
+
+    if (updateDto.selling_price) {
+      // updateDto.selling_price = convertedPrice;
+      product.selling_price = convertedPrice;
+    }
+    if (updateDto.quantity) {
+      // updateDto.quantity = Number(updateDto.quantity);
+      product.quantity = Number(updateDto.quantity);
+    }
+    if (updateDto.is_boosted) {
+      updateDto.is_boosted = updateDto.is_boosted === "true";
+      product.is_boosted = updateDto.is_boosted;
+    }
+    if (updateDto.weight) {
+      updateDto.weight = Number(updateDto.weight);
+      product.weight = Number(updateDto.weight);
+    }
+    if (updateDto.width) {
+      updateDto.width = Number(updateDto.width);
+      product.width = Number(updateDto.width);
+    }
+    if (updateDto.height) {
+      updateDto.height = Number(updateDto.height);
+      product.height = Number(updateDto.height);
+    }
+    if (updateDto.length) {
+      updateDto.length = Number(updateDto.length);
+      product.length = Number(updateDto.length);
+    }
+    if (updateDto.size) {
+      product.size = updateDto.size;
+    }
+    if (updateDto.product_name) {
+      product.product_name = updateDto.product_name;
+    }
+    if (updateDto.category) {
+      product.category = updateDto.category;
+    }
+    if (updateDto.brand) {
+      product.brand = updateDto.brand;
+    }
+    if (updateDto.condition) {
+      product.condition = updateDto.condition;
+    }
+    if (updateDto.description) {
+      product.description = updateDto.description;
+    }
+    // Assign product fields
+    // Object.assign(product, {
+    //   ...updateDto,
+    // });
+
+    // -----------------------------
+    // IMAGES
+    // -----------------------------
+    console.log("Updated", updateDto);
+    // this._logger.log("Product", updateDto);
+    let productImg = null;
+    if (updateDto.images && updateDto.images.length > 0) {
+      console.log("Updating images...");
+      await this._productImageRepository.delete({ product: { id: id } });
+      const newImages = updateDto.images.map((imgUrl) => {
+        const obj = new ProductImage();
+        obj.product = product;
+        obj.product_id = id;
+        // obj.productId = product.id;
+        obj.image = imgUrl;
+        return obj;
+      });
+      this._logger.log(`Edit Product Images`, newImages);
+      productImg = newImages;
+      // await manager.save(ProductImage, newImages);
+      await this._productImageRepository.save(newImages);
+      // product.images = newImages
+    }
+
+    // if (productImg) {
+    //   product.images = productImg;
+    // }
+    const productImages = await this._productImageRepository.find({ where: { product_id: id } });
+    product.images = productImages;
+
+    // -----------------------------
+    // ADDRESS / CARRIER LOGIC
+    if (updateDto.carrer_type === "collection_address") {
+      if (product.collectionAddress) {
+        console.log("Updating existing address...");
+        console.log("Before update:", product.collectionAddress);
+
+        // Merge only fields that exist in updateDto
+        for (const key of Object.keys(updateDto)) {
+          if (key in product.collectionAddress) {
+            (product.collectionAddress as any)[key] = (updateDto as any)[key];
+          }
+        }
+
+        const address = await this._collectionRepo.save(product.collectionAddress);
+        console.log("Updated existing address:", address);
+      }
+    }
+    product.carrer_option = updateDto.carrer_type;
+    // If courier drop-off or pickup
+    // if (updateDto.carrer_type !== "collection_address") {
+    //   // If they choose shipping with service point
+    //   if (updateDto.service_point_id) {
+    //     product.service_point_id = Number(updateDto.service_point_id);
+    //   } else {
+    //     product.service_point_id = null;
+    //   }
+    // }
+
+    // -----------------------------
+    // Store protection fee
+    // -----------------------------
+    // product.protectionFee = buyerProtectionFee;
+    console.log("Product Img", productImg);
+    // product.images = productImg ? productImg : product.images;
+    // Save final product
+    await this._productRepository.save(product);
+
+    return {
+      message: "Product updated successfully",
+      statusCode: 200,
+      data: product,
+    };
+    // );
   }
 
   async getProduct(id: number): Promise<Product> {
@@ -772,7 +734,10 @@ export class ProductsService {
 
   async updateProductsStatus(id: number): Promise<ResponseInterface<Product>> {
     try {
-      const product = await this._productRepository.findOne({ where: { id, status: ProductStatus.PENDING } });
+      const product = await this._productRepository.findOne({
+        where: { id, status: ProductStatus.PENDING },
+        relations: ["user"],
+      });
       if (!product) {
         throw new NotFoundException("Product not found!");
       }
