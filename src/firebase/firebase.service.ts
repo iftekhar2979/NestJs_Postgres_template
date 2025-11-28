@@ -40,7 +40,8 @@ export class FirebaseService {
       return response;
     } catch (error) {
       this.logger.error("Failed to send push notification", error.stack || error);
-      throw new Error("Failed to send push notification");
+      return null;
+      //  throw new Error("Failed to send push notification");
     }
   }
 
@@ -57,7 +58,8 @@ export class FirebaseService {
       return response;
     } catch (error) {
       this.logger.error("Failed to send multicast push notification", error.stack || error);
-      throw new Error("Failed to send multicast push notification");
+      return null;
+      // throw new Error("Failed to send multicast push notification");
     }
   }
 
