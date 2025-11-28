@@ -11,6 +11,7 @@ import { ParticipantsModule } from "src/participants/participants.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { Messages } from "src/messages/entities/messages.entity";
 import { Conversations } from "src/conversations/entities/conversations.entity";
+import { BullModule } from "@nestjs/bull";
 
 @Global()
 @Module({
@@ -34,6 +35,7 @@ import { Conversations } from "src/conversations/entities/conversations.entity";
     //  forwardRef(() => MessagesModule),
     // MessagesModule,
     // ConversationsModule,
+    BullModule.registerQueue({ name: "product" }, { name: "notifications" }),
     ParticipantsModule,
   ],
   providers: [SocketGateway, SocketService],

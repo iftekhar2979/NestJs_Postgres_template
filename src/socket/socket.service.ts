@@ -12,6 +12,8 @@ import { User } from "src/user/entities/user.entity";
 import { UserService } from "src/user/user.service";
 import { Logger } from "winston";
 import { Conversations } from "src/conversations/entities/conversations.entity";
+import { InjectQueue } from "@nestjs/bull";
+import { Queue } from "bull";
 
 @Injectable()
 export class SocketService {
@@ -28,7 +30,8 @@ export class SocketService {
     @InjectRepository(Messages) private readonly messageRepository: Repository<Messages>,
     @InjectRepository(Conversations) private readonly conversationRepository: Repository<Conversations>,
     private readonly participantService: ParticipantsService,
-    @InjectLogger() private readonly logger: Logger
+    @InjectLogger() private readonly logger: Logger,
+    @InjectQueue("notifications") private readonly _notificationQueue: Queue
     // @InjectRe(Message.name) private readonly messageModel: Model<Message>,
     // @InjectModel(Conversation.name)
     // private readonly conversationModel: Model<Conversation>,
@@ -185,11 +188,21 @@ export class SocketService {
   }) {
     const receiverSocket = this.getSocketByUserId(receiverId);
     const senderSocket = this.getSocketByUserId(senderId);
-    console.log(senderSocket, message);
+    console.log(message.sender);
+    const senderName = `${message?.sender?.firstName} ${message?.sender?.lastName}`;
     delete message.conversation;
     delete message.sender;
     if (receiverSocket) {
       receiverSocket.emit(`conversation-${conversation_id}`, message);
+    } else {
+      const user = await this.userService.getUserById(receiverId);
+      if (user.fcm) {
+        await this._notificationQueue.add("push_notifications", {
+          token: user.fcm,
+          title: ` ${senderName} messaged you `,
+          body: `${message.msg}`,
+        });
+      }
     }
     if (senderSocket) {
       senderSocket.emit(`conversation-${conversation_id}`, message);
@@ -228,7 +241,7 @@ export class SocketService {
         isRead: false,
         conversation_id: conversation.id,
       });
-      console.log(message);
+      // console.log(message);
       this.handleMessageDelivery({
         senderId: sender.id,
         receiverId: receiver.id,
