@@ -368,6 +368,7 @@ export class ProductsService {
 
     // console.log(term)
     const where: any = {};
+    const orderby: { is_boosted?: "DESC"; boost_end_time?: "ASC"; created_at?: "DESC" } = {};
 
     // Text Search
     if (term) {
@@ -393,8 +394,14 @@ export class ProductsService {
 
     if (type === "own") {
       where.user_id = userId;
+      where.status = In([ProductStatus.AVAILABLE, ProductStatus.PENDING]);
+      // where.product.status = In([ProductStatus.AVAILABLE, ProductStatus.PENDING]);
+      orderby.created_at = "DESC";
     } else {
       where.status = ProductStatus.AVAILABLE;
+      orderby.is_boosted = "DESC";
+      orderby.boost_end_time = "ASC";
+      orderby.created_at = "DESC";
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -414,11 +421,12 @@ export class ProductsService {
     // if (type === "own") {
     //   orderBy = { updated_at: "DESC", created_at: "DESC" };
     // }
+    console.log(where);
     const [data, total] = await this._productRepository.findAndCount({
       where,
       skip,
       take,
-      order: { is_boosted: "DESC", boost_end_time: "ASC", created_at: "DESC" },
+      order: orderby,
       relations: ["images"], // Ensure images are loaded
     });
     // const productIds = data.map((product) => product.id);
