@@ -10,7 +10,11 @@ import { SendOfferDto } from "./dto/sendOffer.dto";
 import { ResponseInterface } from "src/common/types/responseInterface";
 import { ConversationsService } from "src/conversations/conversations.service";
 import { NotificationsService } from "src/notifications/notifications.service";
-import { NotificationAction, NotificationRelated } from "src/notifications/entities/notifications.entity";
+import {
+  NotificationAction,
+  NotificationRelated,
+  NotificationType,
+} from "src/notifications/entities/notifications.entity";
 import { UserRoles } from "src/user/enums/role.enum";
 import { MailService } from "src/mail/mail.service";
 import { UserService } from "src/user/user.service";
@@ -19,6 +23,7 @@ import { Queue } from "bull";
 import { ConverterService } from "src/currency-converter/currency-converter.service";
 import { defaultCurrency } from "src/products/enums/status.enum";
 import { User } from "src/user/entities/user.entity";
+import { title } from "process";
 
 @Injectable()
 export class OfferService {
@@ -32,7 +37,9 @@ export class OfferService {
     private readonly _mailService: MailService,
     private readonly _userService: UserService,
     private readonly _currencyConverterService: ConverterService,
-    @InjectQueue("product") private readonly _queue: Queue
+    @InjectQueue("product") private readonly _queue: Queue,
+
+    @InjectQueue("notifications") private readonly _notificationQueue: Queue
   ) {}
 
   async createOffer(payload: SendOfferDto, user: User): Promise<ResponseInterface<Offer>> {
@@ -60,7 +67,6 @@ export class OfferService {
     if (product.user_id === buyer_id) {
       throw new BadRequestException("You cannot make an offer on your own product");
     }
-    console.log("oFFFER hERE 1");
 
     const offeredPrice = await this._currencyConverterService.convert(
       user.currency.toUpperCase(),
@@ -81,25 +87,35 @@ export class OfferService {
       status: OfferStatus.PENDING,
     });
     await this._offerRepo.save(offer);
-    console.log("oFFFER hERE 2");
     const conversation = await this._coversationService.getOrCreate({
       productId: product.id,
       userIds: [product.user_id, buyer_id],
       offer: offer,
       offerType: OfferStatus.PENDING,
     });
-    console.log("oFFFER hERE 3");
     //  console.log(conversation)
-    await this._notificationService.createNotification({
-      userId: product.user_id,
+    // await this._notificationService.createNotification({
+    //   userId: product.user_id,
+    //   related: NotificationRelated.CONVERSATION,
+    //   action: NotificationAction.CREATED,
+    //   msg: `${product.product_name} has a new offer for your review!`,
+    //   targetId: conversation.id,
+    //   isImportant: true,
+    //   notificationFor: UserRoles.USER,
+    // });
+
+    await this._notificationQueue.add("notification_saver", {
+      user: product.user,
       related: NotificationRelated.CONVERSATION,
-      action: NotificationAction.CREATED,
       msg: `${product.product_name} has a new offer for your review!`,
+      type: NotificationType.SUCCESS,
       targetId: conversation.id,
-      isImportant: true,
       notificationFor: UserRoles.USER,
+      action: NotificationAction.CREATED,
+      isImportant: true,
+      title: `Please review the upcoming offer for ${product.product_name}`,
+      body: `Got new offer for ${product.product_name}`,
     });
-    console.log("oFFFER hERE 4");
     await this._mailService.sendOfferConfirmation(userInfo, product.user, offer, product);
     // await this._queue.add("user-behaviour", {}, { attempts: 10 });
     // await this._queue.add("mail", {
@@ -152,14 +168,27 @@ export class OfferService {
     });
     // await this._offerRepo.save(offer);
     // console.log(conversation)
-    await this._notificationService.createNotification({
-      userId: offer.seller.id,
+    // await this._notificationService.createNotification({
+    //   userId: offer.seller.id,
+    //   related: NotificationRelated.CONVERSATION,
+    //   action: NotificationAction.UPDATED,
+    //   msg: `Offer accepted for ${product.product_name} ! Feel Free to phurcase that . `,
+    //   targetId: conversation.id,
+    //   isImportant: true,
+    //   notificationFor: UserRoles.USER,
+    // });
+
+    await this._notificationQueue.add("notification_saver", {
+      user: offer.buyer,
       related: NotificationRelated.CONVERSATION,
-      action: NotificationAction.UPDATED,
       msg: `Offer accepted for ${product.product_name} ! Feel Free to phurcase that . `,
+      type: NotificationType.SUCCESS,
       targetId: conversation.id,
-      isImportant: true,
       notificationFor: UserRoles.USER,
+      action: NotificationAction.CREATED,
+      isImportant: true,
+      title: `Your offer ${product.product_name} has been accepted .`,
+      body: `Please feel free to purchase the product .`,
     });
     offer.status = OfferStatus.ACCEPTED;
     await this._offerRepo.save(offer);

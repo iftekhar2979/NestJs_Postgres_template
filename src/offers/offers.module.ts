@@ -22,7 +22,7 @@ import { CurrencyConverterModule } from "src/currency-converter/currency-convert
     ProductsModule,
     ConversationsModule,
     NotificationsModule,
-    BullModule.registerQueue({ name: "product" }),
+    BullModule.registerQueue({ name: "product" }, { name: "notifications" }),
     CurrencyConverterModule,
   ],
   controllers: [OffersController],

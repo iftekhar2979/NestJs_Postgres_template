@@ -33,58 +33,140 @@ export class OrdersService {
 
     private readonly _currencyConverterService: ConverterService
   ) {}
+  // async createOrderFromOffer(offer: Offer): Promise<Order> {
+  //   try {
+  //     if (offer.order_id) {
+  //       throw new BadRequestException("Order already exists for this offer");
+  //     }
+  //     const existingOrder = await this._orderRepository.findOne({
+  //       where: { product: { id: offer.product.id } },
+  //       relations: ["product", "accepted_offer", "delivery", "buyer", "seller"],
+  //     });
+  //     if (existingOrder) {
+  //       throw new BadRequestException("Order already exists for this Product");
+  //     }
+  //     const order = this._orderRepository.create({
+  //       paymentStatus: PaymentStatus.PENDING,
+  //       status: OrderStatus.PENDING,
+  //       buyer: offer.buyer,
+  //       buyer_id: offer.buyer.id,
+  //       seller: offer.seller,
+  //       seller_id: offer.seller.id,
+  //       product: offer.product,
+  //       protectionFee: FeeWithCommision(offer.price, 10) + 0.8,
+  //       total: offer.price,
+  //       accepted_offer: offer,
+  //       offer_id: offer.id,
+  //       deliveryInfo: null,
+  //       delivery_id: null,
+  //     });
+  //     // console.log("ORDERInfo", order);
+  //     await this._orderRepository.save(order);
+  //     const productName = offer.product.product_name;
+  //     const notifications = [
+  //       {
+  //         userId: offer.buyer.id,
+  //         user: offer.buyer,
+  //         isImportant: true,
+  //         action: NotificationAction.UPDATED,
+  //         related: NotificationRelated.ORDER,
+  //         notificationFor: UserRoles.USER,
+  //         type: NotificationType.SUCCESS,
+  //         targetId: order.id,
+  //         msg: `${productName} is now ready to phurcase !`,
+  //       },
+  //       {
+  //         userId: offer.seller.id,
+  //         user: offer.seller,
+  //         isImportant: true,
+  //         action: NotificationAction.UPDATED,
+  //         related: NotificationRelated.ORDER,
+  //         notificationFor: UserRoles.USER,
+  //         type: NotificationType.INFO,
+  //         targetId: order.id,
+  //         msg: `${productName} is ready to sell!`,
+  //       },
+  //       {
+  //         userId: null,
+  //         isImportant: true,
+  //         action: NotificationAction.UPDATED,
+  //         related: NotificationRelated.ORDER,
+  //         notificationFor: UserRoles.ADMIN,
+  //         type: NotificationType.INFO,
+  //         targetId: order.id,
+  //         msg: `#${order.id} both are agreed with negotiation!`,
+  //       },
+  //     ];
+  //     await this._notificaionService.bulkInsertNotifications(notifications);
+  //     return await this._orderRepository.save(order);
+  //   } catch (error) {
+  //     console.error("Error creating order from offer:", error);
+  //     throw new BadRequestException("Failed to create order from offer");
+  //   }
+  // }
+
   async createOrderFromOffer(offer: Offer): Promise<Order> {
     try {
       if (offer.order_id) {
         throw new BadRequestException("Order already exists for this offer");
       }
+
+      // ❗Prevent duplicate orders for same product
       const existingOrder = await this._orderRepository.findOne({
         where: { product: { id: offer.product.id } },
-        relations: ["product", "accepted_offer", "delivery", "buyer", "seller"],
+        relations: ["product", "accepted_offer", "deliveryInfo", "buyer", "seller"],
       });
+
       if (existingOrder) {
-        throw new BadRequestException("Order already exists for this Product");
+        throw new BadRequestException("Order already exists for this product");
       }
+
+      const protectionFee = Number(FeeWithCommision(offer.price, 10)) + 0.8;
+
       const order = this._orderRepository.create({
         paymentStatus: PaymentStatus.PENDING,
         status: OrderStatus.PENDING,
+
         buyer: offer.buyer,
         buyer_id: offer.buyer.id,
+
         seller: offer.seller,
         seller_id: offer.seller.id,
+
         product: offer.product,
-        protectionFee: FeeWithCommision(offer.price, 10) + 0.8,
+
+        protectionFee,
         total: offer.price,
+
         accepted_offer: offer,
         offer_id: offer.id,
+
         deliveryInfo: null,
         delivery_id: null,
       });
-      // console.log("ORDERInfo", order);
-      await this._orderRepository.save(order);
-      const productName = offer.product.product_name;
+
+      const savedOrder = await this._orderRepository.save(order);
+
       const notifications = [
         {
           userId: offer.buyer.id,
-          user: offer.buyer,
           isImportant: true,
           action: NotificationAction.UPDATED,
           related: NotificationRelated.ORDER,
           notificationFor: UserRoles.USER,
           type: NotificationType.SUCCESS,
-          targetId: order.id,
-          msg: `${productName} is now ready to phurcase !`,
+          targetId: savedOrder.id,
+          msg: `${offer.product.product_name} is now ready to purchase!`,
         },
         {
           userId: offer.seller.id,
-          user: offer.seller,
           isImportant: true,
           action: NotificationAction.UPDATED,
           related: NotificationRelated.ORDER,
           notificationFor: UserRoles.USER,
           type: NotificationType.INFO,
-          targetId: order.id,
-          msg: `${productName} is ready to sell!`,
+          targetId: savedOrder.id,
+          msg: `${offer.product.product_name} is ready to sell!`,
         },
         {
           userId: null,
@@ -93,18 +175,19 @@ export class OrdersService {
           related: NotificationRelated.ORDER,
           notificationFor: UserRoles.ADMIN,
           type: NotificationType.INFO,
-          targetId: order.id,
-          msg: `#${order.id} both are agreed with negotiation!`,
+          targetId: savedOrder.id,
+          msg: `#${savedOrder.id} both parties agreed on negotiation.`,
         },
       ];
+
       await this._notificaionService.bulkInsertNotifications(notifications);
-      return await this._orderRepository.save(order);
+
+      return savedOrder;
     } catch (error) {
       console.error("Error creating order from offer:", error);
       throw new BadRequestException("Failed to create order from offer");
     }
   }
-
   async findByBuyerId(
     buyerId: string,
     page: number = 1,

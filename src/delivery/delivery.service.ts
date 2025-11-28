@@ -1,3 +1,4 @@
+import { Length } from "class-validator";
 import { UserService } from "./../user/user.service";
 // import { NotificationService } from 'src/notification/notification.service';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
@@ -396,7 +397,8 @@ export class DeliveryService {
     }
     console.log(params);
     const pricing = await this._sendCloudService.getEstimateOfSingleShipping(params, shippingId);
-    // console.log(pricing)
+    console.log(pricing);
+    console.log(pricing.length === 0);
     if (pricing.length === 0) {
       throw new BadRequestException(
         "Currently the shipping method is not available . Please try another one !"
@@ -404,6 +406,7 @@ export class DeliveryService {
     }
     const shippingMethodPrice = parseFloat(pricing[0].price);
     const fee = (shippingMethodPrice * DELIVERY_PROTECTION_PERCENTAGE) / 100;
+    console.log("Pricing Info");
     let pricingInfo = {
       deliveryCharge: shippingMethodPrice,
       deliveryProtectionFee: fee,
@@ -416,6 +419,7 @@ export class DeliveryService {
         parseFloat(order.protectionFee as unknown as string),
       currency: "GBP",
     } as any;
+    console.log(pricingInfo);
     this._logger.log("Delivery Charge", pricingInfo);
     if (!pricingInfo.deliveryCharge) {
       throw new BadRequestException(
@@ -450,7 +454,6 @@ export class DeliveryService {
       pricingInfo.productProtectionFee +
       pricingInfo.deliveryCharge +
       pricingInfo.deliveryProtectionFee;
-    console.log(total);
     pricingInfo.total = total;
     pricingInfo.currency = user.currency.toUpperCase();
     console.timeEnd("Currency Conversion Time");
