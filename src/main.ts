@@ -19,8 +19,6 @@ import { runMigrations } from "./migration-runner";
 import { join } from "path";
 import { SeederService } from "./seeder/seeder.service";
 import bodyParser from "body-parser";
-import { MailerService } from "@nestjs-modules/mailer";
-import { order, parcelInfo, pricingInfo } from "../emailmock.js";
 
 /**
  * function for bootstraping the nest application

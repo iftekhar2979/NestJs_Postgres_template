@@ -81,4 +81,13 @@ export class PushNotificationProccessor {
     const { user, otp } = job.data;
     await this._mailService.sendForgotPasswordMail(user.email, `${otp}`);
   }
+
+  // @Process("send_offer_with_mail")
+  // async sendOffer(job: Job<>) {
+  //   console.log("job data", job.data);
+  //   this._logger.log("Notification Saver Job started", job.data);
+  //   // console.log("Email", job.data);
+  //   const { user, otp } = job.data;
+  //   await this._mailService.sendForgotPasswordMail(user.email, `${otp}`);
+  // }
 }
