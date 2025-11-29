@@ -84,10 +84,15 @@ export class DeliveryService {
         where: { product: { id: product_id } },
         relations: ["deliveryInfo"],
       });
-      console.log("Order", order);
+      this._logger.log(`Delivery Info Creation Of Order ==== >`, order.deliveryInfo);
+      const userInfo = await this._userService.getUserById(user.id);
       // const deliveryInfo = order.deliveryInfo;
       if (order) {
         if (order.deliveryInfo && order.status === OrderStatus.DELIVERY_FILLED) {
+          this._logger.log(
+            "Order Has the delivery Information and order status was ==>",
+            OrderStatus.DELIVERY_FILLED
+          );
           delete createDeliveryAddressDto.carrer_type;
           delete createDeliveryAddressDto.country_state;
           await this._deliveryAddressRepository.update(order.deliveryInfo.id, createDeliveryAddressDto);
@@ -100,7 +105,6 @@ export class DeliveryService {
         }
       }
 
-      const userInfo = await this._userService.getUserById(user.id);
       // Check if product exists and the current user can purchase it
       if (!product) {
         throw new BadRequestException("Product not found");
@@ -113,7 +117,6 @@ export class DeliveryService {
       if (product.status === ProductStatus.SOLD) {
         throw new BadRequestException("Product already sold");
       }
-      console.log(product);
       if (product.status !== ProductStatus.AVAILABLE) {
         throw new ForbiddenException("Product is no longer available for purchase.");
       }
@@ -203,7 +206,7 @@ export class DeliveryService {
                 };
           const deliveryAddress = this._deliveryAddressRepository.create(deliveryInfo);
           await queryRunner.manager.save(deliveryAddress);
-          this._logger.log(`New Delivery Created `, deliveryAddress.id);
+          this._logger.log(`New Delivery  Created `, deliveryAddress.id);
           order.deliveryInfo = deliveryAddress;
           order.delivery_id = deliveryAddress.id;
           this._logger.log(`order ${order.id} will update with`, deliveryAddress.id);
@@ -217,7 +220,15 @@ export class DeliveryService {
 
           const deliveryInfo =
             createDeliveryAddressDto.carrer_type === CARRER_TYPE.SERVICE_TYPE
-              ? { order: existingOrder, service_point_id }
+              ? {
+                  order,
+                  name: `${userInfo.firstName} ${userInfo.lastName}`,
+                  email: userInfo.email,
+                  company_name: createDeliveryAddressDto.company_name,
+                  telephone: userInfo.phone,
+                  service_point_id: null,
+                  ...createDeliveryAddressDto,
+                }
               : {
                   order: existingOrder,
                   name: `${userInfo.firstName} ${userInfo.lastName}`,
@@ -395,10 +406,8 @@ export class DeliveryService {
     } else {
       params.service_point_id = deliveryInfo.service_point_id;
     }
-    console.log(params);
     const pricing = await this._sendCloudService.getEstimateOfSingleShipping(params, shippingId);
-    console.log(pricing);
-    console.log(pricing.length === 0);
+
     if (pricing.length === 0) {
       throw new BadRequestException(
         "Currently the shipping method is not available . Please try another one !"
@@ -406,7 +415,7 @@ export class DeliveryService {
     }
     const shippingMethodPrice = parseFloat(pricing[0].price);
     const fee = (shippingMethodPrice * DELIVERY_PROTECTION_PERCENTAGE) / 100;
-    console.log("Pricing Info");
+    console.log("Pricing Info", order.total);
     let pricingInfo = {
       deliveryCharge: shippingMethodPrice,
       deliveryProtectionFee: fee,
