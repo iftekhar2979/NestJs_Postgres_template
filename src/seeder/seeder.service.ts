@@ -15,7 +15,7 @@ export class SeederService {
     // private readonly settingService: SettingsService,
     @InjectRepository(Setting) private _settingModel: Repository<Setting>,
     @InjectRepository(Category) private _categoryRepository: Repository<Category>
-  ) { }
+  ) {}
 
   async seedAdminUser() {
     const adminEmail = "admin@petAttix.com"; // Use a valid email
@@ -103,8 +103,12 @@ export class SeederService {
       // { name: 'Travel & Outdoor Gear', image: '/images/categories/travel-outdoor.jpg' },
       // { name: 'Miscellaneous', image: '/images/categories/misc.jpg' },
     ];
-
-    await this._categoryRepository.insert(categories);
+    const category = await this._categoryRepository.find({ where: { name: "Dog Supplies" } });
+    if (category) {
+      console.log("Categories already exist");
+    } else {
+      await this._categoryRepository.insert(categories);
+    }
 
     // for (const item of seedData) {
     //   const exists = await this._settingModel.findOne({ where: { key: item.key } });
