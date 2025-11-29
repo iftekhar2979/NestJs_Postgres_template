@@ -542,26 +542,24 @@ export class ProductsService {
     }
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // Runs every minute for demonstration ; adjust as needed .
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async expireBoostedProducts() {
     const currentDate = new Date();
 
-    const expiredBoostedProducts = await this._productRepository.find({
-      where: {
-        is_boosted: true,
-        boost_end_time: LessThanOrEqual(currentDate), // Expired boosts
-      },
-    });
+    const result = await this._productRepository
+      .createQueryBuilder()
+      .update()
+      .set({
+        is_boosted: false,
+        boost_start_time: null,
+        boost_end_time: null,
+      })
+      .where("is_boosted = :isBoosted", { isBoosted: true })
+      .andWhere("boost_end_time <= :currentDate", { currentDate })
+      .returning("id") // PostgreSQL only — returns affected IDs
+      .execute();
 
-    await this._currencyConverterService.getRates();
-    // console.log()
-    console.log("Cron Job : ", expiredBoostedProducts);
-    for (const product of expiredBoostedProducts) {
-      product.is_boosted = false;
-      product.boost_start_time = null;
-      product.boost_end_time = null;
-      await this._productRepository.save(product);
-    }
+    console.log(`Cron Job: Expired products:`, result.raw);
   }
 
   async updateProduct(
