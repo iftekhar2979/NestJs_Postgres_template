@@ -352,131 +352,131 @@ export class OrdersService {
   }
 
   async completeOrder({ order_id, user }: { order_id: number; user: User }) {
+    console.log("Order id", order_id);
+    const order = await this._orderRepository.findOne({
+      where: { id: order_id },
+      relations: ["product", "buyer", "seller"],
+    });
+    console.log("order", order);
+    if (!order) {
+      throw new BadRequestException("Order is not found!");
+    }
+    if (order.status === OrderStatus.DELIVERED) {
+      throw new BadRequestException("Product already delivered");
+    }
+
+    if (order.status !== OrderStatus.SHIPMENT_READY) {
+      throw new BadRequestException("Order is not yet ready for shipment.");
+    }
+    if (order.buyer.id !== user.id) {
+      throw new BadRequestException("You have no permission to compelete the order.");
+    }
+    const sellerWallet = await this._walletRepository.findOne({ where: { user: { id: order.seller.id } } });
+    if (!sellerWallet) {
+      throw new BadRequestException("Seller wallet is not active !");
+    }
+
+    const { product, seller } = order;
+
+    const queryRunner = this._dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
     try {
-      const order = await this._orderRepository.findOne({
-        where: { id: order_id },
-        relations: ["product", "accepted_offer", "delivery", "buyer", "seller"],
-      });
-      if (!order) {
-        throw new BadRequestException("Order is not found!");
-      }
-      if (order.status === OrderStatus.DELIVERED) {
-        throw new BadRequestException("Product already delivered");
-      }
-      if (order.status !== OrderStatus.PREPEARED) {
-        throw new BadRequestException("Order is not yet ready for shipment.");
-      }
-      if (order.buyer.id !== user.id) {
-        throw new BadRequestException("You have no permission to compelete the order.");
-      }
-      const sellerWallet = await this._walletRepository.findOne({ where: { user: { id: order.seller.id } } });
-      if (!sellerWallet) {
-        throw new BadRequestException("Seller wallet is not active !");
-      }
+      order.status = OrderStatus.DELIVERED;
 
-      const { product, seller } = order;
-      const queryRunner = this._dataSource.createQueryRunner();
-      await queryRunner.startTransaction();
-      try {
-        order.status = OrderStatus.DELIVERED;
+      sellerWallet.balance += Number(order.total);
+      sellerWallet.version += 1;
 
-        sellerWallet.balance += Number(order.total);
-        sellerWallet.version += 1;
+      const randomString = Math.random().toString(36).substring(2, 10);
+      const paymentId = `Trans-${order.product.id}-${randomString}`;
+      // // Transaction for payment
+      const transaction = new Transections();
+      transaction.amount = order.total;
+      transaction.order = order;
+      transaction.paymentId = paymentId;
+      transaction.transection_type = TransectionType.ORDER_COMPLETATION;
+      transaction.status = PaymentStatus.COMPLETED;
+      transaction.product = order.product;
+      transaction.paymentMethod = "Internal";
+      transaction.user = order.seller;
+      transaction.wallet = sellerWallet;
 
-        const randomString = Math.random().toString(36).substring(2, 10);
-        const paymentId = `Trans-${order.product.id}-${randomString}`;
-        // // Transaction for payment
-        const transaction = new Transections();
-        transaction.amount = order.total;
-        transaction.order = order;
-        transaction.paymentId = paymentId;
-        transaction.transection_type = TransectionType.ORDER_COMPLETATION;
-        transaction.status = PaymentStatus.COMPLETED;
-        transaction.product = order.product;
-        transaction.paymentMethod = "Internal";
-        transaction.user = order.seller;
-        transaction.wallet = sellerWallet;
+      const notifications = [
+        {
+          user: user,
+          userId: user.id,
+          related: NotificationRelated.ORDER,
+          action: NotificationAction.CREATED,
+          type: NotificationType.SUCCESS,
+          msg: `Your Purchase ,Order #${order.id} is marked as delivered or completed.`,
+          target_id: order.id,
+          notificationFor: UserRoles.USER,
+          isImportant: true,
+        },
+        {
+          userId: seller.id,
+          user: product.user,
+          related: NotificationRelated.ORDER,
+          action: NotificationAction.CREATED,
+          type: NotificationType.SUCCESS,
+          msg: `Order ${order.id} is marked as completed by ${seller.firstName}`,
+          target_id: product.id,
+          notificationFor: UserRoles.USER,
+          isImportant: true,
+        },
+        {
+          userId: seller.id,
+          user: seller,
+          related: NotificationRelated.ORDER,
+          action: NotificationAction.CREATED,
+          type: NotificationType.SUCCESS,
+          msg: `Order : #${order.id} with ${product.product_name} is completed.`,
+          target_id: product.id,
+          notificationFor: UserRoles.ADMIN,
+          isImportant: true,
+        },
+        {
+          userId: seller.id,
+          related: NotificationRelated.WALLET,
+          action: NotificationAction.CREATED,
+          type: NotificationType.SUCCESS,
+          msg: `Congratulation Order completed ! A total of ${order.total} has been credited to your wallet for order #${order.id}.`,
+          notificationFor: UserRoles.USER,
+          isImportant: true,
+          targetId: sellerWallet.id,
+        },
+        {
+          userId: seller.id,
+          user: seller,
+          related: NotificationRelated.ORDER,
+          action: NotificationAction.CREATED,
+          type: NotificationType.SUCCESS,
+          msg: `Order : #${order.id} with ${product.product_name} has transection to ${seller.firstName}'s wallet.`,
+          target_id: product.id,
+          notificationFor: UserRoles.ADMIN,
+          isImportant: true,
+        },
+      ];
 
-        const notifications = [
-          {
-            user: user,
-            userId: user.id,
-            related: NotificationRelated.ORDER,
-            action: NotificationAction.CREATED,
-            type: NotificationType.SUCCESS,
-            msg: `Your Purchase ,Order #${order.id} is marked as delivered or completed.`,
-            target_id: order.id,
-            notificationFor: UserRoles.USER,
-            isImportant: true,
-          },
-          {
-            userId: seller.id,
-            user: product.user,
-            related: NotificationRelated.ORDER,
-            action: NotificationAction.CREATED,
-            type: NotificationType.SUCCESS,
-            msg: `Order ${order.id} is marked as completed by ${seller.firstName}`,
-            target_id: product.id,
-            notificationFor: UserRoles.USER,
-            isImportant: true,
-          },
-          {
-            userId: seller.id,
-            user: seller,
-            related: NotificationRelated.ORDER,
-            action: NotificationAction.CREATED,
-            type: NotificationType.SUCCESS,
-            msg: `Order : #${order.id} with ${product.product_name} is completed.`,
-            target_id: product.id,
-            notificationFor: UserRoles.ADMIN,
-            isImportant: true,
-          },
-          {
-            userId: seller.id,
-            related: NotificationRelated.WALLET,
-            action: NotificationAction.CREATED,
-            type: NotificationType.SUCCESS,
-            msg: `Congratulation Order completed ! A total of ${order.total} has been credited to your wallet for order #${order.id}.`,
-            notificationFor: UserRoles.USER,
-            isImportant: true,
-            targetId: sellerWallet.id,
-          },
-          {
-            userId: seller.id,
-            user: seller,
-            related: NotificationRelated.ORDER,
-            action: NotificationAction.CREATED,
-            type: NotificationType.SUCCESS,
-            msg: `Order : #${order.id} with ${product.product_name} has transection to ${seller.firstName}'s wallet.`,
-            target_id: product.id,
-            notificationFor: UserRoles.ADMIN,
-            isImportant: true,
-          },
-        ];
+      // Bulk insert notifications for both user and admin
+      await this._notificaionService.bulkInsertNotifications(notifications);
+      await queryRunner.manager.save(Order, order);
+      await queryRunner.manager.save(Transections, transaction);
+      await queryRunner.manager.save(Wallets, sellerWallet);
+      // await queryRunner.manager.save(Shipment, shipmentInfo)
+      await queryRunner.commitTransaction();
 
-        // Bulk insert notifications for both user and admin
-        await this._notificaionService.bulkInsertNotifications(notifications);
-        await queryRunner.manager.save(Order, order);
-        await queryRunner.manager.save(Transections, transaction);
-        await queryRunner.manager.save(Wallets, sellerWallet);
-        // await queryRunner.manager.save(Shipment, shipmentInfo)
-        await queryRunner.commitTransaction();
-
-        return {
-          message: `Product maked as completed!`,
-          data: order,
-          statusCode: 201,
-        };
-      } catch (error) {
-        await queryRunner.rollbackTransaction();
-        console.error("Error during order creation:", error);
-        throw new BadRequestException("Error creating delivery address");
-      } finally {
-        // Release the query runner
-        await queryRunner.release();
-      }
+      return {
+        message: `Product marked as completed!`,
+        data: order,
+        statusCode: 201,
+      };
     } catch (error) {
-      console.log(error);
+      await queryRunner.rollbackTransaction();
+      console.error("Error during order creation:", error);
+      throw new BadRequestException(error.message);
+    } finally {
+      // Release the query runner
+      await queryRunner.release();
     }
   }
 }
