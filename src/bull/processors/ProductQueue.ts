@@ -6,13 +6,16 @@ import * as fs from "fs"; // File system module to write images to disk
 import * as path from "path"; // Path module for handling file paths
 import { UserBehaviourService } from "src/user-behaviour/user-behaviour.service";
 import { MailService } from "src/mail/mail.service";
+import { Category } from "src/category/entity/category.entity";
+import { CategoryService } from "src/category/category.service";
 
 @Processor("product") // Processor listening to 'ProductQueue'
 @Injectable()
 export class ImageProcessor {
   constructor(
     private readonly _userBehaviourService: UserBehaviourService,
-    private readonly _mailService: MailService
+    private readonly _mailService: MailService,
+    private readonly _category: CategoryService
   ) {}
   @Process("Product-image") // Listen for jobs of type 'Product-image'
   async handleImageJob(job: Job) {
@@ -89,5 +92,12 @@ export class ImageProcessor {
   @Process("mails")
   async VerificationConfirmation(job: Job) {
     console.log("Email", job.data);
+  }
+  @Process("category")
+  async categoryCreation(job: Job<Category>) {
+    console.log("category", job.data);
+    const { image, name } = job.data;
+
+    await this._category.create({ image, name });
   }
 }

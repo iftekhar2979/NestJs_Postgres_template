@@ -5,9 +5,10 @@ import { UserBehaviourModule } from "src/user-behaviour/user-behaviour.module";
 import { MailModule } from "src/mail/mail.module";
 import { FirebaseModule } from "src/firebase/firebase.module";
 import { NotificationsModule } from "src/notifications/notifications.module";
+import { CategoryModule } from "src/category/category.module";
 
 @Module({
-  imports: [UserBehaviourModule, MailModule, FirebaseModule, NotificationsModule],
+  imports: [UserBehaviourModule, MailModule, FirebaseModule, NotificationsModule, CategoryModule],
   providers: [BullService],
   controllers: [BullController],
 })

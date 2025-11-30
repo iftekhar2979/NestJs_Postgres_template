@@ -6,6 +6,7 @@ import { Repository } from "typeorm";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { Category } from "./entity/category.entity";
 import { UpdateCategoryDto } from "./dto/update-category";
+import { ProductStatus } from "src/products/enums/status.enum";
 // import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
@@ -20,8 +21,27 @@ export class CategoryService {
     return this.categoryRepository.save(category);
   }
 
-  async findAll(): Promise<Category[]> {
-    return this.categoryRepository.find();
+  // async findAll(): Promise<Category[]> {
+  //   return this.categoryRepository.find();
+  // }
+
+  async findAll(limit: number = 10) {
+    return this.categoryRepository
+      .createQueryBuilder("category")
+      .leftJoin("products", "product", "product.category = category.name")
+      .select("category.id", "id")
+      .addSelect("category.name", "name")
+      .addSelect("category.image", "image")
+      .addSelect("COUNT(product.id)", "productCount")
+      .where("product.status = :status OR product.status IS NULL", {
+        status: ProductStatus.AVAILABLE,
+      })
+      .groupBy("category.id")
+      .addGroupBy("category.name")
+      .addGroupBy("category.image")
+      .orderBy('"productCount"', "DESC") // Quote to preserve case
+      .limit(limit)
+      .getRawMany();
   }
 
   async findOne(id: number): Promise<Category> {

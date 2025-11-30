@@ -226,6 +226,12 @@ export class ProductsService {
             img.product = savedProduct;
             return img;
           });
+
+          await this._queue.add("category", {
+            image: productImages[0].image,
+            name: product.category,
+          });
+
           await queryRunner.manager.save(ProductImage, productImages);
         }
 
