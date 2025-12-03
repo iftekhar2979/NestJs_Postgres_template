@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Order } from "./entities/order.entity";
-import { DataSource, Repository } from "typeorm";
+import { DataSource, In, Repository } from "typeorm";
 import { Offer } from "src/offers/entities/offer.entity";
 import { OrderStatus, PaymentStatus } from "./enums/orderStatus";
 import { ResponseInterface } from "src/common/types/responseInterface";
@@ -21,6 +21,8 @@ import { Transections } from "src/transections/entity/transections.entity";
 import { TransectionType } from "src/transections/enums/transectionTypes";
 import { FeeWithCommision } from "src/shared/utils/utils";
 import { ConverterService } from "src/currency-converter/currency-converter.service";
+import { InjectQueue } from "@nestjs/bull";
+import { Queue } from "bull";
 @Injectable()
 export class OrdersService {
   constructor(
@@ -30,9 +32,10 @@ export class OrdersService {
     @InjectRepository(Product) private _productRepository: Repository<Product>,
     @InjectRepository(Wallets) private _walletRepository: Repository<Wallets>,
     @InjectRepository(Transections) private _transectionRespositoy: Repository<Transections>,
-
+    @InjectQueue("product") private readonly _queue: Queue,
+    @InjectQueue("notifications") private readonly _notificationQueue: Queue,
     private readonly _currencyConverterService: ConverterService
-  ) {}
+  ) { }
   // async createOrderFromOffer(offer: Offer): Promise<Order> {
   //   try {
   //     if (offer.order_id) {
@@ -180,6 +183,8 @@ export class OrdersService {
         },
       ];
 
+      // await this._notificationQueue.add("",)
+
       await this._notificaionService.bulkInsertNotifications(notifications);
 
       return savedOrder;
@@ -195,7 +200,7 @@ export class OrdersService {
     user?: User
   ): Promise<ResponseInterface<Order[]>> {
     const [orders, total] = await this._orderRepository.findAndCount({
-      where: { buyer_id: buyerId, status: OrderStatus.SHIPMENT_READY },
+      where: { buyer_id: buyerId, status: In([OrderStatus.SHIPMENT_READY, OrderStatus.DELIVERED]) },
       relations: ["product", "accepted_offer", "deliveryInfo", "buyer", "seller"],
       skip: (page - 1) * limit,
       take: limit,
