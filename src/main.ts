@@ -51,9 +51,9 @@ async function bootstrap() {
   // });
 
   const seederService = app.get(SeederService);
-  await seederService.seedAdminUser();
-  await seederService.seedSettings();
-  await seederService.seedCategories();
+  // await seederService.seedAdminUser();
+  // await seederService.seedSettings();
+  // await seederService.seedCategories();
   app.setGlobalPrefix("/api");
 
   app.enableVersioning({
