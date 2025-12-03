@@ -11,12 +11,14 @@ import { Product } from "src/products/entities/products.entity";
 import { Wallets } from "src/wallets/entity/wallets.entity";
 import { Transections } from "src/transections/entity/transections.entity";
 import { CurrencyConverterModule } from "src/currency-converter/currency-converter.module";
+import { BullModule } from "@nestjs/bull";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Order, Offer, Product, Wallets, Transections]),
     AuthModule,
     UserModule,
+    BullModule.registerQueue({ name: "product" }, { name: "notifications" }),
     NotificationsModule,
     CurrencyConverterModule,
   ],
@@ -24,4 +26,4 @@ import { CurrencyConverterModule } from "src/currency-converter/currency-convert
   providers: [OrdersService],
   exports: [OrdersService],
 })
-export class OrdersModule {}
+export class OrdersModule { }
