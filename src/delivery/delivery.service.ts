@@ -56,7 +56,7 @@ export class DeliveryService {
     @InjectQueue("product") private readonly _queue: Queue,
 
     @InjectQueue("notifications") private readonly _notificationQueue: Queue
-  ) {}
+  ) { }
   async createDeliveryAddress({
     createDeliveryAddressDto,
     product_id,
@@ -84,7 +84,7 @@ export class DeliveryService {
         where: { product: { id: product_id } },
         relations: ["deliveryInfo"],
       });
-      this._logger.log(`Delivery Info Creation Of Order ==== >`, order.deliveryInfo);
+      // this._logger.log(`Delivery Info Creation Of Order ==== >`, order.deliveryInfo);
       const userInfo = await this._userService.getUserById(user.id);
       // const deliveryInfo = order.deliveryInfo;
       if (order) {
@@ -182,36 +182,36 @@ export class DeliveryService {
           order.protectionFee = protectionFee;
           order.total = Number(product.selling_price);
           await queryRunner.manager.save(Order, order);
-          this._logger.log(`New Order Created `, order.id);
+          // this._logger.log(`New Order Created `, order?.id);
           const deliveryInfo =
             createDeliveryAddressDto.carrer_type === CARRER_TYPE.SERVICE_TYPE
               ? {
-                  order,
-                  service_point_id,
-                  name: `${userInfo.firstName} ${userInfo.lastName}`,
-                  email: userInfo.email,
-                  company_name: createDeliveryAddressDto.company_name,
-                  telephone: userInfo.phone,
-                  // service_point_id: null,
-                  ...createDeliveryAddressDto,
-                }
+                order,
+                service_point_id,
+                name: `${userInfo.firstName} ${userInfo.lastName}`,
+                email: userInfo.email,
+                company_name: createDeliveryAddressDto.company_name,
+                telephone: userInfo.phone,
+                // service_point_id: null,
+                ...createDeliveryAddressDto,
+              }
               : {
-                  order,
-                  name: `${userInfo.firstName} ${userInfo.lastName}`,
-                  email: userInfo.email,
-                  company_name: createDeliveryAddressDto.company_name,
-                  telephone: userInfo.phone,
-                  service_point_id: null,
-                  ...createDeliveryAddressDto,
-                };
+                order,
+                name: `${userInfo.firstName} ${userInfo.lastName}`,
+                email: userInfo.email,
+                company_name: createDeliveryAddressDto.company_name,
+                telephone: userInfo.phone,
+                service_point_id: null,
+                ...createDeliveryAddressDto,
+              };
           const deliveryAddress = this._deliveryAddressRepository.create(deliveryInfo);
           await queryRunner.manager.save(deliveryAddress);
-          this._logger.log(`New Delivery  Created `, deliveryAddress.id);
+          // this._logger.log(`New Delivery  Created `, deliveryAddress?.id);
           order.deliveryInfo = deliveryAddress;
           order.delivery_id = deliveryAddress.id;
-          this._logger.log(`order ${order.id} will update with`, deliveryAddress.id);
+          // this._logger.log(`order ${order.id} will update with`, deliveryAddress.id);
           await queryRunner.manager.save(Order, order);
-          this._logger.log(`Order Update with Delivery Address`, order.deliveryInfo);
+          // this._logger.log(`Order Update with Delivery Address`, order.deliveryInfo);
         } else {
           existingOrder.total = Number(product.selling_price);
           existingOrder.protectionFee = protectionFee;
@@ -221,22 +221,22 @@ export class DeliveryService {
           const deliveryInfo =
             createDeliveryAddressDto.carrer_type === CARRER_TYPE.SERVICE_TYPE
               ? {
-                  order,
-                  name: `${userInfo.firstName} ${userInfo.lastName}`,
-                  email: userInfo.email,
-                  company_name: createDeliveryAddressDto.company_name,
-                  telephone: userInfo.phone,
-                  service_point_id: null,
-                  ...createDeliveryAddressDto,
-                }
+                order,
+                name: `${userInfo.firstName} ${userInfo.lastName}`,
+                email: userInfo.email,
+                company_name: createDeliveryAddressDto.company_name,
+                telephone: userInfo.phone,
+                service_point_id: null,
+                ...createDeliveryAddressDto,
+              }
               : {
-                  order: existingOrder,
-                  name: `${userInfo.firstName} ${userInfo.lastName}`,
-                  email: userInfo.email,
-                  company_name: createDeliveryAddressDto.company_name,
-                  telephone: userInfo.phone,
-                  ...createDeliveryAddressDto,
-                };
+                order: existingOrder,
+                name: `${userInfo.firstName} ${userInfo.lastName}`,
+                email: userInfo.email,
+                company_name: createDeliveryAddressDto.company_name,
+                telephone: userInfo.phone,
+                ...createDeliveryAddressDto,
+              };
           const deliveryAddress = this._deliveryAddressRepository.create(deliveryInfo);
           await queryRunner.manager.save(deliveryAddress);
 
