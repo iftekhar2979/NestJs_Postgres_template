@@ -64,7 +64,7 @@ export class ProductsService {
     private readonly _userService: UserService,
     @InjectRepository(Transections) private readonly _transectionRepository: Repository<Transections>,
     @InjectLogger() private readonly _logger: LoggerService
-  ) {}
+  ) { }
   // async getProductById({product_id,status,}){
 
   // }
@@ -756,13 +756,26 @@ export class ProductsService {
       product.status = ProductStatus.AVAILABLE;
       await this._productRepository.save(product);
 
-      await this._notificationService.createNotification({
-        userId: product.user.id,
+      // await this._notificationService.createNotification({
+      //   userId: product.user.id,
+      //   action: NotificationAction.UPDATED,
+      //   msg: `${product.product_name} is now available on marketplace`,
+      //   isImportant: false,
+      //   related: NotificationRelated.PRODUCT,
+      //   targetId: product.id,
+      // });
+
+      await this._notificationQueue.add("notification_saver", {
+        user: product.user,
+        related: NotificationRelated.PRODUCT,
         action: NotificationAction.UPDATED,
         msg: `${product.product_name} is now available on marketplace`,
-        isImportant: false,
-        related: NotificationRelated.PRODUCT,
+        type: NotificationType.SUCCESS,
         targetId: product.id,
+        notificationFor: UserRoles.USER,
+        isImportant: true,
+        title: `${product.product_name} is now available on marketplace`,
+        body: `Your product ${product.product_name} is approved.`,
       });
       return { message: "Product updated", statusCode: 200, data: product, status: "success" };
     } catch (error) {
