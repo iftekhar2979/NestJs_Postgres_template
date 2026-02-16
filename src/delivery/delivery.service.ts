@@ -1,39 +1,33 @@
-import { Length } from "class-validator";
 import { UserService } from "./../user/user.service";
 // import { NotificationService } from 'src/notification/notification.service';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { DeliveryAddress } from "./entities/delivery_information.entity";
+import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, Repository } from "typeorm";
-import { CreateDeliveryAddressDto } from "./dto/createDelivery.dto";
-import { DELIVERY_PROTECTION_PERCENTAGE, Product } from "src/products/entities/products.entity";
-import { Wallets } from "src/wallets/entity/wallets.entity";
-import { defaultCurrency, ProductStatus } from "src/products/enums/status.enum";
-import { User } from "src/user/entities/user.entity";
-import { Order } from "src/orders/entities/order.entity";
-import { OrderStatus, PaymentStatus } from "src/orders/enums/orderStatus";
+import { ConverterService } from "src/currency-converter/currency-converter.service";
 import {
-  NotificationAction,
-  NotificationRelated,
-  Notifications,
-  NotificationType,
+    Notifications
 } from "src/notifications/entities/notifications.entity";
 import { NotificationsService } from "src/notifications/notifications.service";
-import { UserRoles } from "src/user/enums/role.enum";
-import { FeeWithCommision, validateAddress } from "src/shared/utils/utils";
-import { ConverterService } from "src/currency-converter/currency-converter.service";
+import { Order } from "src/orders/entities/order.entity";
+import { OrderStatus, PaymentStatus } from "src/orders/enums/orderStatus";
 import { CARRER_TYPE } from "src/products/dto/CreateProductDto.dto";
-import { Logger } from "winston";
+import { DELIVERY_PROTECTION_PERCENTAGE, Product } from "src/products/entities/products.entity";
+import { defaultCurrency, ProductStatus } from "src/products/enums/status.enum";
 import { InjectLogger } from "src/shared/decorators/logger.decorator";
-import { ConfigService } from "@nestjs/config";
+import { FeeWithCommision, validateAddress } from "src/shared/utils/utils";
+import { User } from "src/user/entities/user.entity";
+import { Wallets } from "src/wallets/entity/wallets.entity";
+import { DataSource, Repository } from "typeorm";
+import { Logger } from "winston";
+import { CreateDeliveryAddressDto } from "./dto/createDelivery.dto";
+import { DeliveryAddress } from "./entities/delivery_information.entity";
 // import { CollectionAddress } from "./entities/collection_Address.entity";
-import { Transections } from "src/transections/entity/transections.entity";
-import { TransectionType } from "src/transections/enums/transectionTypes";
-import { SendcloudService } from "src/sendcloud/sendcloud.service";
-import { FavouritesService } from "src/favourites/favourites.service";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
-import { MailService } from "src/mail/mail.service";
+import { FavouritesService } from "src/favourites/favourites.service";
+import { SendcloudService } from "src/sendcloud/sendcloud.service";
+import { Transections } from "src/transections/entity/transections.entity";
+import { TransectionType } from "src/transections/enums/transectionTypes";
 import { createDirectPurchaseNotifications, createOrderNotifications } from "./utils/notification";
 
 @Injectable()
@@ -127,7 +121,7 @@ export class DeliveryService {
       if (!wallets) {
         throw new BadRequestException("User wallet not found");
       }
-      const productPrice = parseFloat(product.selling_price as unknown as string);
+      const productPrice = parseFloat(product.price as unknown as string);
       const productSellingPrice = await this._currencyConverterService.convert(
         user.currency.toUpperCase(),
         defaultCurrency,
@@ -180,7 +174,7 @@ export class DeliveryService {
           order.seller_id = product.user.id;
           order.status = OrderStatus.DELIVERY_FILLED;
           order.protectionFee = protectionFee;
-          order.total = Number(product.selling_price);
+          order.total = Number(product.price);
           await queryRunner.manager.save(Order, order);
           // this._logger.log(`New Order Created `, order?.id);
           const deliveryInfo =
@@ -213,7 +207,7 @@ export class DeliveryService {
           await queryRunner.manager.save(Order, order);
           // this._logger.log(`Order Update with Delivery Address`, order.deliveryInfo);
         } else {
-          existingOrder.total = Number(product.selling_price);
+          existingOrder.total = Number(product.price);
           existingOrder.protectionFee = protectionFee;
           existingOrder.status = OrderStatus.DELIVERY_FILLED;
           await queryRunner.manager.save(Order, existingOrder);

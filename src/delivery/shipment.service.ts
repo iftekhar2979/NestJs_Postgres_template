@@ -1,37 +1,37 @@
 // import { Delivery } from "./entities/delivery.entity";
-import { DeliveryAddress } from "./entities/delivery_information.entity";
-import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
 import { DataSource, Repository } from "typeorm";
-import { Shipment } from "./entities/shipments.entity";
-import { OrderInvoice } from "./entities/shipment_order_invoice.entity";
+import { DeliveryAddress } from "./entities/delivery_information.entity";
 import { Label } from "./entities/shipment_lable.entity";
+import { OrderInvoice } from "./entities/shipment_order_invoice.entity";
+import { Shipment } from "./entities/shipments.entity";
 // import { CreateShipmentDto } from './dto/createShipment.dto';
-import { ShipmentDocument } from "./entities/shipment_document.entity";
-import { CreateShipmentDto } from "./dto/createShipment.dto";
-import { OrdersService } from "src/orders/orders.service";
-import { Product } from "src/products/entities/products.entity";
-import { Wallets } from "src/wallets/entity/wallets.entity";
-import { Order } from "src/orders/entities/order.entity";
-import {
-  NotificationAction,
-  NotificationRelated,
-  Notifications,
-  NotificationType,
-} from "src/notifications/entities/notifications.entity";
-import { UserService } from "src/user/user.service";
-import { NotificationsService } from "src/notifications/notifications.service";
-import { User } from "src/user/entities/user.entity";
-import { ProductStatus } from "src/products/enums/status.enum";
-import { OrderStatus, PaymentStatus } from "src/orders/enums/orderStatus";
-import { Transections } from "src/transections/entity/transections.entity";
-import { TransectionType } from "src/transections/enums/transectionTypes";
-import { UserRoles } from "src/user/enums/role.enum";
 import { HttpService } from "@nestjs/axios";
 import { ConfigService } from "@nestjs/config";
-import { ConverterService } from "src/currency-converter/currency-converter.service";
 import { Cache } from "cache-manager";
+import { ConverterService } from "src/currency-converter/currency-converter.service";
+import {
+    NotificationAction,
+    NotificationRelated,
+    Notifications,
+    NotificationType,
+} from "src/notifications/entities/notifications.entity";
+import { NotificationsService } from "src/notifications/notifications.service";
+import { Order } from "src/orders/entities/order.entity";
+import { OrderStatus, PaymentStatus } from "src/orders/enums/orderStatus";
+import { OrdersService } from "src/orders/orders.service";
+import { Product } from "src/products/entities/products.entity";
+import { ProductStatus } from "src/products/enums/status.enum";
+import { Transections } from "src/transections/entity/transections.entity";
+import { TransectionType } from "src/transections/enums/transectionTypes";
+import { User } from "src/user/entities/user.entity";
+import { UserRoles } from "src/user/enums/role.enum";
+import { UserService } from "src/user/user.service";
+import { Wallets } from "src/wallets/entity/wallets.entity";
+import { CreateShipmentDto } from "./dto/createShipment.dto";
+import { ShipmentDocument } from "./entities/shipment_document.entity";
 
 @Injectable()
 export class ShipmentService {
@@ -133,8 +133,8 @@ export class ShipmentService {
   //       throw new Error("Buyer wallet not found");
   //     }
 
-  //     // const productSellingPrice = Number(product.selling_price);
-  //     const productPrice = parseFloat(product.selling_price as unknown as string);
+  //     // const productSellingPrice = Number(product.price);
+  //     const productPrice = parseFloat(product.price as unknown as string);
   //     const productSellingPrice = await this._currencyConverterService.convert(
   //       user.currency.toUpperCase(),
   //       defaultCurrency,
@@ -576,7 +576,7 @@ export class ShipmentService {
     const queryRunner = this._dataSource.createQueryRunner();
     await queryRunner.startTransaction();
     try {
-      const productSellingPrice = Number(product.selling_price);
+      const productSellingPrice = Number(product.price);
       if (isNaN(productSellingPrice)) {
         throw new Error("Invalid product price");
       }

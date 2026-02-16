@@ -1,27 +1,36 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToMany,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
-  OneToOne,
-} from "typeorm";
-import { IsString, IsNumber, IsBoolean, IsPositive, IsInt, Min, MaxLength, MinLength } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
-import { ProductImage } from "./productImage.entity";
-import { ProductStatus } from "../enums/status.enum";
-import { User } from "src/user/entities/user.entity";
-import { Favorite } from "src/favourites/entities/favourite.entity";
-import { ProductBoosts } from "src/product-boost/entities/product-boost.entity";
-import { Offer } from "src/offers/entities/offer.entity";
-import { Transections } from "src/transections/entity/transections.entity";
+import { IsBoolean, IsInt, IsNumber, IsPositive, IsString, MaxLength, Min, MinLength } from "class-validator";
 import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
+import { Favorite } from "src/favourites/entities/favourite.entity";
+import { Offer } from "src/offers/entities/offer.entity";
+import { ProductBoosts } from "src/product-boost/entities/product-boost.entity";
+import { Size } from "src/sizes/entity/sizes.entity";
+import { Transections } from "src/transections/entity/transections.entity";
+import { User } from "src/user/entities/user.entity";
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from "typeorm";
+import { ProductColor } from "../colors/entities/colors.entity";
 import { CARRER_TYPE } from "../dto/CreateProductDto.dto";
+import { ProductStatus } from "../enums/status.enum";
+import { SubCategory } from "../sub_categories/entities/sub_categories.entity";
+import { ProductImage } from "./productImage.entity";
 
 @Entity("products")
+@Index("full_text_index", ["product_name"])
+// @Index("product_listing_optimization", ["colorId", "sizeId"])
+@Index("price", ["price"])
+// @Index("color_filter", ["colorId"])
+// @Index("color_price_filter", ["colorId", "price"])
 export class Product {
   @ApiProperty({ example: 1, description: "Unique identifier for the product" })
   @PrimaryGeneratedColumn()
@@ -56,18 +65,25 @@ export class Product {
   @Column()
   status: ProductStatus;
 
+  @Column({ type: "int" })
+  subCategoryId: number;
+
+  @ManyToOne(() => SubCategory, (subCategory) => subCategory.products)
+  @JoinColumn({ name: "subCategoryId" })
+  subCategory: SubCategory;
+
   @ApiProperty({ example: 499.99, description: "Selling price of the product" })
   @IsNumber()
   @IsPositive()
   @Column("decimal", { precision: 10, scale: 2 })
-  selling_price: number;
+  price: number;
 
-  @ApiProperty({ example: "Electronics", description: "Category of the product" })
-  @IsString()
-  @MinLength(3)
-  @MaxLength(100)
-  @Column()
-  category: string;
+  // @ApiProperty({ example: "Electronics", description: "Category of the product" })
+  // @IsString()
+  // @MinLength(3)
+  // @MaxLength(100)
+  // @Column()
+  // category: string;
 
   @ApiProperty({ example: 5, description: "Quantity of the product in stock" })
   @IsInt()
@@ -92,12 +108,19 @@ export class Product {
   @Column()
   condition: string;
 
-  @ApiProperty({ example: "M", description: "Size of the product (if applicable)" })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(10)
-  @Column()
-  size: string;
+  @Column({ type: "int" })
+  sizeId: number;
+
+  @Column({ type: "int" })
+  colorId: number;
+
+  @ManyToOne(() => Size, (size) => size.products)
+  @JoinColumn({ name: "sizeId" })
+  size: Size;
+
+  @ManyToOne(() => ProductColor, (color) => color.products)
+  @JoinColumn({ name: "colorId" })
+  color: ProductColor;
 
   @ApiProperty({ example: "Apple", description: "Brand of the product" })
   @IsString()
@@ -122,6 +145,7 @@ export class Product {
   @ApiProperty({ description: "Boost end time for the product" })
   @Column({ type: "timestamp", nullable: true })
   boost_end_time: Date;
+
   @Column({ type: "decimal", precision: 10, scale: 2, nullable: true })
   @ApiProperty({ example: "2.49" })
   weight: number;

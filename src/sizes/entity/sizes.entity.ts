@@ -1,6 +1,7 @@
 // src/sizes/entities/size.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
 import { ApiProperty } from "@nestjs/swagger";
+import { Product } from "src/products/entities/products.entity";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity("sizes")
 export class Size {
@@ -15,4 +16,7 @@ export class Size {
   @ApiProperty({ example: "64*22 MM", description: "Size description" })
   @Column()
   description: string;
+
+  @OneToMany(() => Product, (variant) => variant.size)
+  products: Product[];
 }

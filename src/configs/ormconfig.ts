@@ -11,7 +11,6 @@ config({ path: join(__dirname, "..", "..", `.env.${process.env.STAGE}`) });
 
 export function createOrmConfig(): DataSourceOptions & TypeOrmModuleOptions {
   const configService = new ConfigService();
-
   const ormconfig: DataSourceOptions & TypeOrmModuleOptions = {
     type: "postgres",
     host: configService.get<string>("DB_HOST"),

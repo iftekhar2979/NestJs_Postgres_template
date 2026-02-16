@@ -127,7 +127,7 @@ export class SendcloudService {
         description: product.product_name,
         quantity: product.quantity ?? 1,
         weight: product.weight ?? 0.5, // fallback
-        value: product.selling_price,
+        value: product.price,
         product_id: product.id.toString(),
         sku: `${product.brand}-${product.id}`,
         hs_code: "000000", // optional → replace if you add HS
@@ -135,8 +135,8 @@ export class SendcloudService {
         properties: {
           brand: product.brand,
           condition: product.condition,
-          size: product.size,
-          category: product.category,
+          // size: product.size,
+          // category: product.category,
         },
       },
     ];

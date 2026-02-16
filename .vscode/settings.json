@@ -1,5 +1,6 @@
 {
     "editor.formatOnSave": true,
     "diffEditor.experimental.showMoves": true,
+    "liveServer.settings.port": 5001,
     
 }

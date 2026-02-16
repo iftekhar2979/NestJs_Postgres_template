@@ -1,6 +1,6 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 @Injectable()
 export class GeminiService {
@@ -24,7 +24,7 @@ export class GeminiService {
         Analyze the product image of a pet product and provide details in the following format:
       {
         "product_name": "Name of the pet product",
-        "selling_price": 49.99,
+        "price": 49.99,
         "purchasing_price": 30.00,
         "category": "Pet Toy", 
         "quantity": 10,
