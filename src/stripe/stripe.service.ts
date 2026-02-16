@@ -14,7 +14,7 @@ export class StripeService {
     // private readonly subscriptionService: SubscriptionService,
   ) {
     this.stripe = new Stripe(this.configService.get<string>("STRIPE_SECRET_KEY"), {
-      apiVersion: "2025-11-17.clover", // Specify Stripe API version you're using
+      apiVersion: "2025-07-30.basil", // Specify Stripe API version you're using
     });
     this.baseUrl = this.configService.get<string>("BASE_URL");
   }

@@ -1,12 +1,11 @@
 import { MailerService } from "@nestjs-modules/mailer";
 import { Injectable, LoggerService } from "@nestjs/common";
-import { FROM_EMAIL, ORG_NAME } from "./constants";
-import { User } from "../user/entities/user.entity";
+import { default as SendGrid } from "@sendgrid/mail";
 import { Offer } from "src/offers/entities/offer.entity";
 import { Product } from "src/products/entities/products.entity";
-import { Order } from "src/orders/entities/order.entity";
 import { InjectLogger } from "src/shared/decorators/logger.decorator";
-import { MailDataRequired, default as SendGrid } from "@sendgrid/mail";
+import { User } from "../user/entities/user.entity";
+import { FROM_EMAIL, ORG_NAME } from "./constants";
 
 @Injectable()
 export class MailService {
@@ -221,7 +220,7 @@ export class MailService {
         sellerFirstName: seller.firstName,
         sellerLastName: seller.lastName,
         productName: product.product_name,
-        sellingPrice: product.selling_price, // added this
+        sellingPrice: product.price, // added this
         offerPrice: offer.price,
       },
     });
@@ -240,7 +239,7 @@ export class MailService {
         sellerFirstName: seller.firstName,
         sellerLastName: seller.lastName,
         productName: product.product_name,
-        sellingPrice: product.selling_price, // added this
+        sellingPrice: product.price, // added this
         offerPrice: offer.price,
       },
     });
@@ -259,7 +258,7 @@ export class MailService {
         sellerFirstName: seller.firstName,
         sellerLastName: seller.lastName,
         productName: product.product_name,
-        sellingPrice: product.selling_price,
+        sellingPrice: product.price,
         offerPrice: offer.price,
       },
     });

@@ -1,14 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
 import {
-  IsString,
+  IsBooleanString,
+  IsInt,
   IsNumberString,
   IsOptional,
-  MinLength,
+  IsString,
   MaxLength,
-  IsBooleanString,
-  IsEnum,
-  isBoolean,
-  IsBoolean,
+  MinLength,
 } from "class-validator";
 
 export enum CARRER_TYPE {
@@ -24,7 +22,7 @@ export class CreateProductDto {
 
   @ApiProperty({ description: "Selling price", example: "499.99" })
   @IsNumberString()
-  selling_price: string;
+  price: string;
 
   @ApiProperty({ description: "Quantity", example: "5" })
   @IsNumberString()
@@ -67,10 +65,11 @@ export class CreateProductDto {
   is_boosted: string;
 
   @ApiProperty({ description: "Size", example: "Medium" })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(50)
-  size: string;
+  @IsInt()
+  size: number;
+  @ApiProperty({ description: "color", example: "Midnight blue" })
+  @IsInt()
+  color: number;
 
   @ApiProperty({ description: "Category", example: "Electronics" })
   @IsString()
@@ -93,56 +92,4 @@ export class CreateProductDto {
   @ApiProperty({ description: "Product height (in cm or inches)", example: "12.7" })
   @IsNumberString()
   height: string;
-  @ApiProperty({
-    description: "Career type should be either 'service_point' or 'collection_address'",
-    example: CARRER_TYPE.SERVICE_TYPE,
-    enum: CARRER_TYPE,
-  })
-  @IsEnum(CARRER_TYPE, {
-    message: "career_type must be either 'service_point' or 'collection_address'",
-  })
-  carrer_type: CARRER_TYPE;
-  @ApiProperty({ example: "221B Baker Street" })
-  @IsString()
-  @IsOptional()
-  address?: string;
-
-  @ApiProperty({ example: "221B" })
-  @IsString()
-  @IsOptional()
-  house_number?: string;
-
-  @ApiProperty({ example: "Apartment 4A", required: false })
-  @IsOptional()
-  @IsString()
-  address_2?: string;
-
-  @ApiProperty({ example: "London" })
-  @IsOptional()
-  @IsString()
-  city?: string;
-
-  @ApiProperty({ example: "GB" })
-  @IsOptional()
-  @IsString()
-  country?: string;
-
-  @ApiProperty({ example: "NW1 6XE" })
-  @IsOptional()
-  @IsString()
-  postal_code?: string;
-
-  @ApiProperty({ example: "Ximera Hrm Ltd." })
-  @IsOptional()
-  @IsString()
-  company_name?: string;
-
-  @ApiProperty({ example: "England", required: false })
-  @IsOptional()
-  @IsString()
-  country_state?: string;
-
-  @ApiProperty({ example: true, required: false })
-  @IsOptional()
-  carrer_option?: CARRER_TYPE;
 }

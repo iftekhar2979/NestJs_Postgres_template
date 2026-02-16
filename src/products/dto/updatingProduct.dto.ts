@@ -1,15 +1,6 @@
 // dto/update-product.dto.ts
 
-import { ApiPropertyOptional, PartialType } from "@nestjs/swagger";
-import {
-  IsOptional,
-  IsString,
-  IsBooleanString,
-  IsArray,
-  IsNumberString,
-  MinLength,
-  MaxLength,
-} from "class-validator";
+import { PartialType } from "@nestjs/swagger";
 import { CreateProductDto } from "./CreateProductDto.dto";
 
 // export class UpdateProductDto {
@@ -25,7 +16,7 @@ import { CreateProductDto } from "./CreateProductDto.dto";
 //   @IsNumberString()
 //   @MinLength(1)
 //   @MaxLength(5)
-//   selling_price?: string;
+//   price?: string;
 
 //   @ApiPropertyOptional({ description: "Quantity", example: "5" })
 //   @IsOptional()

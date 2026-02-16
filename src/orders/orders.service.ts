@@ -1,28 +1,28 @@
+import { InjectQueue } from "@nestjs/bull";
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Order } from "./entities/order.entity";
-import { DataSource, In, Repository } from "typeorm";
-import { Offer } from "src/offers/entities/offer.entity";
-import { OrderStatus, PaymentStatus } from "./enums/orderStatus";
+import { Queue } from "bull";
 import { ResponseInterface } from "src/common/types/responseInterface";
-import { pagination } from "src/shared/utils/pagination";
+import { ConverterService } from "src/currency-converter/currency-converter.service";
 import {
-  NotificationAction,
-  NotificationRelated,
-  NotificationType,
+    NotificationAction,
+    NotificationRelated,
+    NotificationType,
 } from "src/notifications/entities/notifications.entity";
-import { UserRoles } from "src/user/enums/role.enum";
 import { NotificationsService } from "src/notifications/notifications.service";
-import { User } from "src/user/entities/user.entity";
+import { Offer } from "src/offers/entities/offer.entity";
 import { Product } from "src/products/entities/products.entity";
 import { defaultCurrency, ProductStatus } from "src/products/enums/status.enum";
-import { Wallets } from "src/wallets/entity/wallets.entity";
+import { pagination } from "src/shared/utils/pagination";
+import { FeeWithCommision } from "src/shared/utils/utils";
 import { Transections } from "src/transections/entity/transections.entity";
 import { TransectionType } from "src/transections/enums/transectionTypes";
-import { FeeWithCommision } from "src/shared/utils/utils";
-import { ConverterService } from "src/currency-converter/currency-converter.service";
-import { InjectQueue } from "@nestjs/bull";
-import { Queue } from "bull";
+import { User } from "src/user/entities/user.entity";
+import { UserRoles } from "src/user/enums/role.enum";
+import { Wallets } from "src/wallets/entity/wallets.entity";
+import { DataSource, In, Repository } from "typeorm";
+import { Order } from "./entities/order.entity";
+import { OrderStatus, PaymentStatus } from "./enums/orderStatus";
 @Injectable()
 export class OrdersService {
   constructor(
@@ -220,7 +220,7 @@ export class OrdersService {
           user.currency.toUpperCase(),
           price
         );
-        order.product.selling_price =
+        order.product.price =
           convertedPrice + FeeWithCommision(convertedPrice, 10) + protectionFeeExtraCharge;
         // product.buyer_protection = FeeWithCommision(convertedPrice, 10) + protectionFeeExtraCharge;
         // product.currency = user.currency.toUpperCase();
@@ -280,7 +280,7 @@ export class OrdersService {
           user.currency.toUpperCase(),
           price
         );
-        order.product.selling_price = convertedPrice;
+        order.product.price = convertedPrice;
         // product.buyer_protection = FeeWithCommision(convertedPrice, 10) + protectionFeeExtraCharge;
         // product.currency = user.currency.toUpperCase();
         // product.images = productImages?.filter((item) => item.product_id);
@@ -312,7 +312,7 @@ export class OrdersService {
       }
 
       const wallets = await this._walletRepository.findOne({ where: { user_id: user.id } });
-      const productSellingPrice = Number(product.selling_price);
+      const productSellingPrice = Number(product.price);
       if (isNaN(productSellingPrice)) {
         product.status = ProductStatus.PENDING;
         await this._productRepository.save(product);

@@ -1,20 +1,20 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { Conversations } from "./entities/conversations.entity";
-import { Brackets, DataSource, In, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import { ParticipantsService } from "src/participants/participants.service";
-import { User } from "src/user/entities/user.entity";
-import { ProductsService } from "src/products/products.service";
-import { UserService } from "src/user/user.service";
-import { Product } from "src/products/entities/products.entity";
-import { pagination } from "src/shared/utils/pagination";
+import { ResponseInterface } from "src/common/types/responseInterface";
 import { Messages } from "src/messages/entities/messages.entity";
 import { Offer } from "src/offers/entities/offer.entity";
 import { OfferStatus } from "src/offers/enums/offerStatus.enum";
-import { SocketService } from "src/socket/socket.service";
 import { ConversationParticipant } from "src/participants/entities/participants.entity";
+import { ParticipantsService } from "src/participants/participants.service";
+import { Product } from "src/products/entities/products.entity";
+import { ProductsService } from "src/products/products.service";
+import { pagination } from "src/shared/utils/pagination";
+import { SocketService } from "src/socket/socket.service";
+import { User } from "src/user/entities/user.entity";
+import { UserService } from "src/user/user.service";
+import { Brackets, DataSource, In, Repository } from "typeorm";
 import { CreateDirectConversationDto } from "./dto/create-direct-conversation.dto";
-import { ResponseInterface } from "src/common/types/responseInterface";
+import { Conversations } from "./entities/conversations.entity";
 @Injectable()
 export class ConversationsService {
   constructor(
@@ -83,7 +83,7 @@ export class ConversationsService {
       const msg = this.messageRepo.create({
         sender_id: offer.buyer_id,
         isRead: false,
-        msg: `Current Price : ${existingConversation.product.selling_price} \n Offer Price : ${offer.price}`,
+        msg: `Current Price : ${existingConversation.product.price} \n Offer Price : ${offer.price}`,
         offer_id: offer.id,
         offer: offer,
         type: "offer",
@@ -209,7 +209,7 @@ export class ConversationsService {
         const msg = await manager.create(Messages, {
           sender_id: offer.buyer_id,
           isRead: false,
-          msg: `Current Price : ${product.selling_price} \n Offer Price : ${offer.price}`,
+          msg: `Current Price : ${product.price} \n Offer Price : ${offer.price}`,
           type: "offer",
           offer_id: offer.id,
           offer: offer,

@@ -1,3 +1,4 @@
+import { InjectQueue } from "@nestjs/bull";
 import {
   BadRequestException,
   ForbiddenException,
@@ -6,41 +7,40 @@ import {
   LoggerService,
   NotFoundException,
 } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Between, DataSource, ILike, In, LessThanOrEqual, Repository } from "typeorm";
+import { Queue } from "bull";
+import { ResponseInterface } from "src/common/types/responseInterface";
+import { ConverterService } from "src/currency-converter/currency-converter.service";
+import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
+import {
+  NotificationAction,
+  NotificationRelated,
+  NotificationType,
+} from "src/notifications/entities/notifications.entity";
+import { NotificationsService } from "src/notifications/notifications.service";
+import { PaymentStatus } from "src/orders/enums/orderStatus";
+import { InjectLogger } from "src/shared/decorators/logger.decorator";
+import { Pagination, pagination } from "src/shared/utils/pagination";
+import { FeeWithCommision } from "src/shared/utils/utils";
+import { Transections } from "src/transections/entity/transections.entity";
+import { TransectionType } from "src/transections/enums/transectionTypes";
+import { UserBehaviourService } from "src/user-behaviour/user-behaviour.service";
+import { User } from "src/user/entities/user.entity";
+import { UserRoles } from "src/user/enums/role.enum";
+import { UserService } from "src/user/user.service";
+import { Wallets } from "src/wallets/entity/wallets.entity";
+import { Between, DataSource, ILike, In, Repository } from "typeorm";
+import { CreateProductDto } from "./dto/CreateProductDto.dto";
+import { GetAdminProductQuery, GetProductsQueryDto } from "./dto/GetProductDto.dto";
+import { ProductImage } from "./entities/productImage.entity";
 import {
   DAYS_IN_SECOND,
   Product,
   PRODUCT_BOOSTING_COST,
   PRODUCT_BOOSTING_DAYS,
 } from "./entities/products.entity";
-import { ProductImage } from "./entities/productImage.entity";
-import { CARRER_TYPE, CreateProductDto } from "./dto/CreateProductDto.dto";
 import { defaultCurrency, ProductStatus } from "./enums/status.enum";
-import { GetAdminProductQuery, GetProductsQueryDto } from "./dto/GetProductDto.dto";
-import { Pagination, pagination } from "src/shared/utils/pagination";
-import { ResponseInterface } from "src/common/types/responseInterface";
-import { NotificationsService } from "src/notifications/notifications.service";
-import {
-  NotificationAction,
-  NotificationRelated,
-  NotificationType,
-} from "src/notifications/entities/notifications.entity";
-import { UserRoles } from "src/user/enums/role.enum";
-import { User } from "src/user/entities/user.entity";
-import { Transections } from "src/transections/entity/transections.entity";
-import { Cron, CronExpression } from "@nestjs/schedule";
-import { Wallets } from "src/wallets/entity/wallets.entity";
-import { InjectQueue } from "@nestjs/bull";
-import { Queue } from "bull";
-import { UserBehaviourService } from "src/user-behaviour/user-behaviour.service";
-import { TransectionType } from "src/transections/enums/transectionTypes";
-import { PaymentStatus } from "src/orders/enums/orderStatus";
-import { ConverterService } from "src/currency-converter/currency-converter.service";
-import { FeeWithCommision, validateAddress } from "src/shared/utils/utils";
-import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
-import { UserService } from "src/user/user.service";
-import { InjectLogger } from "src/shared/decorators/logger.decorator";
 // import {Conver}
 @Injectable()
 export class ProductsService {
@@ -64,7 +64,7 @@ export class ProductsService {
     private readonly _userService: UserService,
     @InjectRepository(Transections) private readonly _transectionRepository: Repository<Transections>,
     @InjectLogger() private readonly _logger: LoggerService
-  ) { }
+  ) {}
   // async getProductById({product_id,status,}){
 
   // }
@@ -110,28 +110,14 @@ export class ProductsService {
       // let productBoostingCost = PRODUCT_BOOSTING_COST;
       const isBoosted = String(createProductDto.is_boosted).toLowerCase() === "true";
       const isNegotiable = String(createProductDto.is_negotiable).toLowerCase() === "true";
-      let sellingPrice = parseFloat(createProductDto.selling_price);
+      let sellingPrice = parseFloat(createProductDto.price);
       const quantity = parseInt(createProductDto.quantity, 10);
       const weight = parseInt(createProductDto.weight, 10);
       const height = parseInt(createProductDto.height, 10);
       const width = parseInt(createProductDto.width, 10);
       const length = parseInt(createProductDto.length, 10);
       // let service_point_id: number = 0;
-      if (createProductDto.carrer_type == CARRER_TYPE.COLLECTION_TYPE) {
-        // this.validateAddress(createProductDto);
-        validateAddress({
-          dto: createProductDto,
-          requiredFields: ["address", "house_number", "city", "country", "postal_code", "company_name"],
-        });
-        createProductDto.carrer_option = CARRER_TYPE.COLLECTION_TYPE;
-        // if (createProductDto.service_point_id) {
-        //   throw new BadRequestException("Service point id should not be included!");
-        // }
-      } else {
-        // if (createProductDto.carrer_type) {
-        createProductDto.carrer_option = CARRER_TYPE.SERVICE_TYPE;
-        // }
-      }
+
       if (isNaN(sellingPrice) || isNaN(quantity)) {
         throw new BadRequestException("Invalid numeric values for price or quantity!");
       }
@@ -160,12 +146,13 @@ export class ProductsService {
         const product = new Product();
         product.user_id = user.id;
         product.product_name = createProductDto.product_name;
-        product.selling_price = sellingPrice;
-        product.category = createProductDto.category;
+        product.price = sellingPrice;
+        // product.category = createProductDto.category;
         product.quantity = quantity;
         product.description = createProductDto.description;
         product.condition = createProductDto.condition;
-        product.size = createProductDto.size;
+        // (product.sizeId = createProductDto.size),
+        //   (product.colorId = createProductDto.color),
         product.brand = createProductDto.brand;
         product.is_negotiable = isNegotiable;
         product.status = ProductStatus.PENDING;
@@ -176,7 +163,6 @@ export class ProductsService {
         product.height = height;
         product.length = length;
         product.width = width;
-        product.carrer_option = createProductDto.carrer_option;
         // product.service_point_id = service_point_id ? service_point_id : null;
         const savedProduct = await queryRunner.manager.save(Product, product);
 
@@ -205,14 +191,7 @@ export class ProductsService {
         const productCollection = new CollectionAddress();
         productCollection.name = `${userInfo.firstName} ${userInfo.lastName}`;
         productCollection.email = userInfo.email;
-        productCollection.city = createProductDto.city;
-        productCollection.address = createProductDto.address;
-        productCollection.address_2 = createProductDto.address_2;
         productCollection.telephone = userInfo.phone;
-        productCollection.country = createProductDto.country;
-        productCollection.company_name = createProductDto.company_name;
-        productCollection.house_number = createProductDto.house_number;
-        productCollection.postal_code = createProductDto.postal_code;
         productCollection.product = savedProduct;
         // productCollection.
         await queryRunner.manager.save(CollectionAddress, productCollection);
@@ -395,7 +374,7 @@ export class ProductsService {
 
     if (price) {
       const [min, max] = price.split("-").map(Number);
-      where.selling_price = Between(min || 0, max || Number.MAX_SAFE_INTEGER);
+      where.price = Between(min || 0, max || Number.MAX_SAFE_INTEGER);
     }
 
     if (type === "own") {
@@ -447,13 +426,13 @@ export class ProductsService {
 
     await Promise.all(
       data.map(async (product) => {
-        const price = parseFloat(product.selling_price as unknown as string);
+        const price = parseFloat(product.price as unknown as string);
         const convertedPrice = await this._currencyConverterService.convert(
           defaultCurrency,
           user.currency.toUpperCase(),
           price
         );
-        product.selling_price = convertedPrice;
+        product.price = convertedPrice;
         product.buyer_protection = FeeWithCommision(convertedPrice, 10) + protectionFeeExtraCharge;
         product.currency = user.currency.toUpperCase();
         // product.images = productImages?.filter((item) => item.product_id);
@@ -597,7 +576,7 @@ export class ProductsService {
       throw new BadRequestException(`Only available products can be updated.`);
     }
 
-    const sellingPriceInput = Number(updateDto.selling_price);
+    const sellingPriceInput = Number(updateDto.price);
 
     // console.log(updateDto);
 
@@ -610,9 +589,9 @@ export class ProductsService {
     console.log("Updated-1", updateDto);
     // Buyer protection fee (example formula)
 
-    if (updateDto.selling_price) {
-      // updateDto.selling_price = convertedPrice;
-      product.selling_price = convertedPrice;
+    if (updateDto.price) {
+      // updateDto.price = convertedPrice;
+      product.price = convertedPrice;
     }
     if (updateDto.quantity) {
       // updateDto.quantity = Number(updateDto.quantity);
@@ -638,15 +617,15 @@ export class ProductsService {
       updateDto.length = Number(updateDto.length);
       product.length = Number(updateDto.length);
     }
-    if (updateDto.size) {
-      product.size = updateDto.size;
-    }
+    // if (updateDto.size) {
+    //   product.size = updateDto.size;
+    // }
     if (updateDto.product_name) {
       product.product_name = updateDto.product_name;
     }
-    if (updateDto.category) {
-      product.category = updateDto.category;
-    }
+    // if (updateDto.category) {
+    //   product.category = updateDto.category;
+    // }
     if (updateDto.brand) {
       product.brand = updateDto.brand;
     }
@@ -804,19 +783,19 @@ export class ProductsService {
     const isFavorite = product.favorites.some((favorite) => favorite.user.id === userId);
 
     if (user.currency) {
-      const price = parseFloat(product.selling_price as unknown as string);
+      const price = parseFloat(product.price as unknown as string);
       const protectionFeeExtraCharge = await this._currencyConverterService.convert(
         defaultCurrency,
         user.currency.toUpperCase(),
         0.8
       );
-      product.selling_price = await this._currencyConverterService.convert(
+      product.price = await this._currencyConverterService.convert(
         defaultCurrency,
         user.currency.toUpperCase(),
         price
       );
       console.log(protectionFeeExtraCharge);
-      product.buyer_protection = FeeWithCommision(product.selling_price, 10) + protectionFeeExtraCharge;
+      product.buyer_protection = FeeWithCommision(product.price, 10) + protectionFeeExtraCharge;
     }
     // const productImage = await this._productImageRepository.find({ where: { id: product.id } });
     // product.images = productImage;

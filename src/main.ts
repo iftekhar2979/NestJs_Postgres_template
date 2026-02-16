@@ -1,24 +1,23 @@
 // import configuration from "./configs/app.config";
 import { ClassSerializerInterceptor, ValidationPipe, VersioningType } from "@nestjs/common";
-import { NestFactory, Reflector } from "@nestjs/core";
-import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
-import cookieParser from "cookie-parser";
-import compression from "compression";
-import helmet from "helmet";
-import csurf from "csurf";
-import xssClean from "xss-clean";
-import hpp from "hpp";
-import { json, urlencoded } from "express";
 import { ConfigService } from "@nestjs/config";
-import { AppModule } from "./app.module";
+import { NestFactory, Reflector } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import compression from "compression";
+import cookieParser from "cookie-parser";
+import csurf from "csurf";
+import { json, urlencoded } from "express";
+import helmet from "helmet";
+import hpp from "hpp";
+import xssClean from "xss-clean";
+import { AppModule } from "./app.module";
 // FIXME: have it if you are using secret manager
 // import { loadSecretsFromAWS } from "./configs/app.config";
+import bodyParser from "body-parser";
+import { join } from "path";
 import { createDataSource } from "./configs/ormconfig";
 import { runMigrations } from "./migration-runner";
-import { join } from "path";
-import { SeederService } from "./seeder/seeder.service";
-import bodyParser from "body-parser";
 
 /**
  * function for bootstraping the nest application
@@ -50,7 +49,7 @@ async function bootstrap() {
   //   },
   // });
 
-  const seederService = app.get(SeederService);
+  // const seederService = app.get(SeederService);
   // await seederService.seedAdminUser();
   // await seederService.seedSettings();
   // await seederService.seedCategories();

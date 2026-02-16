@@ -1,17 +1,31 @@
-// src/category/entities/category.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
-import { ApiProperty } from "@nestjs/swagger";
+import { SubCategory } from "src/products/sub_categories/entities/sub_categories.entity";
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from "typeorm";
 
 @Entity("categories")
 export class Category {
-  @ApiProperty({ example: 1, description: "Unique ID" })
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ApiProperty({ example: "Electronics", description: "Category name" })
-  @Column()
+  @Column({ type: "varchar" })
   name: string;
-  @ApiProperty({ example: "Image", description: "Image Url" })
-  @Column()
-  image: string;
+
+  @Column({ type: "text", nullable: true })
+  description: string;
+
+  @CreateDateColumn({ type: "timestamp" })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: "timestamp" })
+  updatedAt: Date;
+
+  // Relationships
+  @OneToMany(() => SubCategory, (subCategory) => subCategory.category)
+  subCategories: SubCategory[];
 }

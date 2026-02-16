@@ -1,13 +1,12 @@
-import { Processor, Process } from "@nestjs/bull";
-import { Job } from "bull";
+import { Process, Processor } from "@nestjs/bull";
 import { Injectable } from "@nestjs/common";
-import sharp from "sharp";
+import { Job } from "bull";
 import * as fs from "fs"; // File system module to write images to disk
 import * as path from "path"; // Path module for handling file paths
-import { UserBehaviourService } from "src/user-behaviour/user-behaviour.service";
-import { MailService } from "src/mail/mail.service";
-import { Category } from "src/category/entity/category.entity";
+import sharp from "sharp";
 import { CategoryService } from "src/category/category.service";
+import { MailService } from "src/mail/mail.service";
+import { UserBehaviourService } from "src/user-behaviour/user-behaviour.service";
 
 @Processor("product") // Processor listening to 'ProductQueue'
 @Injectable()
@@ -93,11 +92,11 @@ export class ImageProcessor {
   async VerificationConfirmation(job: Job) {
     console.log("Email", job.data);
   }
-  @Process("category")
-  async categoryCreation(job: Job<Category>) {
-    console.log("category", job.data);
-    const { image, name } = job.data;
+  // @Process("category")
+  // async categoryCreation(job: Job<Category>) {
+  //   console.log("category", job.data);
+  //   const { image, name } = job.data;
 
-    await this._category.create({ image, name });
-  }
+  //   await this._category.create({ image, name });
+  // }
 }
