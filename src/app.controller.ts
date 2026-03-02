@@ -1,12 +1,12 @@
-import { Controller, Get, Render, Req, Sse } from "@nestjs/common";
-import { AppService } from "./app.service";
-import { Request } from "express";
-import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { InjectQueue } from "@nestjs/bull";
+import { Controller, Get, Render, Req, Sse } from "@nestjs/common";
+import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Queue } from "bull";
-import process from "process";
+import { Request } from "express";
 import os from "node:os";
+import process from "process";
 import { interval, map, Observable, Subject } from "rxjs";
+import { AppService } from "./app.service";
 @Controller()
 export class AppController {
   private systemInfo$ = new Subject<any>();
@@ -24,7 +24,7 @@ export class AppController {
   @Get("")
   async get() {
     console.trace("call stack");
-    structuredClone({ name: "Iftekhar" });
+    // structuredClone({ name: "Iftekhar" });
     return { msg: "Hello world" };
   }
 

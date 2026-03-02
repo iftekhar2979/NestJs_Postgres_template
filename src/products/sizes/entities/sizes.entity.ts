@@ -1,10 +1,13 @@
+import { Product } from "src/products/entities/products.entity";
 import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
-  UpdateDateColumn
+  UpdateDateColumn,
 } from "typeorm";
+
 @Entity("sizes")
 export class Size {
   @PrimaryGeneratedColumn()
@@ -23,6 +26,6 @@ export class Size {
   updatedAt: Date;
 
   // Relationships
-  // @OneToMany(() => Product, (product) => product.size)
-  // products: Product[];
+  @OneToMany(() => Product, (product) => product.size)
+  products: Product[];
 }

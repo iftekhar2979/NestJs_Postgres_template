@@ -18,22 +18,22 @@ import {
   UsePipes,
   ValidationPipe,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiBody, ApiParam, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { ProductsService } from "./products.service";
-import { Product } from "./entities/products.entity";
-import { CreateProductDto } from "./dto/CreateProductDto.dto";
-import { GetFilesDestination, GetUser } from "src/auth/decorators/get-user.decorator";
-import { JwtAuthenticationGuard } from "src/auth/guards/session-auth.guard";
 import { FileFieldsInterceptor } from "@nestjs/platform-express";
+import { ApiBearerAuth, ApiBody, ApiParam, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { GetFilesDestination, GetUser } from "src/auth/decorators/get-user.decorator";
+import { RolesGuard } from "src/auth/guards/roles-auth.guard";
+import { JwtAuthenticationGuard } from "src/auth/guards/session-auth.guard";
 import { multerConfig } from "src/common/multer/multer.config";
+import { InjectLogger } from "src/shared/decorators/logger.decorator";
+import { Roles } from "src/user/decorators/roles.decorator";
+import { User } from "src/user/entities/user.entity";
+import { UserRoles } from "src/user/enums/role.enum";
+import { Logger } from "winston";
+import { CreateProductDto } from "./dto/CreateProductDto.dto";
 import { GetAdminProductQuery, GetProductsQueryDto } from "./dto/GetProductDto.dto";
 import { UpdateProductDto } from "./dto/updatingProduct.dto";
-import { User } from "src/user/entities/user.entity";
-import { Roles } from "src/user/decorators/roles.decorator";
-import { RolesGuard } from "src/auth/guards/roles-auth.guard";
-import { UserRoles } from "src/user/enums/role.enum";
-import { InjectLogger } from "src/shared/decorators/logger.decorator";
-import { Logger } from "winston";
+import { Product } from "./entities/products.entity";
+import { ProductsService } from "./products.service";
 
 @Controller("products")
 @ApiTags("Products")
@@ -139,6 +139,7 @@ export class ProductsController {
   ): Promise<ResponseInterface<Product>> {
     return this._productsService.updateProductsStatus(id);
   }
+
   @Get(":id")
   @UseGuards(JwtAuthenticationGuard)
   @ApiResponse({ status: 200, description: "Product updated successfully", type: Product })

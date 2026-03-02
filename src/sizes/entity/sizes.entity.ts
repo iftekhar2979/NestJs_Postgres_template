@@ -11,11 +11,11 @@ export class Size {
 
   @ApiProperty({ example: "XXL", description: "Size name" })
   @Column()
-  size: string;
+  type: string;
 
   @ApiProperty({ example: "64*22 MM", description: "Size description" })
   @Column()
-  description: string;
+  name: string;
 
   @OneToMany(() => Product, (variant) => variant.size)
   products: Product[];
