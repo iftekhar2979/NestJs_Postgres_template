@@ -50,6 +50,7 @@ async function bootstrap() {
   // });
 
   // const seederService = app.get(SeederService);
+  // await seederService.runSeed();
   // await seederService.seedAdminUser();
   // await seederService.seedSettings();
   // await seederService.seedCategories();

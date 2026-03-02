@@ -3,18 +3,79 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { CreateAdminDto } from "src/auth/dto/create-user.dto";
 import { Category } from "src/category/entity/category.entity";
+import { ProductColor } from "src/products/colors/entities/colors.entity";
+import { SubCategory } from "src/products/sub_categories/entities/sub_categories.entity";
 import { Setting } from "src/settings/entity/settings.entity";
+import { Size } from "src/sizes/entity/sizes.entity";
 import { UserRoles } from "src/user/enums/role.enum";
 import { UserService } from "src/user/user.service";
 import { Repository } from "typeorm";
 
+const SEED_DATA = {
+  categories: [
+    {
+      name: "Apparel",
+      description: "Main clothing line",
+      subCategories: [
+        { name: "T-Shirts", sizeType: "Alpha" }, // S, M, L
+        { name: "Hoodies", sizeType: "Alpha" },
+        { name: "Jeans", sizeType: "Waist" }, // 30, 32, 34
+        { name: "Trousers", sizeType: "Waist" },
+      ],
+    },
+    {
+      name: "Footwear",
+      description: "Shoes and sneakers",
+      subCategories: [
+        { name: "Sneakers", sizeType: "Numeric" }, // 8, 9, 10
+        { name: "Boots", sizeType: "Numeric" },
+      ],
+    },
+    {
+      name: "Accessories",
+      description: "Add-ons",
+      subCategories: [
+        { name: "Belts", sizeType: "Waist" },
+        { name: "Hats", sizeType: "OneSize" },
+      ],
+    },
+  ],
+  colors: [
+    { name: "Midnight Black", image: "#000000" },
+    { name: "Pure White", image: "#FFFFFF" },
+    { name: "Navy Blue", image: "#000080" },
+    { name: "Charcoal Grey", image: "#36454F" },
+    { name: "Forest Green", image: "#228B22" },
+    { name: "Burgundy", image: "#800020" },
+  ],
+  sizes: [
+    { type: "Alpha", name: "XS" },
+    { type: "Alpha", name: "S" },
+    { type: "Alpha", name: "M" },
+    { type: "Alpha", name: "L" },
+    { type: "Alpha", name: "XL" },
+    { type: "Waist", name: "30" },
+    { type: "Waist", name: "32" },
+    { type: "Waist", name: "34" },
+    { type: "Waist", name: "36" },
+    { type: "Numeric", name: "8" },
+    { type: "Numeric", name: "9" },
+    { type: "Numeric", name: "10" },
+    { type: "Numeric", name: "11" },
+    { type: "OneSize", name: "OS" },
+  ],
+};
 @Injectable()
 export class SeederService {
   constructor(
     private readonly _userService: UserService,
     // private readonly settingService: SettingsService,
     @InjectRepository(Setting) private _settingModel: Repository<Setting>,
-    @InjectRepository(Category) private _categoryRepository: Repository<Category>
+    @InjectRepository(Category) private _categoryRepository: Repository<Category>,
+    @InjectRepository(Category) private catRepo: Repository<Category>,
+    @InjectRepository(SubCategory) private subRepo: Repository<SubCategory>,
+    @InjectRepository(Size) private sizeRepo: Repository<Size>,
+    @InjectRepository(ProductColor) private colorRepo: Repository<ProductColor>
   ) {}
 
   async seedAdminUser() {
@@ -120,4 +181,32 @@ export class SeederService {
 
   //   console.log("✅ Settings seeded.");
   // }
+
+  async runSeed() {
+    // 1. Seed Colors
+    const savedColors = await this.colorRepo.save(SEED_DATA.colors);
+
+    // 2. Seed Sizes
+    const savedSizes = await this.sizeRepo.save(SEED_DATA.sizes);
+
+    // 3. Seed Categories & SubCategories
+    for (const catData of SEED_DATA.categories) {
+      const category = await this.catRepo.save({
+        name: catData.name,
+        description: catData.description,
+      });
+
+      for (const subData of catData.subCategories) {
+        await this.subRepo.save({
+          name: subData.name,
+          categoryId: category.id,
+          description: `All ${subData.name} in ${catData.name}`,
+          // Note: If you add a 'sizeType' column to SubCategory,
+          // you can use it later to filter which sizes show up in the UI.
+        });
+      }
+    }
+
+    return { message: "Database Seeded Successfully" };
+  }
 }
