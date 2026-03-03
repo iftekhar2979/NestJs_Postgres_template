@@ -1,5 +1,15 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsBoolean, IsInt, IsNumber, IsPositive, IsString, MaxLength, Min, MinLength } from "class-validator";
+import {
+  IsBoolean,
+  IsInt,
+  IsNumber,
+  IsPositive,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from "class-validator";
 import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
 import { Favorite } from "src/favourites/entities/favourite.entity";
 import { Offer } from "src/offers/entities/offer.entity";
@@ -87,9 +97,10 @@ export class Product {
 
   @ApiProperty({ example: 5, description: "Quantity of the product in stock" })
   @IsInt()
-  @Min(0)
+  @Min(1)
+  @Max(2000)
   @Column()
-  quantity: number;
+  unit: number;
 
   @ApiProperty({
     example: "A gently used iPhone in excellent condition",

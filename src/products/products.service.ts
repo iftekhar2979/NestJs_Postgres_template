@@ -31,6 +31,7 @@ import { UserRoles } from "src/user/enums/role.enum";
 import { UserService } from "src/user/user.service";
 import { Wallets } from "src/wallets/entity/wallets.entity";
 import { Between, DataSource, ILike, In, Repository } from "typeorm";
+import { PRODUCT_CONSTANT } from "./constants/product.contants";
 import { CreateProductDto } from "./dto/CreateProductDto.dto";
 import { GetAdminProductQuery, GetProductsQueryDto } from "./dto/GetProductDto.dto";
 import { ProductImage } from "./entities/productImage.entity";
@@ -111,15 +112,15 @@ export class ProductsService {
       const isBoosted = String(createProductDto.is_boosted).toLowerCase() === "true";
       const isNegotiable = String(createProductDto.is_negotiable).toLowerCase() === "true";
       let sellingPrice = parseFloat(createProductDto.price);
-      const quantity = parseInt(createProductDto.quantity, 10);
+      const unit = parseInt(createProductDto.unit, 10);
       const weight = parseInt(createProductDto.weight, 10);
       const height = parseInt(createProductDto.height, 10);
       const width = parseInt(createProductDto.width, 10);
       const length = parseInt(createProductDto.length, 10);
       // let service_point_id: number = 0;
 
-      if (isNaN(sellingPrice) || isNaN(quantity)) {
-        throw new BadRequestException("Invalid numeric values for price or quantity!");
+      if (isNaN(sellingPrice) || isNaN(unit)) {
+        throw new BadRequestException("Invalid numeric values for price or unit!");
       }
 
       const productBoostingCost = await this._currencyConverterService.convert(
@@ -147,8 +148,9 @@ export class ProductsService {
         product.user_id = user.id;
         product.product_name = createProductDto.product_name;
         product.price = sellingPrice;
+
         // product.category = createProductDto.category;
-        product.quantity = quantity;
+        product.unit = unit;
         product.description = createProductDto.description;
         product.condition = createProductDto.condition;
         // (product.sizeId = createProductDto.size),
@@ -163,6 +165,9 @@ export class ProductsService {
         product.height = height;
         product.length = length;
         product.width = width;
+        product.sizeId = createProductDto.size;
+        product.colorId = createProductDto.color;
+        product.subCategoryId = createProductDto.category;
         // product.service_point_id = service_point_id ? service_point_id : null;
         const savedProduct = await queryRunner.manager.save(Product, product);
 
@@ -173,13 +178,13 @@ export class ProductsService {
 
           const transection = new Transections();
           transection.amount = productBoostingCost;
-          transection.paymentMethod = "Internal";
+          transection.paymentMethod = PRODUCT_CONSTANT.internalPaymentMethod();
           transection.product = product;
           transection.user = user;
           transection.user_id = user.id;
           transection.status = PaymentStatus.COMPLETED;
           transection.transection_type = TransectionType.BOOST;
-          transection.paymentId = `TSN-${product.id}-${Math.floor(Math.random() * 1000000)}`;
+          transection.paymentId = PRODUCT_CONSTANT.paymentTransectionId(product.id);
           transection.product_id = product.id;
           transection.wallet = wallets;
           transection.wallet_id = wallets.id;
@@ -188,13 +193,13 @@ export class ProductsService {
           await queryRunner.manager.save(Transections, transection);
         }
         // if (createProductDto.carrer_type == CARRER_TYPE.COLLECTION_TYPE) {
-        const productCollection = new CollectionAddress();
-        productCollection.name = `${userInfo.firstName} ${userInfo.lastName}`;
-        productCollection.email = userInfo.email;
-        productCollection.telephone = userInfo.phone;
-        productCollection.product = savedProduct;
-        // productCollection.
-        await queryRunner.manager.save(CollectionAddress, productCollection);
+        // const productCollection = new CollectionAddress();
+        // productCollection.name = `${userInfo.firstName} ${userInfo.lastName}`;
+        // productCollection.email = userInfo.email;
+        // productCollection.telephone = userInfo.phone;
+        // productCollection.product = savedProduct;
+        // // productCollection.
+        // await queryRunner.manager.save(CollectionAddress, productCollection);
         // }
         // Handle images
         if (Array.isArray(createProductDto.images) && createProductDto.images.length > 0) {
@@ -383,7 +388,7 @@ export class ProductsService {
       // where.product.status = In([ProductStatus.AVAILABLE, ProductStatus.PENDING]);
       orderby.created_at = "DESC";
     } else {
-      where.status = ProductStatus.AVAILABLE;
+      where.status = ProductStatus.PENDING;
       orderby.is_boosted = "DESC";
       orderby.boost_end_time = "ASC";
       orderby.created_at = "DESC";
@@ -593,9 +598,9 @@ export class ProductsService {
       // updateDto.price = convertedPrice;
       product.price = convertedPrice;
     }
-    if (updateDto.quantity) {
-      // updateDto.quantity = Number(updateDto.quantity);
-      product.quantity = Number(updateDto.quantity);
+    if (updateDto.unit) {
+      // updateDto.unit = Number(updateDto.unit);
+      product.unit = Number(updateDto.unit);
     }
     if (updateDto.is_boosted) {
       updateDto.is_boosted = updateDto.is_boosted === "true";
