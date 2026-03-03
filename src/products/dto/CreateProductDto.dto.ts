@@ -1,12 +1,11 @@
 import { ApiProperty } from "@nestjs/swagger";
 import {
   IsBooleanString,
-  IsInt,
   IsNumberString,
   IsOptional,
   IsString,
   MaxLength,
-  MinLength,
+  MinLength
 } from "class-validator";
 
 export enum CARRER_TYPE {
@@ -26,7 +25,7 @@ export class CreateProductDto {
 
   @ApiProperty({ description: "Quantity", example: "5" })
   @IsNumberString()
-  quantity: string;
+  unit: string;
 
   @ApiProperty({ description: "Description", example: "A gently used iPhone in excellent condition" })
   @IsString()
@@ -65,17 +64,18 @@ export class CreateProductDto {
   is_boosted: string;
 
   @ApiProperty({ description: "Size", example: "Medium" })
-  @IsInt()
+  @IsNumberString()
+  // @IsPositive()
   size: number;
   @ApiProperty({ description: "color", example: "Midnight blue" })
-  @IsInt()
+  @IsNumberString()
+  // @IsPositive()
   color: number;
 
-  @ApiProperty({ description: "Category", example: "Electronics" })
-  @IsString()
-  @MinLength(3)
-  @MaxLength(100)
-  category: string;
+  @ApiProperty({ description: "color", example: "Midnight blue" })
+  @IsNumberString()
+  // @IsPositive()
+  category: number;
 
   @ApiProperty({ description: "Product weight (in kg or lbs)", example: "2.49" })
   @IsNumberString()
