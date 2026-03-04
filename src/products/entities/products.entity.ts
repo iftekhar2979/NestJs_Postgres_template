@@ -1,20 +1,16 @@
 import { ApiProperty } from "@nestjs/swagger";
 import {
   IsBoolean,
-  IsInt,
   IsNumber,
   IsPositive,
   IsString,
-  Max,
   MaxLength,
-  Min,
-  MinLength,
+  MinLength
 } from "class-validator";
 import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
 import { Favorite } from "src/favourites/entities/favourite.entity";
 import { Offer } from "src/offers/entities/offer.entity";
 import { ProductBoosts } from "src/product-boost/entities/product-boost.entity";
-import { Size } from "src/sizes/entity/sizes.entity";
 import { Transections } from "src/transections/entity/transections.entity";
 import { User } from "src/user/entities/user.entity";
 import {
@@ -29,24 +25,23 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
-import { ProductColor } from "../colors/entities/colors.entity";
 import { CARRER_TYPE } from "../dto/CreateProductDto.dto";
 import { ProductStatus } from "../enums/status.enum";
 import { SubCategory } from "../sub_categories/entities/sub_categories.entity";
+import { ProductVariant } from "../varients/entities/productVarient.entity";
 import { ProductImage } from "./productImage.entity";
+
+// \
 
 @Entity("products")
 @Index("full_text_index", ["product_name"])
-// @Index("product_listing_optimization", ["colorId", "sizeId"])
 @Index("price", ["price"])
-// @Index("color_filter", ["colorId"])
-// @Index("color_price_filter", ["colorId", "price"])
 export class Product {
   @ApiProperty({ example: 1, description: "Unique identifier for the product" })
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ApiProperty({ example: 10, description: "ID of the user who owns the product" })
+  @ApiProperty({ example: "10", description: "ID of the user who owns the product" })
   @IsString()
   @Column()
   user_id: string;
@@ -57,6 +52,7 @@ export class Product {
   @MaxLength(100)
   @Column()
   product_name: string;
+
   @ApiProperty({
     type: () => [ProductImage],
     description: "List of product images related to this product",
@@ -64,11 +60,22 @@ export class Product {
   })
   @OneToMany(() => ProductImage, (productImage) => productImage.product, {
     cascade: true,
-    eager: true, // Optional: auto-load images with product
+    eager: true,
   })
   images: ProductImage[];
 
-  @ApiProperty({ example: "available", description: "Status of the product (e.g., available, sold)" })
+  // ─── VARIANTS (replaces top-level colorId / sizeId / unit) ───────────────────
+  @ApiProperty({
+    type: () => [ProductVariant],
+    description: "Color + size + stock variants for this product",
+  })
+  @OneToMany(() => ProductVariant, (variant) => variant.product, {
+    cascade: true,
+    eager: true,
+  })
+  variants: ProductVariant[];
+
+  @ApiProperty({ example: "available", description: "Status of the product" })
   @IsString()
   @MinLength(3)
   @MaxLength(50)
@@ -82,25 +89,11 @@ export class Product {
   @JoinColumn({ name: "subCategoryId" })
   subCategory: SubCategory;
 
-  @ApiProperty({ example: 499.99, description: "Selling price of the product" })
+  @ApiProperty({ example: 499.99, description: "Base selling price of the product (in default currency)" })
   @IsNumber()
   @IsPositive()
   @Column("decimal", { precision: 10, scale: 2 })
   price: number;
-
-  // @ApiProperty({ example: "Electronics", description: "Category of the product" })
-  // @IsString()
-  // @MinLength(3)
-  // @MaxLength(100)
-  // @Column()
-  // category: string;
-
-  @ApiProperty({ example: 5, description: "Quantity of the product in stock" })
-  @IsInt()
-  @Min(1)
-  @Max(2000)
-  @Column()
-  unit: number;
 
   @ApiProperty({
     example: "A gently used iPhone in excellent condition",
@@ -119,20 +112,6 @@ export class Product {
   @Column()
   condition: string;
 
-  @Column({ type: "int" })
-  sizeId: number;
-
-  @Column({ type: "int" })
-  colorId: number;
-
-  @ManyToOne(() => Size, (size) => size.products)
-  @JoinColumn({ name: "sizeId" })
-  size: Size;
-
-  @ManyToOne(() => ProductColor, (color) => color.products)
-  @JoinColumn({ name: "colorId" })
-  color: ProductColor;
-
   @ApiProperty({ example: "Apple", description: "Brand of the product" })
   @IsString()
   @MinLength(2)
@@ -144,7 +123,8 @@ export class Product {
   @IsBoolean()
   @Column({ default: false })
   is_negotiable: boolean;
-  @ApiProperty({ example: true, description: "Whether the price is negotiable" })
+
+  @ApiProperty({ example: false, description: "Whether the product is currently boosted" })
   @IsBoolean()
   @Column({ default: false })
   is_boosted: boolean;
@@ -188,24 +168,30 @@ export class Product {
   @ManyToOne(() => User, (user) => user.products, { eager: true })
   @JoinColumn({ name: "user_id" })
   user: User;
+
   @OneToMany(() => Favorite, (favorite) => favorite.product)
   favorites: Favorite[];
+
   @OneToMany(() => Transections, (transection) => transection)
   transections: Transections[];
-  @OneToMany(() => ProductBoosts, (favorite) => favorite.product)
+
+  @OneToMany(() => ProductBoosts, (boost) => boost.product)
   boosted: ProductBoosts[];
+
   @ManyToOne(() => Offer, (offer) => offer.product, { nullable: true })
   @JoinColumn({ name: "offer_id" })
-  offer: Offer; // The related offer for this product
+  offer: Offer;
+
   @OneToOne(() => CollectionAddress, (address) => address.product, {
-    cascade: true, // saves the collectionAddress automatically
-    eager: true, // loads collectionAddress when fetching product
+    cascade: true,
+    eager: true,
   })
   collectionAddress: CollectionAddress;
+
+  // ─── Virtual / runtime-only fields ───────────────────────────────────────────
   currency?: string;
   buyer_protection?: number;
 }
-
 export class FavouriteProduct extends Product {
   @ApiProperty({ example: true, description: "Is the product marked as favorite by the current user" })
   is_favorite: boolean;

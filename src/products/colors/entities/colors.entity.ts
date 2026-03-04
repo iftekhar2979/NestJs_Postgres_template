@@ -1,4 +1,4 @@
-import { Product } from "src/products/entities/products.entity";
+import { ProductVariant } from "src/products/varients/entities/productVarient.entity";
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity("product_colors")
@@ -12,7 +12,8 @@ export class ProductColor {
   @Column({ type: "varchar", nullable: true })
   image: string;
 
-  // Relationships
-  @OneToMany(() => Product, (product) => product.color)
-  products: Product[];
+  // Inverse side of ProductVariant.color
+  // lazy: true avoids circular eager-load issues
+  @OneToMany(() => ProductVariant, (variant) => variant.color, { lazy: true })
+  variants: Promise<ProductVariant[]>;
 }
