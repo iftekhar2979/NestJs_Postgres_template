@@ -18,6 +18,7 @@ import bodyParser from "body-parser";
 import { join } from "path";
 import { createDataSource } from "./configs/ormconfig";
 import { runMigrations } from "./migration-runner";
+import { SeederService } from "./seeder/seeder.service";
 
 /**
  * function for bootstraping the nest application
@@ -49,8 +50,8 @@ async function bootstrap() {
   //   },
   // });
 
-  // const seederService = app.get(SeederService);
-  // await seederService.runSeed();
+  const seederService = app.get(SeederService);
+  await seederService.runSeed();
   // await seederService.seedAdminUser();
   // await seederService.seedSettings();
   // await seederService.seedCategories();

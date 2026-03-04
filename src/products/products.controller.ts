@@ -16,10 +16,10 @@ import {
   UseGuards,
   UseInterceptors,
   UsePipes,
-  ValidationPipe,
+  ValidationPipe
 } from "@nestjs/common";
 import { FileFieldsInterceptor } from "@nestjs/platform-express";
-import { ApiBearerAuth, ApiBody, ApiParam, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { GetFilesDestination, GetUser } from "src/auth/decorators/get-user.decorator";
 import { RolesGuard } from "src/auth/guards/roles-auth.guard";
 import { JwtAuthenticationGuard } from "src/auth/guards/session-auth.guard";
@@ -29,11 +29,13 @@ import { Roles } from "src/user/decorators/roles.decorator";
 import { User } from "src/user/entities/user.entity";
 import { UserRoles } from "src/user/enums/role.enum";
 import { Logger } from "winston";
-import { CreateProductDto } from "./dto/CreateProductDto.dto";
-import { GetAdminProductQuery, GetProductsQueryDto } from "./dto/GetProductDto.dto";
-import { UpdateProductDto } from "./dto/updatingProduct.dto";
+import { CreateProductDto } from "./dto/secondary/CreateProduct.dto";
+import { GetAdminProductsQueryDto, GetProductsQueryDto } from "./dto/secondary/GetProduct.dto";
+import { UpdateProductDto } from "./dto/secondary/UpdateProduct.dto";
 import { Product } from "./entities/products.entity";
+import { ProductStatus } from "./enums/status.enum";
 import { ProductsService } from "./products.service";
+import { ProductsSecondaryService } from "./services/products_secondary.service";
 
 @Controller("products")
 @ApiTags("Products")
@@ -41,39 +43,40 @@ import { ProductsService } from "./products.service";
 export class ProductsController {
   constructor(
     @InjectLogger() private readonly _logger: Logger,
-    private readonly _productsService: ProductsService
+    private readonly _productsService: ProductsService,
+    private readonly _productsSecondaryService: ProductsSecondaryService
   ) {}
 
   @Post()
   @UseGuards(JwtAuthenticationGuard)
-  @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        { name: "images", maxCount: 6 }, // You can limit the number of files here
-      ],
-      multerConfig
-    )
-  )
+  // @UseInterceptors(
+  //   FileFieldsInterceptor(
+  //     [
+  //       { name: "images", maxCount: 6 }, // You can limit the number of files here
+  //     ],
+  //     multerConfig
+  //   )
+  // )
   @ApiResponse({ status: 201, description: "Product created successfully", type: Product })
   @ApiBody({ type: CreateProductDto })
-  async createProduct(
-    @Body() createProductDto: CreateProductDto,
-    @GetUser() user,
-    @UploadedFiles() files: { images?: Express.Multer.File[] },
-    @GetFilesDestination() filesDestination: string[]
+    async create(
+    @Body() dto: CreateProductDto,
+    @GetUser() user: User,
+    // @UploadedFiles() files: { images?: Express.Multer.File[] },
+    // @GetFilesDestination() filePaths: string[]
   ) {
-    this._logger.log("Product Upload", createProductDto);
-    createProductDto.images = filesDestination;
-    return this._productsService.create(createProductDto, user);
+
+    this._logger.log("Create product", { user: user.id, variants: dto.variants?.length });
+    return this._productsSecondaryService.create(dto, user);
   }
 
-  @Get("all")
-  @UseGuards(JwtAuthenticationGuard)
-  @ApiResponse({ status: 200, description: "Product retrived successfully", type: Product })
-  @ApiBody({ type: CreateProductDto })
-  async getProducts(@Query() query: GetAdminProductQuery) {
-    return this._productsService.findAll(Number(query.page), Number(query.limit), query);
-  }
+  // @Get("all")
+  // @UseGuards(JwtAuthenticationGuard)
+  // @ApiResponse({ status: 200, description: "Product retrived successfully", type: Product })
+  // @ApiBody({ type: CreateProductDto })
+  // async getProducts(@Query() query: GetAdminProductQuery) {
+  //   return this._productsSecondaryService.findAll(Number(query.page), Number(query.limit), query);
+  // }
   @Get(":productId/details")
   @UseGuards(JwtAuthenticationGuard)
   @ApiResponse({ status: 200, description: "Product retrived successfully", type: Product })
@@ -82,17 +85,45 @@ export class ProductsController {
     return this._productsService.getProductById(id);
   }
 
+
+   @Get("admin/all")
+  @UseGuards(RolesGuard)
+  @Roles(UserRoles.ADMIN)
+  @ApiOperation({
+    summary: "[ADMIN] List all products across all statuses",
+    description: `
+Admin-only endpoint that returns products with all statuses including \`pending\`, \`rejected\`, \`deleted\`.
+
+**Extra filters available to admin:**
+- \`status\` — filter to a specific status
+- \`sellerEmail\` — filter by seller email address
+- All public filters (\`term\`, \`brand\`, \`subCategoryId\`) also apply.
+
+Prices are NOT currency-converted — raw GBP values are returned.
+    `.trim(),
+  })
+  @ApiQuery({ name: "page",          required: false, type: Number, example: 1 })
+  @ApiQuery({ name: "limit",         required: false, type: Number, example: 10 })
+  @ApiQuery({ name: "term",          required: false, type: String, example: "iPhone",      description: "Search name, brand, seller name" })
+  @ApiQuery({ name: "brand",         required: false, type: String, example: "Apple" })
+  @ApiQuery({ name: "subCategoryId", required: false, type: Number, example: 3 })
+  @ApiQuery({ name: "status",        required: false, enum: ProductStatus,                  description: "Filter by product status" })
+  @ApiQuery({ name: "sellerEmail",   required: false, type: String, example: "john@example.com", description: "Filter by seller email" })
+  // @ApiResponse({ status: 200, description: "All products (admin view)", ...pagedProductResponse })
+  // @ApiResponse({ status: 403, description: "Admin access required", ...ApiInternalServerErrorResponse(403, "Forbidden resource") })
+  async findAllAdmin(@Query() query: GetAdminProductsQueryDto) {
+    return this._productsSecondaryService.findAllAdmin(query);
+  }
   @Get()
   @UseGuards(JwtAuthenticationGuard)
   @ApiResponse({ status: 200, description: "Product retrived successfully", type: Product })
   @ApiQuery({ type: GetProductsQueryDto, required: false })
-  async getProductsWithFiltering(@Query() query: GetProductsQueryDto, @GetUser() user: User) {
+  async getProducts(@Query() query: GetProductsQueryDto, @GetUser() user: User) {
     if (query.userId) {
       throw new ForbiddenException("Can't resolve the api");
     }
     query.userId = user.id;
-    query.user = user;
-    return this._productsService.findAllWithFilters(query);
+    return this._productsSecondaryService.findAll(query);
   }
   @Patch(":id")
   @UseGuards(JwtAuthenticationGuard)

@@ -1,31 +1,22 @@
-import { Product } from "src/products/entities/products.entity";
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from "typeorm";
+import { ApiProperty } from "@nestjs/swagger";
+import { ProductVariant } from "src/products/varients/entities/productVarient.entity";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+
 
 @Entity("sizes")
 export class Size {
+  @ApiProperty({ example: 1, description: "Unique ID" })
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: "varchar" })
+  @ApiProperty({ example: "XXL", description: "Size name" })
+  @Column()
   type: string;
 
-  @Column({ type: "varchar" })
+  @ApiProperty({ example: "64*22 MM", description: "Size description" })
+  @Column()
   name: string;
 
-  @CreateDateColumn({ type: "timestamp" })
-  createdAt: Date;
-
-  @UpdateDateColumn({ type: "timestamp" })
-  updatedAt: Date;
-
-  // Relationships
-  @OneToMany(() => Product, (product) => product.size)
-  products: Product[];
+  @OneToMany(() => ProductVariant, (variant) => variant.size)
+  variants: ProductVariant[];
 }

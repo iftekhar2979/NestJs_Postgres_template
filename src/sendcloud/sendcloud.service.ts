@@ -125,7 +125,7 @@ export class SendcloudService {
     return [
       {
         description: product.product_name,
-        quantity: product.unit ?? 1,
+        // quantity: product.unit ?? 1,
         weight: product.weight ?? 0.5, // fallback
         value: product.price,
         product_id: product.id.toString(),

@@ -1,8 +1,7 @@
 // src/sizes/entities/size.entity.ts
 import { ApiProperty } from "@nestjs/swagger";
-import { Product } from "src/products/entities/products.entity";
+import { ProductVariant } from "src/products/varients/entities/productVarient.entity";
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-
 @Entity("sizes")
 export class Size {
   @ApiProperty({ example: 1, description: "Unique ID" })
@@ -17,6 +16,8 @@ export class Size {
   @Column()
   name: string;
 
-  @OneToMany(() => Product, (variant) => variant.size)
-  products: Product[];
+  // Inverse side of ProductVariant.size
+  // lazy: true avoids circular eager-load issues
+  @OneToMany(() => ProductVariant, (variant) => variant.size, { lazy: true })
+  variants: Promise<ProductVariant[]>;
 }

@@ -150,7 +150,7 @@ export class ProductsService {
         product.price = sellingPrice;
 
         // product.category = createProductDto.category;
-        product.unit = unit;
+        // product.unit = unit;
         product.description = createProductDto.description;
         product.condition = createProductDto.condition;
         // (product.sizeId = createProductDto.size),
@@ -165,8 +165,8 @@ export class ProductsService {
         product.height = height;
         product.length = length;
         product.width = width;
-        product.sizeId = createProductDto.size;
-        product.colorId = createProductDto.color;
+        // product.sizeId = createProductDto.size;
+        // product.colorId = createProductDto.color;
         product.subCategoryId = createProductDto.category;
         // product.service_point_id = service_point_id ? service_point_id : null;
         const savedProduct = await queryRunner.manager.save(Product, product);
@@ -423,26 +423,26 @@ export class ProductsService {
     // const productImages = await this._productImageRepository.find({
     //   where: { product_id: In(productIds) },
     // });
-    const protectionFeeExtraCharge = await this._currencyConverterService.convert(
-      defaultCurrency,
-      user.currency.toUpperCase(),
-      0.8
-    );
+    // const protectionFeeExtraCharge = await this._currencyConverterService.convert(
+    //   defaultCurrency,
+    //   user.currency.toUpperCase(),
+    //   0.8
+    // );
 
-    await Promise.all(
-      data.map(async (product) => {
-        const price = parseFloat(product.price as unknown as string);
-        const convertedPrice = await this._currencyConverterService.convert(
-          defaultCurrency,
-          user.currency.toUpperCase(),
-          price
-        );
-        product.price = convertedPrice;
-        product.buyer_protection = FeeWithCommision(convertedPrice, 10) + protectionFeeExtraCharge;
-        product.currency = user.currency.toUpperCase();
-        // product.images = productImages?.filter((item) => item.product_id);
-      })
-    );
+    // await Promise.all(
+    //   data.map(async (product) => {
+    //     const price = parseFloat(product.price as unknown as string);
+    //     const convertedPrice = await this._currencyConverterService.convert(
+    //       defaultCurrency,
+    //       user.currency.toUpperCase(),
+    //       price
+    //     );
+    //     product.price = convertedPrice;
+    //     product.buyer_protection = FeeWithCommision(convertedPrice, 10) + protectionFeeExtraCharge;
+    //     product.currency = user.currency.toUpperCase();
+    //     // product.images = productImages?.filter((item) => item.product_id);
+    //   })
+    // );
     const boostedProducts = data.filter((product) => product.is_boosted);
     // console.log(boostedProducts)
     const nonBoostedProducts = data.filter((product) => !product.is_boosted);
@@ -600,7 +600,7 @@ export class ProductsService {
     }
     if (updateDto.unit) {
       // updateDto.unit = Number(updateDto.unit);
-      product.unit = Number(updateDto.unit);
+      // product.unit = Number(updateDto.unit);
     }
     if (updateDto.is_boosted) {
       updateDto.is_boosted = updateDto.is_boosted === "true";
