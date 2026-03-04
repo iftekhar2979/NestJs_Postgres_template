@@ -269,135 +269,141 @@ export class ProductsSecondaryService {
   // READ — Public listing (filterable, paginated, currency-converted)
   // ══════════════════════════════════════════════════════════════════════════════
 
-  async findAll(query: GetProductsQueryDto): Promise<PagedResponse<Product>> {
-    const { page = 1, limit = 10, term, brand, country, subCategoryId, sizes, colors, price, userId } = query;
+ async findAll(query: GetProductsQueryDto) {
+  const {
+    page = 1,
+    limit = 10,
+    term,
+    brand,
+    country,
+    subCategoryId,
+    sizes,
+    colors,
+    price,
+    userId,
+  } = query;
 
-    const qb = this._productRepo
-      .createQueryBuilder("p")
-      .leftJoinAndSelect("p.images", "images")
-      .leftJoinAndSelect("p.variants", "variants")
-      .leftJoinAndSelect("variants.color", "color")
-      .leftJoinAndSelect("variants.size", "size")
-      .leftJoinAndSelect("p.subCategory", "subCategory")
-      .leftJoinAndSelect("p.user", "user");
-    
+  const qb = this._productRepo
+    .createQueryBuilder("p")
+    .select([
+      "p.id",
+      "p.product_name",
+      "p.price",
+      "p.description",
+    ]);
 
-    // ── Status: public sees only AVAILABLE; own listing shows own pending too ──
-    if (userId) {
-      qb.andWhere("(p.status = :available OR (p.status IN (:...ownStatuses) AND p.user_id = :userId))", {
-        available: ProductStatus.AVAILABLE,
-        ownStatuses: [ProductStatus.AVAILABLE, ProductStatus.PENDING, ProductStatus.IN_PROGRESS],
-        userId,
-      });
-    } else {
-      qb.andWhere("p.status = :status", { status: ProductStatus.AVAILABLE });
-    }
+  // ── STATUS ─────────────────────────────
+  qb.andWhere("p.status = :status", {
+    status: ProductStatus.PENDING,
+  });
 
-    // ── Full-text search ──────────────────────────────────────────────────────
-    if (term) {
+  // ── SEARCH ─────────────────────────────
+  if (term) {
+    qb.andWhere(
+      "(p.product_name ILIKE :term OR p.description ILIKE :term)",
+      { term: `%${term}%` }
+    );
+  }
+
+  if (brand) {
+    qb.andWhere("p.brand ILIKE :brand", {
+      brand: `%${brand}%`,
+    });
+  }
+
+  if (subCategoryId) {
+    qb.andWhere("p.subCategoryId = :subCategoryId", {
+      subCategoryId,
+    });
+  }
+
+  if (price) {
+    const [min, max] = price.split("-").map(Number);
+    if (!isNaN(min)) qb.andWhere("p.price >= :min", { min });
+    if (!isNaN(max)) qb.andWhere("p.price <= :max", { max });
+  }
+
+  // ── SIZE FILTER (NO JOIN) ─────────────
+  if (sizes) {
+    const sizeIds = sizes.split(",").map(Number).filter(Boolean);
+    if (sizeIds.length) {
       qb.andWhere(
-        "(p.product_name ILIKE :term OR p.brand ILIKE :term OR p.description ILIKE :term)",
-        { term: `%${term}%` }
+        `EXISTS (
+          SELECT 1 FROM product_variants v
+          WHERE v.product_id = p.id
+          AND v.size_id IN (:...sizeIds)
+        )`,
+        { sizeIds }
       );
     }
-
-    // ── Brand ─────────────────────────────────────────────────────────────────
-    if (brand) {
-      qb.andWhere("p.brand ILIKE :brand", { brand: `%${brand}%` });
-    }
-
-    // ── Country (seller address) ───────────────────────────────────────────────
-    if (country) {
-      qb.andWhere("user.address ILIKE :country", { country: `%${country}%` });
-    }
-
-    // ── Sub-category ──────────────────────────────────────────────────────────
-    if (subCategoryId) {
-      qb.andWhere("p.subCategoryId = :subCategoryId", { subCategoryId });
-    }
-
-    // ── Size (filter via variants join) ───────────────────────────────────────
-    if (sizes) {
-      const sizeIds = sizes.split(",").map(Number).filter(Boolean);
-      if (sizeIds.length > 0) {
-        qb.andWhere("variants.sizeId IN (:...sizeIds)", { sizeIds });
-      }
-    }
-
-    // ── Color (filter via variants join) ──────────────────────────────────────
-    if (colors) {
-      const colorIds = colors.split(",").map(Number).filter(Boolean);
-      if (colorIds.length > 0) {
-        qb.andWhere("variants.colorId IN (:...colorIds)", { colorIds });
-      }
-    }
-
-    // ── Price range ───────────────────────────────────────────────────────────
-    if (price) {
-      const [min, max] = price.split("-").map(Number);
-      if (!isNaN(min)) qb.andWhere("p.price >= :minPrice", { minPrice: min });
-      if (!isNaN(max)) qb.andWhere("p.price <= :maxPrice", { maxPrice: max });
-    }
-
-    // ── Ordering: boosted first, then newest ──────────────────────────────────
-    qb.orderBy("p.is_boosted", "DESC")
-      .addOrderBy("p.boost_end_time", "ASC", "NULLS LAST")
-      .addOrderBy("p.created_at", "DESC");
-
-    // ── Pagination ────────────────────────────────────────────────────────────
-    const skip = (page - 1) * limit;
-    qb.skip(skip).take(limit);
-
-    const [raw, total] = await qb.getManyAndCount();
-
-    // ── Currency conversion ───────────────────────────────────────────────────
-    const userCurrency = query.userCurrency?.toUpperCase() ?? defaultCurrency;
-    const protectionExtra = await this._currencyService.convert(defaultCurrency, userCurrency, 0.8);
-
-    const data = await Promise.all(
-      raw.map(async (product) => {
-        const basePrice = parseFloat(product.price as unknown as string);
-        const converted = await this._currencyService.convert(defaultCurrency, userCurrency, basePrice);
-        product.price = converted;
-        product.currency = userCurrency;
-        product.buyer_protection = FeeWithCommision(converted, 10) + protectionExtra;
-
-        // Convert variant price overrides
-        // if (product.variants?.length) {
-        //   await Promise.all(
-        //     product.variants.map(async (v) => {
-        //       if (v.price_override ) {
-        //         v.price_override = await this._currencyService.convert(
-        //           defaultCurrency,
-        //           userCurrency,
-        //           parseFloat(v.price_override as unknown as string)
-        //         );
-        //       }
-        //     })
-        //   );
-        // }
-        return product;
-      })
-    );
-
-    // ── Shuffle boosted within their group so no single seller dominates ──────
-    const boosted = this._shuffle(data.filter((p) => p.is_boosted));
-    const nonBoosted = data.filter((p) => !p.is_boosted);
-
-    // ── Track user search behaviour ───────────────────────────────────────────
-    if ((term || subCategoryId || price || sizes) && userId) {
-      this._productQueue
-        .add("user-behaviour", { userId, search: term, subCategoryId, price, sizes, colors })
-        .catch((e) => this._logger.error("Behaviour queue error", e));
-    }
-
-    return {
-      message: "Products retrieved successfully",
-      statusCode: 200,
-      data: [...boosted, ...nonBoosted],
-      pagination: pagination({ page, limit, total }),
-    };
   }
+
+  // ── COLOR FILTER (NO JOIN) ────────────
+  if (colors) {
+    const colorIds = colors.split(",").map(Number).filter(Boolean);
+    if (colorIds.length) {
+      qb.andWhere(
+        `EXISTS (
+          SELECT 1 FROM product_variants v
+          WHERE v.product_id = p.id
+          AND v.color_id IN (:...colorIds)
+        )`,
+        { colorIds }
+      );
+    }
+  }
+
+  // ── COUNTRY FILTER (NO JOIN) ──────────
+  if (country) {
+    qb.andWhere(
+      `EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = p.user_id
+        AND u.address ILIKE :country
+      )`,
+      { country: `%${country}%` }
+    );
+  }
+
+  qb.orderBy("p.created_at", "DESC")
+    .skip((page - 1) * limit)
+    .take(limit);
+
+  const [products, total] = await qb.getManyAndCount();
+
+  // ── Get ONE image per product (separate lightweight query) ─────
+  const productIds = products.map(p => p.id);
+
+  let images = [];
+  if (productIds.length > 0) {
+    images = await this._imageRepo
+      .createQueryBuilder("img")
+      .select(["img.product_id", "MIN(img.image) as image"])
+      .where("img.product_id IN (:...ids)", { ids: productIds })
+      .groupBy("img.product_id")
+      .getRawMany();
+  }
+
+  const imageMap = {};
+  images.forEach(img => {
+    imageMap[img.img_product_id] = img.image;
+  });
+
+  const data = products.map(p => ({
+    id: p.id,
+    product_name: p.product_name,
+    price: p.price,
+    description: p.description,
+    image: imageMap[p.id] || null,
+  }));
+
+  return {
+    message: "Products retrieved successfully",
+    statusCode: 200,
+    data,
+    pagination: pagination({ page, limit, total }),
+  };
+}
 
   // ══════════════════════════════════════════════════════════════════════════════
   // READ — Admin listing (all statuses, extra filters)
