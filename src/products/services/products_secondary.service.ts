@@ -395,6 +395,8 @@ export class ProductsSecondaryService {
     price: p.price,
     description: p.description,
     image: imageMap[p.id] || null,
+    rating:4,
+    reviewCount:5,
   }));
 
   return {
