@@ -20,6 +20,7 @@ import {
 } from "src/notifications/entities/notifications.entity";
 import { NotificationsService } from "src/notifications/notifications.service";
 import { PaymentStatus } from "src/orders/enums/orderStatus";
+import { RedisService } from "src/redis/redis.service";
 import { InjectLogger } from "src/shared/decorators/logger.decorator";
 import { Pagination, pagination } from "src/shared/utils/pagination";
 import { FeeWithCommision } from "src/shared/utils/utils";
@@ -62,9 +63,11 @@ export class ProductsService {
     private readonly _collectionRepo: Repository<CollectionAddress>,
     private readonly _notificationService: NotificationsService,
     private readonly _currencyConverterService: ConverterService,
-    private readonly _userService: UserService,
+    public  _userService: UserService,
     @InjectRepository(Transections) private readonly _transectionRepository: Repository<Transections>,
-    @InjectLogger() private readonly _logger: LoggerService
+    @InjectLogger() private readonly _logger: LoggerService,
+    private readonly _cacheService:RedisService,
+    
   ) {}
   // async getProductById({product_id,status,}){
 
@@ -722,10 +725,16 @@ export class ProductsService {
   }
 
   async getProduct(id: number): Promise<Product> {
-    return await this._productRepository.findOne({
+    const prod = await this._cacheService.get(PRODUCT_CONSTANT.productDetail(id));
+    if (prod) {
+      return JSON.parse(prod);
+    }
+    const product = await this._productRepository.findOne({
       where: { id },
       relations: ["user", "favorites", "images"],
     });
+    await this._cacheService.set(PRODUCT_CONSTANT.productDetail(id), JSON.stringify(product));
+    return product;
   }
 
   async updateProductsStatus(id: number): Promise<ResponseInterface<Product>> {

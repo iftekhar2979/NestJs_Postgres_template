@@ -1,6 +1,7 @@
 export const PRODUCT_CONSTANT = {
   productUtils:"product-utils",
   productStats:"product-stats",
+  productDetail: (productId: number) => `product:detail:${productId}`,
   /**
    * Single shop detail: shop:detail:{shopId}
    */

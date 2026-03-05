@@ -1,17 +1,17 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { User } from "./entities/user.entity";
-import { MailService } from "../mail/mail.service";
-import { UpdateUserDto } from "./dto/update-user.dto";
-import { InjectLogger } from "../shared/decorators/logger.decorator";
 import { CreateAdminDto } from "src/auth/dto/create-user.dto";
-import { argon2hash } from "src/utils/hashes/argon2";
-import { GetUsersQueryDto } from "./dto/get-user.query.dto";
-import { UserRoles } from "./enums/role.enum";
-import { Verification } from "./entities/verification.entity";
 import { pagination } from "src/shared/utils/pagination";
+import { argon2hash } from "src/utils/hashes/argon2";
+import { Repository } from "typeorm";
+import { MailService } from "../mail/mail.service";
+import { InjectLogger } from "../shared/decorators/logger.decorator";
+import { GetUsersQueryDto } from "./dto/get-user.query.dto";
 import { UpdateUserProfileDto } from "./dto/update-profile.dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
+import { User } from "./entities/user.entity";
+import { Verification } from "./entities/verification.entity";
+import { UserRoles } from "./enums/role.enum";
 
 /**
  * This service contain contains methods and business logic related to user.

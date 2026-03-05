@@ -29,7 +29,7 @@ export class ScoringCronService {
   /**
    * Recalculate recently updated products every 15 minutes
    */
-  @Cron(CronExpression.EVERY_10_MINUTES)
+  @Cron(CronExpression.EVERY_10_SECONDS)
   async handleFrequentScoreRefresh(): Promise<void> {
     try {
       const count = await this.scoreRecalcService.recalculateRecentlyUpdated();
