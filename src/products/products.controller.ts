@@ -24,6 +24,7 @@ import { GetFilesDestination, GetUser } from "src/auth/decorators/get-user.decor
 import { RolesGuard } from "src/auth/guards/roles-auth.guard";
 import { JwtAuthenticationGuard } from "src/auth/guards/session-auth.guard";
 import { multerConfig } from "src/common/multer/multer.config";
+import { RedisService } from "src/redis/redis.service";
 import { InjectLogger } from "src/shared/decorators/logger.decorator";
 import { Roles } from "src/user/decorators/roles.decorator";
 import { User } from "src/user/entities/user.entity";
@@ -44,7 +45,8 @@ export class ProductsController {
   constructor(
     @InjectLogger() private readonly _logger: Logger,
     private readonly _productsService: ProductsService,
-    private readonly _productsSecondaryService: ProductsSecondaryService
+    private readonly _productsSecondaryService: ProductsSecondaryService ,
+    private readonly _cacheService:RedisService
   ) {}
 
   @Post()

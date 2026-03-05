@@ -16,24 +16,40 @@ export class RedisService implements OnModuleInit {
   ) {}
   onModuleInit() {
     console.log("Redis Intiazed");
-    // this.redis = new Redis({
-    //   host: "127.0.0.1",
-    //   port: 6379,
-    // });
-
-    // this.redis.monitor((err, monitor) => {
-    //   if (err) {
-    //     console.error("Monitor error", err);
-    //     return;
-    //   }
-    //   console.log("Redis MONITOR mode started");
-    //   monitor.on("monitor", (time, args, source, db) => {
-    //     console.log(`[DB${db}] ${source}:`, args);
-    //   });
-    // });
+    
+  }
+  async get(key:string){
+  
+    return await this.redis.get(key)
+  }
+  async set(key:string,value,ttl?:number){
+    return await this.redis.set(key,value)
+  }
+  async del(key:string){
+    return await this.redis.del(key)
+  }
+  async exists(key:string){
+    return await this.redis.exists(key)
+  }
+  async ttl(key:string){
+    return await this.redis.ttl(key)
+  }
+  async hashGet(key:string,field:string){
+    return await this.redis.hget(key,field)
+  }
+  async hashSet(key:string,field:string,value:string){
+    return await this.redis.hset(key,field,value)
+  }
+  async hashDel(key:string,field:string){
+    return await this.redis.hdel(key,field)
+  }
+  async hashExists(key:string,field:string){
+    return await this.redis.hexists(key,field)
+  }
+  async hashGetAll(key:string){
+    return await this.redis.hgetall(key)
   }
 
-  // Set a value in the Redis cache
   async setCache(key: string, value: string): Promise<void> {
     await this._cacheManager.set(key, value);
   }
@@ -58,11 +74,7 @@ export class RedisService implements OnModuleInit {
     await this._cacheManager.set(key, value, ttlSeconds);
     this._logger.debug(`Set key "${key}" with TTL ${ttlSeconds}s`);
   }
-  async exists(key: string): Promise<boolean> {
-    const val = await this._cacheManager.get(key);
-    return val !== undefined && val !== null;
-  }
-
+ 
   // ⚠️ Requires direct Redis client (not available by default in cache-manager)
   async deleteByPattern(pattern: string): Promise<void> {
     const redis = (this._cacheManager as any).store.getClient();
