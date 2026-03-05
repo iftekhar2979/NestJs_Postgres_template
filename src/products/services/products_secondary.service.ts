@@ -252,7 +252,13 @@ export class ProductsSecondaryService {
             body: `Boost active until ${savedProduct.boost_end_time?.toLocaleDateString()}.`,
           }),
       ]);
-
+ await this._productQueue.add(PRODUCT_CONSTANT.productUtils, {
+            type: PRODUCT_CONSTANT.productStats,
+            data: {
+              product_id: savedProduct.id,
+              user_id: user.id,
+            },
+          });
       // Reload with all relations
       const result = await this._loadProduct(savedProduct.id);
       return { message: "Product created successfully", statusCode: 201, data: result };

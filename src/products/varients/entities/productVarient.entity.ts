@@ -3,15 +3,17 @@ import { ProductColor } from "src/products/colors/entities/colors.entity";
 import { Product } from "src/products/entities/products.entity";
 import { Size } from "src/sizes/entity/sizes.entity";
 import {
-    Column,
-    CreateDateColumn,
-    Entity,
-    JoinColumn,
-    ManyToOne,
-    PrimaryGeneratedColumn,
-    UpdateDateColumn,
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from "typeorm";
 @Entity("product_variants")
+@Index(["product_id", "colorId", "sizeId"])
 export class ProductVariant {
   @ApiProperty({ example: 1, description: "Unique identifier for the variant" })
   @PrimaryGeneratedColumn()

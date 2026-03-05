@@ -1,63 +1,64 @@
 import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { WinstonModule } from "nest-winston";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
-import { LoggerMiddleware } from "./shared/middlewares/logger.middleware";
-import { envSchema } from "./utils/env.validation";
 import { AuthModule } from "./auth/auth.module";
-import { MailModule } from "./mail/mail.module";
-import { PostgreSQLDatabaseModule } from "./database/postgresql.module";
-import { UserModule } from "./user/user.module";
-import { HealthModule } from "./health/health.module";
 import { winstonLoggerConfig } from "./configs/winston.config";
-import { S3Module } from "./s3/s3.module";
-import { SseModule } from "./sse/sse.module";
+import { PostgreSQLDatabaseModule } from "./database/postgresql.module";
+import { HealthModule } from "./health/health.module";
+import { MailModule } from "./mail/mail.module";
 import { OtpModule } from "./otp/otp.module";
 import { ProductsModule } from "./products/products.module";
+import { S3Module } from "./s3/s3.module";
+import { LoggerMiddleware } from "./shared/middlewares/logger.middleware";
+import { SseModule } from "./sse/sse.module";
+import { UserModule } from "./user/user.module";
+import { envSchema } from "./utils/env.validation";
 // import { ElasticsearchModule } from "@nestjs/elasticsearch";
-import { SearchModule } from "./search/search.module";
+import { ScheduleModule } from "@nestjs/schedule";
+import { AttachmentModule } from "./attachment/attachment.module";
+import { CategoryModule } from "./category/category.module";
+import { ConversationsModule } from "./conversations/conversations.module";
+import { DeliveryModule } from "./delivery/delivery.module";
 import { FavouritesModule } from "./favourites/favourites.module";
+import { MessagesModule } from "./messages/messages.module";
+import { NotificationsModule } from "./notifications/notifications.module";
 import { OffersModule } from "./offers/offers.module";
 import { OrdersModule } from "./orders/orders.module";
-import { DeliveryModule } from "./delivery/delivery.module";
-import { CategoryModule } from "./category/category.module";
-import { SizesModule } from "./sizes/sizes.module";
-import { WalletsModule } from "./wallets/wallets.module";
-import { TransectionsModule } from "./transections/transections.module";
-import { WithdrawsService } from "./withdraws/withdraws.service";
-import { WithdrawsModule } from "./withdraws/withdraws.module";
-import { ConversationsModule } from "./conversations/conversations.module";
-import { MessagesModule } from "./messages/messages.module";
 import { ParticipantsModule } from "./participants/participants.module";
-import { AttachmentModule } from "./attachment/attachment.module";
-import { SeederModule } from "./seeder/seeder.module";
-import { NotificationsModule } from "./notifications/notifications.module";
-import { SocketModule } from "./socket/socket.module";
-import { ReviewsModule } from "./reviews/reviews.module";
-import { TransglobalModule } from "./transglobal/transglobal.module";
-import { ScheduleModule } from "@nestjs/schedule";
 import { ProductBoostModule } from "./product-boost/product-boost.module";
+import { ReviewsModule } from "./reviews/reviews.module";
+import { SearchModule } from "./search/search.module";
+import { SeederModule } from "./seeder/seeder.module";
+import { SizesModule } from "./sizes/sizes.module";
+import { SocketModule } from "./socket/socket.module";
+import { TransectionsModule } from "./transections/transections.module";
+import { TransglobalModule } from "./transglobal/transglobal.module";
+import { WalletsModule } from "./wallets/wallets.module";
+import { WithdrawsModule } from "./withdraws/withdraws.module";
+import { WithdrawsService } from "./withdraws/withdraws.service";
 // import { ProductBoostgService } from './product-boostg/product-boostg.service';
 import { StripeModule } from "./stripe/stripe.module";
 // import { StripController } from './strip/strip.controller';
-import { RedisModule } from "./redis/redis.module";
 import { CacheModule } from "@nestjs/cache-manager";
 import * as redisStore from "cache-manager-ioredis";
+import { RedisModule } from "./redis/redis.module";
 // import { BullQueueProcessor } from './bull-queue.processor';
 import { BullModule } from "@nestjs/bull";
-import { UserlogsModule } from "./userlogs/userlogs.module";
 import { ImageProcessor } from "./bull/processors/ProductQueue";
-import { GeminiModule } from "./gemini/gemini.module";
-import { UserBehaviourModule } from "./user-behaviour/user-behaviour.module";
-import { SettingsModule } from "./settings/settings.module";
-import { SettingService } from "./setting/setting.service";
-import { CurrencyConverterModule } from "./currency-converter/currency-converter.module";
-import { SendcloudModule } from "./sendcloud/sendcloud.module";
 import { PushNotificationProccessor } from "./bull/processors/pushNotificationQueue";
+import { CurrencyConverterModule } from "./currency-converter/currency-converter.module";
 import { FirebaseModule } from "./firebase/firebase.module";
+import { GeminiModule } from "./gemini/gemini.module";
+import { StatsModule } from "./products/stats/stats.module";
+import { SendcloudModule } from "./sendcloud/sendcloud.module";
+import { SettingService } from "./setting/setting.service";
+import { SettingsModule } from "./settings/settings.module";
+import { UserBehaviourModule } from "./user-behaviour/user-behaviour.module";
+import { UserlogsModule } from "./userlogs/userlogs.module";
 /**
  * It is the root module for the application in we import all feature modules and configure modules and packages that are common in feature modules. Here we also configure the middlewares.
  *
@@ -126,6 +127,7 @@ import { FirebaseModule } from "./firebase/firebase.module";
     MailModule,
     UserModule,
     HealthModule,
+    StatsModule,
     S3Module,
     SseModule,
     OtpModule,

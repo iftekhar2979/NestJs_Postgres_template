@@ -20,6 +20,7 @@ import { SizesModule } from './sizes/sizes.module';
 import { SubCategoriesModule } from './sub_categories/sub_categories.module';
 import { ProductVariant } from "./varients/entities/productVarient.entity";
 import { ReviewsModule } from './reviews/reviews.module';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ReviewsModule } from './reviews/reviews.module';
     SizesModule,
     ColorsModule,
     ReviewsModule,
+    StatsModule,
   ],
 
   // BullModule.registerQueue({name:"behaviour"})],
