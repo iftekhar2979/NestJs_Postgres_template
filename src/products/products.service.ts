@@ -215,7 +215,7 @@ export class ProductsService {
           //   image: productImages[0].image,
           //   name: product.category,
           // });
-
+         
           await queryRunner.manager.save(ProductImage, productImages);
         }
 

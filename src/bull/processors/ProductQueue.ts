@@ -6,6 +6,8 @@ import * as path from "path"; // Path module for handling file paths
 import sharp from "sharp";
 import { CategoryService } from "src/category/category.service";
 import { MailService } from "src/mail/mail.service";
+import { PRODUCT_CONSTANT } from "src/products/constants/product.contants";
+import { StatsService } from "src/products/stats/stats.service";
 import { UserBehaviourService } from "src/user-behaviour/user-behaviour.service";
 
 @Processor("product") // Processor listening to 'ProductQueue'
@@ -14,7 +16,8 @@ export class ImageProcessor {
   constructor(
     private readonly _userBehaviourService: UserBehaviourService,
     private readonly _mailService: MailService,
-    private readonly _category: CategoryService
+    private readonly _category: CategoryService ,
+    private readonly _productStatsService: StatsService
   ) {}
   @Process("Product-image") // Listen for jobs of type 'Product-image'
   async handleImageJob(job: Job) {
@@ -91,6 +94,15 @@ export class ImageProcessor {
   @Process("mails")
   async VerificationConfirmation(job: Job) {
     console.log("Email", job.data);
+  }
+
+  @Process(PRODUCT_CONSTANT.productUtils)
+  async productUtils(job: Job) {
+    console.log("Product Utils", job.data);
+    const {type,data} = job.data;
+    if(type === PRODUCT_CONSTANT.productStats){
+      await this._productStatsService.create(data);
+    }
   }
   // @Process("category")
   // async categoryCreation(job: Job<Category>) {

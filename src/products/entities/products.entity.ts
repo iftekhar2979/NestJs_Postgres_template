@@ -28,6 +28,7 @@ import {
 import { CARRER_TYPE } from "../dto/CreateProductDto.dto";
 import { ProductStatus } from "../enums/status.enum";
 import { Review } from "../reviews/entities/review.entity";
+import { ProductStats } from "../stats/entities/productStats.entity";
 import { SubCategory } from "../sub_categories/entities/sub_categories.entity";
 import { ProductVariant } from "../varients/entities/productVarient.entity";
 import { ProductImage } from "./productImage.entity";
@@ -169,6 +170,9 @@ export class Product {
   @ManyToOne(() => User, (user) => user.products, { eager: true })
   @JoinColumn({ name: "user_id" })
   user: User;
+
+  @OneToOne(() => ProductStats, (stats) => stats.product)
+  stats: ProductStats;
 
   @OneToMany(() => Review, (review) => review.product)
   reviews: Review[];

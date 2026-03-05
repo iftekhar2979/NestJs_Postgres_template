@@ -12,9 +12,10 @@ export class ColorsController {
   }
 
   @Get()
-  findAll(@Query("page") page: number = 1, @Query("limit") limit: number = 10) {
-    return this.colorsService.findAll(+page, +limit);
+  findAll(@Query("page") page: number = 1, @Query("limit") limit: number = 30) {
+    return this.colorsService.findAll(page, limit);
   }
+
 
   @Get(":id")
   findOne(@Param("id", ParseIntPipe) id: number) {

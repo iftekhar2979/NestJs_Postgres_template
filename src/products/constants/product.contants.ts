@@ -1,4 +1,6 @@
 export const PRODUCT_CONSTANT = {
+  productUtils:"product-utils",
+  productStats:"product-stats",
   /**
    * Single shop detail: shop:detail:{shopId}
    */
