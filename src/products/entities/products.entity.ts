@@ -37,6 +37,8 @@ import { ProductImage } from "./productImage.entity";
 
 @Entity("products")
 @Index("full_text_index", ["product_name"])
+@Index("idx_products_status_score", ["status", "synthetic_score"])
+@Index("idx_products_active_score", ["synthetic_score"], { where: "status = 'active'" })
 @Index("price", ["price"])
 export class Product {
   @ApiProperty({ example: 1, description: "Unique identifier for the product" })
@@ -195,6 +197,36 @@ export class Product {
     eager: true,
   })
   collectionAddress: CollectionAddress;
+
+ // In Product entity - PERSISTED to DB
+@ApiProperty({ example: 0.8742, description: "Pre-calculated ranking score" })
+@Column({ type: "decimal", precision: 6, scale: 4, default: 0 })
+synthetic_score: number; // ← Has @Column() = saved to database
+
+  // ─── Helper Methods ────────────────────────────────────────
+  
+  /**
+   * Check if product has available stock across all variants
+   */
+  get isInStock(): boolean {
+    if (!this.variants?.length) return false;
+    return this.variants.some(v => v.unit > 0);
+  }
+
+  /**
+   * Get total stock count (for scoring/availability logic)
+   */
+  getTotalStock(): number {
+    return this.variants?.reduce((sum, v) => sum + (v.unit || 0), 0) ?? 0;
+  }
+
+  /**
+   * Check if boost is currently active
+   */
+  isBoostActive(): boolean {
+    if (!this.is_boosted || !this.boost_end_time) return false;
+    return new Date() < new Date(this.boost_end_time);
+  }
 
   // ─── Virtual / runtime-only fields ───────────────────────────────────────────
   currency?: string;

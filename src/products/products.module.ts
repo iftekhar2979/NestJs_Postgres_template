@@ -15,16 +15,20 @@ import { ProductImage } from "./entities/productImage.entity";
 import { Product } from "./entities/products.entity";
 import { ProductsController } from "./products.controller";
 import { ProductsService } from "./products.service";
+import { ReviewsModule } from './reviews/reviews.module';
+import { ProductScoringService } from "./services/products_scoring.service";
 import { ProductsSecondaryService } from "./services/products_secondary.service";
+import { ScoreRecalculationService } from "./services/score_recalculate.service";
+import { ScoringCronService } from "./services/scoring.cron.service";
 import { SizesModule } from './sizes/sizes.module';
+import { ProductStats } from "./stats/entities/productStats.entity";
+import { StatsModule } from './stats/stats.module';
 import { SubCategoriesModule } from './sub_categories/sub_categories.module';
 import { ProductVariant } from "./varients/entities/productVarient.entity";
-import { ReviewsModule } from './reviews/reviews.module';
-import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, ProductImage, Wallets, Transections,ProductVariant, CollectionAddress]),
+    TypeOrmModule.forFeature([Product, ProductImage,ProductStats, Wallets, Transections,ProductVariant, CollectionAddress]),
     AuthModule,
     UserModule,
     UserBehaviourModule,
@@ -41,7 +45,7 @@ import { StatsModule } from './stats/stats.module';
 
   // BullModule.registerQueue({name:"behaviour"})],
   controllers: [ProductsController],
-  providers: [ProductsService,ProductsSecondaryService],
+  providers: [ProductsService,ProductsSecondaryService,ScoreRecalculationService , ProductScoringService , ScoringCronService],
   exports: [ProductsService],
 })
 export class ProductsModule {}

@@ -157,7 +157,7 @@ export class ProductsService {
         //   (product.colorId = createProductDto.color),
         product.brand = createProductDto.brand;
         product.is_negotiable = isNegotiable;
-        product.status = ProductStatus.PENDING;
+        product.status = ProductStatus.AVAILABLE;
         product.is_boosted = isBoosted;
         product.boost_start_time = isBoosted ? new Date() : null;
         product.boost_end_time = isBoosted ? new Date(Date.now() + boostDays * DAYS_IN_SECOND) : null;
