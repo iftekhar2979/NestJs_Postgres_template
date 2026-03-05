@@ -14,6 +14,8 @@ import {
 } from "typeorm";
 @Entity("product_variants")
 @Index(["product_id", "colorId", "sizeId"])
+@Index( ["product_id"])
+@Index( ["updated_at"]) // For tracking changes
 export class ProductVariant {
   @ApiProperty({ example: 1, description: "Unique identifier for the variant" })
   @PrimaryGeneratedColumn()

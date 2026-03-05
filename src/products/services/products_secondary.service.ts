@@ -151,7 +151,7 @@ export class ProductsSecondaryService {
         height: dto.height ? Number(dto.height) : undefined,
         width: dto.width ? Number(dto.width) : undefined,
         carrer_option: dto.carrer_option,
-        status: ProductStatus.PENDING,
+        status: ProductStatus.AVAILABLE,
       });
       const savedProduct = await queryRunner.manager.save(Product, product);
 
@@ -296,11 +296,12 @@ export class ProductsSecondaryService {
       "p.product_name",
       "p.price",
       "p.description",
-    ]);
+    ])
+    .orderBy("p.synthetic_score", "DESC");
 
   // ── STATUS ─────────────────────────────
   qb.andWhere("p.status = :status", {
-    status: ProductStatus.PENDING,
+    status: ProductStatus.AVAILABLE,
   });
 
   // ── SEARCH ─────────────────────────────
