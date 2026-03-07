@@ -11,7 +11,7 @@ export class ReviewsService {
   ) {}
 
   // ✅ Create Review
-  async create(userId: string, productId: string, dto: any) {
+  async create(userId: string, productId: number, dto: any) {
     // Check if already reviewed
     const existing = await this.reviewRepository.findOne({
       where: {
@@ -34,7 +34,7 @@ export class ReviewsService {
   }
 
   // ✅ Get All Reviews (with pagination)
-  async findAll(productId: string, page = 1, limit = 10) {
+  async findAll(productId: number, page = 1, limit = 10) {
     const [data, total] = await this.reviewRepository.findAndCount({
       where: { product_id: productId },
       relations: ["user"],
