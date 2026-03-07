@@ -725,15 +725,22 @@ export class ProductsService {
   }
 
   async getProduct(id: number): Promise<Product> {
-    const prod = await this._cacheService.get(PRODUCT_CONSTANT.productDetail(id));
-    if (prod) {
-      return JSON.parse(prod);
-    }
+    // const prod = await this._cacheService.get(PRODUCT_CONSTANT.productDetail(id));
+    // if (prod) {
+    //   return JSON.parse(prod);
+    // }
     const product = await this._productRepository.findOne({
       where: { id },
-      relations: ["user", "favorites", "images"],
+      relations: [
+        "user", 
+        "favorites", 
+        "images", 
+        "variants",
+        "variants.color",
+        "variants.size",
+      ],
     });
-    await this._cacheService.set(PRODUCT_CONSTANT.productDetail(id), JSON.stringify(product));
+    // await this._cacheService.set(PRODUCT_CONSTANT.productDetail(id), JSON.stringify(product));
     return product;
   }
 

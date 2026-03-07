@@ -11,18 +11,18 @@ export class ReviewsController {
   @UseGuards(JwtAuthenticationGuard)
   @Post(":productId")
   create(
-    @Param("productId", ParseUUIDPipe) productId: string,
+    @Param("productId", ParseUUIDPipe) productId: number,
     @Body() body,
     @Req() req,
   ) {
     const userId = req.user.id; // from JWT
-    return this.reviewsService.create(userId, productId, body);
+    return this.reviewsService.create(userId, Number(productId), body);
   }
 
   // ✅ Get Reviews of Product
   @Get("product/:productId")
   findAll(
-    @Param("productId", ParseUUIDPipe) productId: string,
+    @Param("productId", ParseUUIDPipe) productId: number,
     @Query("page") page = 1,
     @Query("limit") limit = 10,
   ) {

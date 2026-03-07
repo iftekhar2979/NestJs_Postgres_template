@@ -2,18 +2,19 @@ import { Product } from "src/products/entities/products.entity";
 import { User } from "src/user/entities/user.entity";
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
-@Entity("reviews")
+@Entity("product_reviews")
 export class Review {
      @PrimaryGeneratedColumn("uuid")
     id: string;
 
-    @Column()
+    @Column({type:'varchar'})
     user_id: string;
     @OneToMany(() => User, (user) => user.reviews)
     user: User;
 
-    @Column()
-    product_id: string;
+    @Column({type:'int'})
+    product_id: number;
+
     @OneToMany(() => Product, (product) => product.reviews)
     product: Product;
 
