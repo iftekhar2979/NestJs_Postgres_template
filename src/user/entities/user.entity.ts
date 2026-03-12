@@ -26,6 +26,7 @@ export enum USERSTATUS {
 }
 @Entity({ name: "users" })
 @Index(["email"], { unique: true })
+@Index(["status", "roles", "isActive"])
 export class User {
   @PrimaryGeneratedColumn("uuid")
   @ApiProperty()
@@ -55,8 +56,8 @@ export class User {
   @Column({ type: "int", default: 0 })
   @ApiProperty()
   rating: 0;
-  @Column({ nullable: true })
-  @Exclude({ toPlainOnly: true })
+  @Column({ nullable: true , select:false  })
+  @Exclude({ toPlainOnly: true ,})
   password: string;
 
   @Column({ nullable: true, type: "varchar" })
@@ -65,7 +66,7 @@ export class User {
   currency: string;
   @Column({ nullable: true, type: "varchar" })
   fcm: string;
-  @Column({ nullable: true, type: "varchar" })
+  @Column({ nullable: true, type: "varchar", select:false })
   phone: string;
 
   @Column("enum", { array: true, enum: UserRoles, default: `{${UserRoles.USER}}` })

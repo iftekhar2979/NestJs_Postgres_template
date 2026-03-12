@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { CreateAdminDto } from "src/auth/dto/create-user.dto";
+import { RedisService } from "src/redis/redis.service";
 import { pagination } from "src/shared/utils/pagination";
 import { argon2hash } from "src/utils/hashes/argon2";
 import { Repository } from "typeorm";
@@ -22,7 +23,8 @@ export class UserService {
     @InjectRepository(User) private _userRepository: Repository<User>,
     @InjectRepository(Verification) private _verificationRepo: Repository<Verification>,
     @InjectLogger() private readonly _logger: Logger,
-    private readonly _mailService: MailService
+    private readonly _mailService: MailService,
+    private readonly _redisService: RedisService
   ) {}
 
   async getUserFilters(query: GetUsersQueryDto) {
@@ -98,7 +100,10 @@ export class UserService {
     // Apply updates
     Object.assign(user, updateDto);
 
-    return this._userRepository.save(user);
+    const updatedUser = await this._userRepository.save(user);
+    // Invalidate cache
+    await this._redisService.del(`user_info:${userId}`);
+    return updatedUser;
   }
   async getUserById(id: string, relations?: string[]): Promise<User> {
     const query: any = { where: { id } };
@@ -147,6 +152,9 @@ export class UserService {
     this._logger.log(`Save Updated User`, UserService.name);
     await this._userRepository.save(currentUser);
 
+    // Invalidate cache
+    await this._redisService.del(`user_info:${user.id}`);
+
     this._logger.log("Sending update Confirmation Mail", UserService.name);
     this._mailService.sendConfirmationOnUpdatingUser(user);
 
@@ -159,6 +167,9 @@ export class UserService {
     if (!updatedUser) {
       throw new NotFoundException("User not found");
     }
+
+    // Invalidate cache
+    await this._redisService.del(`user_info:${user.id}`);
 
     this._logger.log(`Image updated successfully`, UserService.name);
     return { message: "Image uploaded successfully", status: "success", data: null };

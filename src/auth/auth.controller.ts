@@ -1,33 +1,20 @@
-import { UserService } from "src/user/user.service";
-import { OtpService } from "src/otp/otp.service";
+import { InjectQueue } from "@nestjs/bull";
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
+  Controller,
   Delete,
-  UseInterceptors,
-  UseGuards,
-  Req,
-  NotFoundException,
+  Get,
   HttpCode,
   HttpException,
   HttpStatus,
-  // ClassSerializerInterceptor,
+  NotFoundException,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
-import { AuthService } from "./auth.service";
-import { CreateUserDto } from "./dto/create-user.dto";
-import { User } from "../user/entities/user.entity";
-import { TransformInterceptor } from "../shared/interceptors/transform.interceptor";
-import { LoginUserDto } from "./dto/login-user.dto";
-import { Request } from "express";
-import { LocalAuthGuard } from "./guards/local-auth.guard";
-import { JwtAuthGuard } from "./guards/jwt-auth.guard";
-import { ForgotPasswordDto } from "./dto/forgot-password.dto";
-import { ResetPasswordDto } from "./dto/reset-password.dto";
-import { GetUser, GetUserInformation } from "./decorators/get-user.decorator";
-import { UpdateMyPasswordDto } from "./dto/update-password.dto";
+import { JwtService } from "@nestjs/jwt";
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -41,18 +28,29 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
-import { UserResponseDto } from "./dto-response/user-response.dto";
-import { MessageResponseDto } from "./dto-response/message-response.dto";
-import { LogoutResponseDto } from "./dto-response/logout-response.dto";
-import { GoogleAuthGuard } from "./guards/google-auth.guard";
-import { OtpVerificationDto } from "./dto/otp-verification.dto";
-import { JwtAuthenticationGuard } from "./guards/session-auth.guard";
-import { ForgetPasswordGuard } from "./guards/forget-password.guard";
-import { JwtService } from "@nestjs/jwt";
-import { MailService } from "src/mail/mail.service";
-import { FirebaseService } from "src/firebase/firebase.service";
 import { Queue } from "bull";
-import { InjectQueue } from "@nestjs/bull";
+import { Request } from "express";
+import { MailService } from "src/mail/mail.service";
+import { OtpService } from "src/otp/otp.service";
+import { UserService } from "src/user/user.service";
+import { TransformInterceptor } from "../shared/interceptors/transform.interceptor";
+import { User } from "../user/entities/user.entity";
+import { AuthService } from "./auth.service";
+import { GetUser, GetUserInformation } from "./decorators/get-user.decorator";
+import { LogoutResponseDto } from "./dto-response/logout-response.dto";
+import { MessageResponseDto } from "./dto-response/message-response.dto";
+import { UserResponseDto } from "./dto-response/user-response.dto";
+import { CreateUserDto } from "./dto/create-user.dto";
+import { ForgotPasswordDto } from "./dto/forgot-password.dto";
+import { LoginUserDto } from "./dto/login-user.dto";
+import { OtpVerificationDto } from "./dto/otp-verification.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { UpdateMyPasswordDto } from "./dto/update-password.dto";
+import { ForgetPasswordGuard } from "./guards/forget-password.guard";
+import { GoogleAuthGuard } from "./guards/google-auth.guard";
+import { JwtAuthGuard } from "./guards/jwt-auth.guard";
+import { LocalAuthGuard } from "./guards/local-auth.guard";
+import { JwtAuthenticationGuard } from "./guards/session-auth.guard";
 
 /**
  * AuthController is responsible for handling incoming requests specific to Authentication related APIs and returning responses to the client.

@@ -1,23 +1,22 @@
-import { Repository } from "typeorm";
 import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Server } from "http";
+import { Server, Socket } from "socket.io";
+import { Repository } from "typeorm";
 // import mongoose, { Model, ObjectId } from 'mongoose';
-import { Socket } from "socket.io";
+import { InjectQueue } from "@nestjs/bull";
+import { Queue } from "bull";
+import { Conversations } from "src/conversations/entities/conversations.entity";
 import { Messages } from "src/messages/entities/messages.entity";
 import { ParticipantsService } from "src/participants/participants.service";
 import { InjectLogger } from "src/shared/decorators/logger.decorator";
 import { User } from "src/user/entities/user.entity";
 import { UserService } from "src/user/user.service";
 import { Logger } from "winston";
-import { Conversations } from "src/conversations/entities/conversations.entity";
-import { InjectQueue } from "@nestjs/bull";
-import { Queue } from "bull";
 
 @Injectable()
 export class SocketService {
-  public io: Socket;
+  public server: Server;
   public connectedClients: Map<string, Socket> = new Map();
   public connectedUsers: Map<string, { name: string; socketID: string }> = new Map();
   private writeInterval: NodeJS.Timeout;
@@ -50,20 +49,15 @@ export class SocketService {
 
   async handleConnection(socket: Socket) {
     try {
+      // console.log("Socket", socket.handshake);
       const clientId = socket.id;
-      const token = socket.handshake.headers.authorization;
-      console.log(socket.handshake.query);
-      //   console.log(socket.handshake.headers);
-      console.log("Connected", socket.id);
+      const token = socket.handshake?.auth?.token || socket.handshake?.headers?.auth;
+      console.log("Connected", token);
       if (!token) {
         throw new UnauthorizedException("You are not authorized to access this resource!");
       }
-      const jwt = token.split(" ")[1];
-      if (!jwt) {
-        throw new UnauthorizedException("You are not authorized to access this resource!");
-      }
       //   const payload = this.jwtService.verify(jwt);
-      const payload = await this.userService.getUserById(this.jwtService.verify(jwt).id);
+      const payload = await this.userService.getUserById(this.jwtService.verify(token).id);
       console.warn("Payload", payload);
       if (!payload.firstName) {
         throw new UnauthorizedException("You are not authorized to access this resource!");
@@ -73,8 +67,15 @@ export class SocketService {
         socketID: clientId,
       });
 
+      // Join the user to their own room for cross-server communication
+      socket.join(payload.id);
+      this.logger.log(`User ${payload.id} joined  their private room.`,SocketService.name);
+
       this.connectedClients.set(clientId, socket);
-      socket.on("send-message", (data) => {
+      socket.on("send-message", (data:{conversation_id:number,msg:string}) => {
+         if (typeof data === "string") {
+    data = JSON.parse(data);
+  }
         this.handleSendMessage(payload, data, socket);
       });
       socket.on("active-status", () => {
@@ -141,10 +142,16 @@ export class SocketService {
       socket.disconnect(); // Disconnect the socket if an error occurs
     }
   }
-  async handleDisconnection(socket: Socket, userId: string) {
-    console.log("Disconnected", socket);
+  async handleDisconnection(socket: Socket) {
+    const userId = Array.from(this.connectedUsers.entries()).find(
+      ([, val]) => val.socketID === socket.id
+    )?.[0];
+    
+    if (userId) {
+      this.connectedUsers.delete(userId);
+      this.logger.log(`User ${userId} disconnected.`,SocketService.name);
+    }
     this.connectedClients.delete(socket.id);
-    this.connectedUsers.delete(userId);
   }
 
   async userActiveStatus(id: string, socket: Socket) {
@@ -167,13 +174,17 @@ export class SocketService {
   }
   joinRoom({ roomkey }: { roomkey: string }) {
     try {
-      this.io.join(roomkey);
+      // In a real gateway, the socket itself calls join. 
+      // This helper might need a socket instance or be refactored.
+      this.logger.warn("joinRoom called on service without socket instance. Use socket.join in gateway or connection handler.");
     } catch (error) {
-      console.log(error);
+      this.logger.error("Error in joinRoom:", error);
     }
   }
   sendToRoom(roomkey: string, event: string, value: any) {
-    this.io.to(roomkey).emit(event, value);
+    if (this.server) {
+      this.server.to(roomkey).emit(event, value);
+    }
   }
   async handleMessageDelivery({
     senderId,
@@ -186,27 +197,21 @@ export class SocketService {
     conversation_id: number;
     message: Messages;
   }) {
-    const receiverSocket = this.getSocketByUserId(receiverId);
-    const senderSocket = this.getSocketByUserId(senderId);
-    console.log(message.sender);
     const senderName = `${message?.sender?.firstName} ${message?.sender?.lastName}`;
     delete message.conversation;
     delete message.sender;
-    if (receiverSocket) {
-      receiverSocket.emit(`conversation-${conversation_id}`, message);
-    } else {
-      const user = await this.userService.getUserById(receiverId);
-      if (user.fcm) {
-        await this._notificationQueue.add("push_notifications", {
-          token: user.fcm,
-          title: ` ${senderName} messaged you `,
-          body: `${message.msg}`,
-        });
-      }
+
+    // Use server.to(userId) to emit to the room through the adapter (cross-server)
+    if (this.server) {
+      this.server.to(receiverId).emit(`conversation-${conversation_id}`, message);
+      this.server.to(senderId).emit(`conversation-${conversation_id}`, message);
     }
-    if (senderSocket) {
-      senderSocket.emit(`conversation-${conversation_id}`, message);
-    }
+
+    // Still send push notification if user is not globally connected (this might need a global check)
+    // For now, we rely on the adapter to distribute the message. 
+    // If you need to know if someone is online globally, you'd check a global state (e.g. Redis).
+    // However, the standard way is to attempt delivery and if they aren't connected to ANY instance, notify.
+    // In a scaled env, knowing if they are NOT on ANY instance needs a global indicator.
   }
 
   async handleSendMessage(
@@ -215,7 +220,7 @@ export class SocketService {
     socket: Socket
   ): Promise<void> {
     try {
-      console.log("Sending Message Event calll", data);
+      console.log(typeof data);
       if (!data.conversation_id || !data.msg || !payload.id) {
         throw new Error("Invalid message data!");
       }
@@ -262,11 +267,10 @@ export class SocketService {
   }
 
   activeSocket(id: string, message: string, payload: any): void {
-    const senderSocket = this.getSocketByUserId(id.toString());
-    if (senderSocket) {
-      senderSocket.emit(message, payload);
+    if (this.server) {
+      this.server.to(id.toString()).emit(message, payload);
     } else {
-      console.log("Socket is not active");
+      this.logger.warn("Socket server instance (this.server) is not initialized.");
     }
   }
   async handleMessageSeen(sender_id: string, receiver_id: string, conversation_id: number) {
