@@ -20,12 +20,12 @@ export class ForgetPasswordGuard {
     console.log(token);
     try {
       const payload = await this.jwtService.verifyAsync(token);
-      console.log(payload);
+      // console.log(payload);
       if (payload.verification_type !== OtpType.FORGOT_PASSWORD) {
         throw new UnauthorizedException("Invalid token type for forget password!");
       }
       const user = await this.userService.getUserById(payload.id);
-      console.log(user);
+      // console.log(user);
       if (!user) {
         throw new Error("User is Not Available!");
       }

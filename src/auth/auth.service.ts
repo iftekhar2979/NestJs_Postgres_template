@@ -1,3 +1,4 @@
+import { InjectQueue } from "@nestjs/bull";
 import {
   BadRequestException,
   ConflictException,
@@ -7,28 +8,30 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
-import { Request } from "express";
 import { ConfigService } from "@nestjs/config";
+import { JwtService } from "@nestjs/jwt";
 import { InjectRepository } from "@nestjs/typeorm";
+import { Queue } from "bull";
+import { Request } from "express";
+import { OtpType } from "src/otp/entities/otp.entity";
+import { OtpService } from "src/otp/otp.service";
+import { AccountStatus, CreateVerificationDto } from "src/user/dto/verification-dto";
+import { Verification } from "src/user/entities/verification.entity";
+import { Wallets } from "src/wallets/entity/wallets.entity";
 import { Repository } from "typeorm";
 import { MailService } from "../mail/mail.service";
+import { InjectLogger } from "../shared/decorators/logger.decorator";
+import { User } from "../user/entities/user.entity";
+import { argon2hash, argon2verify } from "../utils/hashes/argon2";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { JwtPayload } from "./dto/jwt-payload.dto";
 import { LoginUserDto } from "./dto/login-user.dto";
+import { OtpVerificationDto } from "./dto/otp-verification.dto";
 import { ResetPasswordDto, UpdatePassword } from "./dto/reset-password.dto";
 import { UpdateMyPasswordDto } from "./dto/update-password.dto";
-import { User } from "../user/entities/user.entity";
-import { argon2hash, argon2verify } from "../utils/hashes/argon2";
-import { InjectLogger } from "../shared/decorators/logger.decorator";
-import { Verification } from "src/user/entities/verification.entity";
-import { AccountStatus, CreateVerificationDto } from "src/user/dto/verification-dto";
-import { OtpType } from "src/otp/entities/otp.entity";
-import { OtpVerificationDto } from "./dto/otp-verification.dto";
-import { OtpService } from "src/otp/otp.service";
-import { Wallets } from "src/wallets/entity/wallets.entity";
-import { InjectQueue } from "@nestjs/bull";
-import { Queue } from "bull";
+
+import { Cacheable } from "src/redis/decorators/cache.decorator";
+import { RedisService } from "src/redis/redis.service";
 
 @Injectable()
 export class AuthService {
@@ -65,6 +68,7 @@ export class AuthService {
     private readonly _mailService: MailService,
     private readonly _configService: ConfigService,
     @InjectLogger() private readonly _logger: Logger,
+    private readonly redisService: RedisService,
 
     @InjectQueue("notifications") private readonly _queue: Queue
   ) {
@@ -175,7 +179,6 @@ export class AuthService {
       throw new BadRequestException("Password does not match with passwordConfirm");
     }
     this._logger.log("Masking Password", AuthService.name);
-    console.log(user);
     const userinfo = await this._userRepository.findOne({ where: { id: user.id } });
     if (!user) {
       throw new NotFoundException("User not found");
@@ -230,8 +233,7 @@ export class AuthService {
     const { email, password } = loginUserDto;
 
     this._logger.log("Searching User with provided email", AuthService.name);
-    const user = await this._userRepository.findOne({ where: { email } });
-    // console.log(user);
+    const user = await this._userRepository.findOne({ where: { email } ,select:{password:true,id:true,email:true} });
     this._logger.log("Verifying User", AuthService.name);
     if (user && (await argon2verify(user.password, password))) {
       const verification = await this._verificationRepository.findOne({ where: { user_id: user.id } });
@@ -314,6 +316,7 @@ export class AuthService {
     }
     return this._jwtService.sign(payload);
   }
+  @Cacheable({ key: (user: User) => `user_info:${user.id}`, ttl: 3600 })
   async userInfo(user: User) {
     return await this._userRepository.findOne({
       where: { id: user.id },

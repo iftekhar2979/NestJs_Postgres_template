@@ -246,8 +246,8 @@ export class ConversationsService {
       const [conversations, total] = await this.conversationRepo
         .createQueryBuilder("conversation")
         .leftJoinAndSelect("conversation.participants", "participant")
-        .leftJoinAndSelect("conversation.product", "product")
-        .leftJoinAndSelect("product.images", "productImages")
+        // .leftJoinAndSelect("conversation.product", "product")
+        // .leftJoinAndSelect("product.images", "productImages")
         .leftJoin("participant.user", "user") // Join with user but don't auto-select full user
         .leftJoinAndSelect("conversation.lastmsg", "lastmsg") // Join with last message
         .addSelect([

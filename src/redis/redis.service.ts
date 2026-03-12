@@ -2,6 +2,7 @@
 
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { Cache } from "cache-manager";
 import Redis from "ioredis";
 import { InjectLogger } from "src/shared/decorators/logger.decorator";
@@ -9,45 +10,123 @@ import { Logger } from "winston";
 
 @Injectable()
 export class RedisService implements OnModuleInit {
-  private redis: Redis;
+  public client: Redis;
+  public publisher: Redis;
+  public subscriber: Redis;
+
   constructor(
-    @Inject(CACHE_MANAGER) private _cacheManager: Cache, // Inject CacheManager
-    @InjectLogger() private readonly _logger: Logger
-  ) {}
-  onModuleInit() {
-    console.log("Redis Intiazed");
+    @Inject(CACHE_MANAGER) private _cacheManager: Cache,
+    @InjectLogger() private readonly _logger: Logger,
+    private readonly _configService: ConfigService
+  ) {
+    const redisConfig = {
+      host: this._configService.get<string>("REDIS_HOST") || process.env.REDIS_IP || "localhost",
+      port: this._configService.get<number>("REDIS_PORT") || (process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379),
+      retryStrategy: (times) => Math.min(times * 50, 2000),
+    };
+
+    this.client = new Redis(redisConfig);
+    this.publisher = new Redis(redisConfig);
+    this.subscriber = new Redis(redisConfig);
+  }
+
+  async onModuleInit() {
+    this._logger.log("Initializing ioredis connections (Main, Pub, Sub)...", RedisService.name);
     
+    this.client.on("connect", () => this._logger.log("Redis Main Client connected.", RedisService.name));
+    this.publisher.on("connect", () => this._logger.log("Redis Publisher connected.", RedisService.name));
+    this.subscriber.on("connect", () => this._logger.log("Redis Subscriber connected.", RedisService.name));
+
+    this.client.on("error", (err) => this._logger.error("Redis Main Client error:", err));
+    this.publisher.on("error", (err) => this._logger.error("Redis Publisher error:", err));
+    this.subscriber.on("error", (err) => this._logger.error("Redis Subscriber error:", err));
   }
-  async get(key:string){
-  
-    return await this.redis.get(key)
+
+  async onModuleDestroy() {
+    this._logger.info("Gracefully shutting down Redis connections...");
+    await Promise.all([
+      this.client.quit(),
+      this.publisher.quit(),
+      this.subscriber.quit(),
+    ]);
   }
-  async set(key:string,value,ttl?:number){
-    return await this.redis.set(key,value)
+
+  /**
+   * Publish a message to a channel
+   */
+  async publish(channel: string, message: any): Promise<number> {
+    const payload = typeof message === "string" ? message : JSON.stringify(message);
+    return this.publisher.publish(channel, payload);
   }
-  async del(key:string){
-    return await this.redis.del(key)
+
+  /**
+   * Subscribe to a channel
+   */
+  async subscribe(channel: string, callback: (message: string) => void): Promise<void> {
+    await this.subscriber.subscribe(channel);
+    this.subscriber.on("message", (chan, message) => {
+      if (chan === channel) {
+        callback(message);
+      }
+    });
+  }
+  /**
+   * Set a value in cache
+   * @param key Cache key
+   * @param value Value to store (will be JSON stringified if not a string)
+   * @param ttl Time to live in seconds
+   */
+  async set(key: string, value: any, ttl?: number): Promise<void> {
+    const stringValue = typeof value === "string" ? value : JSON.stringify(value);
+    if (ttl) {
+      await this._cacheManager.set(key, stringValue, ttl);
+    } else {
+      await this._cacheManager.set(key, stringValue);
+    }
+  }
+
+  /**
+   * Get a value from cache
+   * @param key Cache key
+   */
+  async get<T = any>(key: string): Promise<T | null> {
+    const value = await this._cacheManager.get<string>(key);
+    if (!value) return null;
+
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return value as unknown as T;
+    }
+  }
+
+  /**
+   * Delete a key from cache
+   * @param key Cache key
+   */
+  async del(key: string): Promise<void> {
+    await this._cacheManager.del(key);
   }
   async exists(key:string){
-    return await this.redis.exists(key)
+    return await this.client.exists(key)
   }
   async ttl(key:string){
-    return await this.redis.ttl(key)
+    return await this.client.ttl(key)
   }
   async hashGet(key:string,field:string){
-    return await this.redis.hget(key,field)
+    return await this.client.hget(key,field)
   }
   async hashSet(key:string,field:string,value:string){
-    return await this.redis.hset(key,field,value)
+    return await this.client.hset(key,field,value)
   }
   async hashDel(key:string,field:string){
-    return await this.redis.hdel(key,field)
+    return await this.client.hdel(key,field)
   }
   async hashExists(key:string,field:string){
-    return await this.redis.hexists(key,field)
+    return await this.client.hexists(key,field)
   }
   async hashGetAll(key:string){
-    return await this.redis.hgetall(key)
+    return await this.client.hgetall(key)
   }
 
   async setCache(key: string, value: string): Promise<void> {
@@ -56,32 +135,35 @@ export class RedisService implements OnModuleInit {
 
   // Get a value from the Redis cache
   async getCache(key: string): Promise<string | undefined> {
-    return await this._cacheManager.get(key);
+    return await this.client.get(key);
   }
 
   // Delete a key from the Redis cache
   async delCache(key: string): Promise<void> {
-    await this._cacheManager.del(key);
+    await this.client.del(key);
   }
   async invalidCacheList(keys: string[]): Promise<void> {
     this._logger.log("Cache Invalided", keys);
     for (const key of keys) {
-      await this._cacheManager.del(key);
+      await this.client.del(key);
     }
   }
   // Set a value with TTL (in seconds)
   async setCacheWithTTL(key: string, value: unknown, ttlSeconds: number): Promise<void> {
-    await this._cacheManager.set(key, value, ttlSeconds);
+    await this.client.set(key, JSON.stringify(value), "EX", ttlSeconds);
     this._logger.debug(`Set key "${key}" with TTL ${ttlSeconds}s`);
   }
  
-  // ⚠️ Requires direct Redis client (not available by default in cache-manager)
+  // ⚠️ Safe pattern-based deletion using SCAN
   async deleteByPattern(pattern: string): Promise<void> {
-    const redis = (this._cacheManager as any).store.getClient();
-    const keys = await redis.keys(pattern);
-    if (keys.length) {
-      await redis.del(keys);
-      this._logger.debug(`Invalidated keys matching pattern: ${pattern}`);
-    }
+    let cursor = "0";
+    do {
+      const [nextCursor, keys] = await this.client.scan(cursor, "MATCH", pattern, "COUNT", 100);
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        await this.client.del(...keys);
+      }
+    } while (cursor !== "0");
+    this._logger.debug(`Invalidated keys matching pattern: ${pattern}`);
   }
 }

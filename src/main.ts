@@ -19,6 +19,7 @@ import { join } from "path";
 import { createDataSource } from "./configs/ormconfig";
 import { runMigrations } from "./migration-runner";
 import { SeederService } from "./seeder/seeder.service";
+import { RedisIoAdapter } from "./socket/redis-io.adapter";
 
 /**
  * function for bootstraping the nest application
@@ -184,8 +185,11 @@ async function bootstrap() {
   }
 
   // FIXME:
-  // Session Management
   // expressSession(app);
+
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisIoAdapter);
 
   const port = configService.get<string>("PORT") || 3000;
 
