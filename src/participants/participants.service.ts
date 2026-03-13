@@ -1,10 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { ConversationParticipant } from "./entities/participants.entity";
-import { EntityManager, In, Repository } from "typeorm";
 import { Conversations } from "src/conversations/entities/conversations.entity";
-import { User } from "src/user/entities/user.entity";
 import { Product } from "src/products/entities/products.entity";
+import { Cacheable } from "src/redis/decorators/cache.decorator";
+import { User } from "src/user/entities/user.entity";
+import { EntityManager, Repository } from "typeorm";
+import { PARTICIPANTS_CACHE_TTL, participantsCacheKey } from "./constants/cache.constants";
+import { ConversationParticipant } from "./entities/participants.entity";
 
 @Injectable()
 export class ParticipantsService {
@@ -77,6 +79,11 @@ export class ParticipantsService {
       },
     });
   }
+
+  @Cacheable({
+    key:(conversationId,user_id)=>participantsCacheKey(conversationId,user_id),
+    ttl:PARTICIPANTS_CACHE_TTL,
+  })
   async checkEligablity({
     conversation_id,
     user_id,
@@ -106,6 +113,10 @@ export class ParticipantsService {
     return { sender, receiver, conversation };
   }
 
+    @Cacheable({
+    key:(conversationId,user_id)=>participantsCacheKey(conversationId,user_id),
+    ttl:PARTICIPANTS_CACHE_TTL,
+  })
   async findMyFriends(userId: string): Promise<User[]> {
     // Query for the conversations the user is part of
     const conversations = await this.participantRepo
