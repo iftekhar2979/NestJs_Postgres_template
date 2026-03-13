@@ -8,11 +8,13 @@ import { ConversationParticipant } from "src/participants/entities/participants.
 import { ParticipantsService } from "src/participants/participants.service";
 import { Product } from "src/products/entities/products.entity";
 import { ProductsService } from "src/products/products.service";
+import { Cacheable } from "src/redis/decorators/cache.decorator";
 import { pagination } from "src/shared/utils/pagination";
 import { SocketService } from "src/socket/socket.service";
 import { User } from "src/user/entities/user.entity";
 import { UserService } from "src/user/user.service";
 import { Brackets, DataSource, In, Repository } from "typeorm";
+import { CONVERSATION_CACHE_KEY, CONVERSATION_CACHE_TTL, conversationCacheKey } from "./constants/conversation.constants";
 import { CreateDirectConversationDto } from "./dto/create-direct-conversation.dto";
 import { Conversations } from "./entities/conversations.entity";
 @Injectable()
@@ -28,6 +30,10 @@ export class ConversationsService {
     private readonly socketService: SocketService
   ) {}
 
+  @Cacheable({
+    key: (conversationId: number) => CONVERSATION_CACHE_KEY(conversationId),
+    ttl: CONVERSATION_CACHE_TTL,
+  })
   async getConversationId(conversationId: number) {
     return await this.conversationRepo.findOneByOrFail({ id: conversationId });
   }
@@ -38,7 +44,6 @@ export class ConversationsService {
       image: `${product.images[0].image}`,
       product,
     });
-    console.log(conversation);
     return await this.conversationRepo.save(conversation);
   }
   async updatedConversation({
@@ -236,6 +241,11 @@ export class ConversationsService {
       throw new BadRequestException("Error in fetching existing conversation");
     }
   }
+
+  @Cacheable({
+    key: (user_id: string, term: string, page: number, limit: number) => conversationCacheKey(user_id, term, page, limit),
+    ttl: CONVERSATION_CACHE_TTL,
+  })
   async getAllConversations(user_id: string, term: string, page: number, limit: number) {
     try {
       // Calculate skip and take for pagination

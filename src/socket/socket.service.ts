@@ -52,13 +52,11 @@ export class SocketService {
       // console.log("Socket", socket.handshake);
       const clientId = socket.id;
       const token = socket.handshake?.auth?.token || socket.handshake?.headers?.auth;
-      console.log("Connected", token);
       if (!token) {
         throw new UnauthorizedException("You are not authorized to access this resource!");
       }
       //   const payload = this.jwtService.verify(jwt);
       const payload = await this.userService.getUserById(this.jwtService.verify(token).id);
-      console.warn("Payload", payload);
       if (!payload.firstName) {
         throw new UnauthorizedException("You are not authorized to access this resource!");
       }
