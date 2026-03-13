@@ -220,7 +220,6 @@ export class SocketService {
     socket: Socket
   ): Promise<void> {
     try {
-      console.log(typeof data);
       if (!data.conversation_id || !data.msg || !payload.id) {
         throw new Error("Invalid message data!");
       }

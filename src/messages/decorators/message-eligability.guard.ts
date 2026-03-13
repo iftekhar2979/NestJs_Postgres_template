@@ -16,7 +16,7 @@ export class MessageEligabilityGuard {
     // console.log(typeof params.id)
     const user = request.user;
     const participants = await this.participantService.getParticipants(parseFloat(params.id));
-    // console.log(participants)
+    console.log(participants)
     let eligable = false;
     let receiver = null;
 

@@ -1,18 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Messages } from "./entities/messages.entity";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { Conversations } from "src/conversations/entities/conversations.entity";
-import { User } from "src/user/entities/user.entity";
-import { SendMessageDto } from "./dto/send-message.dto";
 import { AttachmentService } from "src/attachment/attachment.service";
-import { ConversationsService } from "src/conversations/conversations.service";
-import { UserService } from "src/user/user.service";
-import { pagination } from "src/shared/utils/pagination";
 import { ResponseInterface } from "src/common/types/responseInterface";
+import { ConversationsService } from "src/conversations/conversations.service";
+import { Conversations } from "src/conversations/entities/conversations.entity";
 import { InjectLogger } from "src/shared/decorators/logger.decorator";
-import { Logger } from "winston";
+import { pagination } from "src/shared/utils/pagination";
 import { SocketService } from "src/socket/socket.service";
+import { User } from "src/user/entities/user.entity";
+import { UserService } from "src/user/user.service";
+import { Repository } from "typeorm";
+import { Logger } from "winston";
+import { SendMessageDto } from "./dto/send-message.dto";
+import { Messages } from "./entities/messages.entity";
 
 @Injectable()
 export class MessagesService {
@@ -69,45 +69,34 @@ export class MessagesService {
   async sendFileAsMessageWithRest({
     conversation_id,
     user,
-    file,
+    imageUrls,
     receiver,
   }: {
     conversation_id: number;
     receiver: User;
     user: User;
-    file: Express.Multer.File[];
+    imageUrls: string[];
   }) {
-    // console.log(this._socketService.connectedUsers);
-    if (file.length < 1) {
-      throw new BadRequestException("Please select a file to send");
-    }
-    // console.log(file);
-    const images = file.map((singleFile) => {
-      return {
-        file_url: `${singleFile.destination.slice(7, singleFile.destination.length)}/${singleFile.filename}`,
-        type: singleFile.mimetype,
-      };
-    });
-    const msgType: "image" | "video" =
-      images[0].type.includes("image") || images[0].type.includes("octet-stream") ? "image" : "video";
+    const attachments = (imageUrls || []).map((url) => ({
+      file_url: url,
+      file_type: "image/jpeg", // Defaulting to image/jpeg
+    }));
 
     const msg = await this.sendMessage({
       conversation_id,
       sender: user,
-      attachments: images,
-      type: msgType,
+      attachments: attachments,
+      type: "image",
     });
-    //  console.log("first")
+
     await this._conversationService.updatedConversation({ conversation_id, message: msg });
-    const receiverSocket = this._socketService.getSocketByUserId(receiver.id);
-    // console.log(this._socketService)
-    const senderSocket = this._socketService.getSocketByUserId(user.id);
-    if (receiverSocket) {
-      receiverSocket.emit(`conversation-${conversation_id}`, msg);
+    
+    // Using the server instance for room-based broadcast
+    if (this._socketService.server) {
+      this._socketService.server.to(receiver.id).emit(`conversation-${conversation_id}`, msg);
+      this._socketService.server.to(user.id).emit(`conversation-${conversation_id}`, msg);
     }
-    if (senderSocket) {
-      senderSocket.emit(`conversation-${conversation_id}`, msg);
-    }
+    
     return msg;
   }
   async getMessages({

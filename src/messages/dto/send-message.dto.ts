@@ -1,5 +1,5 @@
-import { IsUUID, IsInt, IsOptional, IsString, IsArray, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
+import { IsArray, IsInt, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
 import { AttachmentDto } from "src/attachment/dto/attachments.dto";
 import { User } from "src/user/entities/user.entity";
 
