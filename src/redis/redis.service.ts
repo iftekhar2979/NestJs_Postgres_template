@@ -166,4 +166,22 @@ export class RedisService implements OnModuleInit {
     } while (cursor !== "0");
     this._logger.debug(`Invalidated keys matching pattern: ${pattern}`);
   }
+
+  /**
+   * Global Online Status Helpers
+   */
+  private readonly ONLINE_USERS_KEY = "online_users";
+
+  async setUserOnline(userId: string): Promise<void> {
+    await this.client.hset(this.ONLINE_USERS_KEY, userId, Date.now().toString());
+  }
+
+  async setUserOffline(userId: string): Promise<void> {
+    await this.client.hdel(this.ONLINE_USERS_KEY, userId);
+  }
+
+  async isUserOnline(userId: string): Promise<boolean> {
+    const exists = await this.client.hexists(this.ONLINE_USERS_KEY, userId);
+    return exists === 1;
+  }
 }

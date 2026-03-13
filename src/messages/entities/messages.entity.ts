@@ -1,19 +1,18 @@
+import { ApiProperty } from "@nestjs/swagger";
+import { MessageAttachment } from "src/attachment/entiies/attachments.entity";
+import { Conversations } from "src/conversations/entities/conversations.entity";
+import { Offer } from "src/offers/entities/offer.entity";
+import { User } from "src/user/entities/user.entity";
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
-  OneToOne,
-  JoinColumn,
   CreateDateColumn,
-  UpdateDateColumn,
+  Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn
 } from "typeorm";
-import { ApiProperty } from "@nestjs/swagger";
-import { User } from "src/user/entities/user.entity";
-import { Conversations } from "src/conversations/entities/conversations.entity";
-import { MessageAttachment } from "src/attachment/entiies/attachments.entity";
-import { Offer } from "src/offers/entities/offer.entity";
 // Make sure this path is correct
 
 @Entity("messages")
