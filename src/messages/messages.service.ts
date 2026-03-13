@@ -2,8 +2,11 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { AttachmentService } from "src/attachment/attachment.service";
 import { ResponseInterface } from "src/common/types/responseInterface";
+import { MESSAGES_CACHE_KEY, MESSAGES_CACHE_PATTERN, MESSAGES_CACHE_TTL } from "src/conversations/constants/conversation.constants";
 import { ConversationsService } from "src/conversations/conversations.service";
 import { Conversations } from "src/conversations/entities/conversations.entity";
+import { Cacheable } from "src/redis/decorators/cache.decorator";
+import { InvalidateCache } from "src/redis/decorators/invalidCache.decorator";
 import { InjectLogger } from "src/shared/decorators/logger.decorator";
 import { pagination } from "src/shared/utils/pagination";
 import { SocketService } from "src/socket/socket.service";
@@ -26,6 +29,9 @@ export class MessagesService {
     @InjectLogger() private readonly _logger: Logger
   ) {}
 
+  @InvalidateCache({
+      pattern: ({conversationId}) =>MESSAGES_CACHE_PATTERN(conversationId) ,
+  })
   async sendMessage(dto: SendMessageDto): Promise<Messages> {
     try {
       const conversation = await this._conversationService.getConversationId(dto.conversation_id);
@@ -99,6 +105,11 @@ export class MessagesService {
     
     return msg;
   }
+
+  @Cacheable({
+    key: ({conversationId, page, limit}:{conversationId: number, page: number, limit: number})  => MESSAGES_CACHE_KEY(conversationId, page, limit),
+    ttl: MESSAGES_CACHE_TTL,
+  })
   async getMessages({
     conversationId,
     conversation,

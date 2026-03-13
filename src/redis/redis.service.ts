@@ -85,12 +85,37 @@ export class RedisService implements OnModuleInit {
     }
   }
 
+  async deleteByPatterns(pattern: string) {
+  const stream = this.client.scanStream({
+    match: pattern,
+    count: 100,
+  });
+
+  const pipeline = this.client.pipeline();
+
+  return new Promise((resolve, reject) => {
+    stream.on("data", (keys: string[]) => {
+      if (keys.length) {
+        keys.forEach((key) => pipeline.del(key));
+      }
+    });
+
+    stream.on("end", async () => {
+      await pipeline.exec();
+      resolve(true);
+    });
+
+    stream.on("error", (err) => reject(err));
+  });
+}
+
   /**
    * Get a value from cache
    * @param key Cache key
    */
   async get<T = any>(key: string): Promise<T | null> {
-    const value = await this._cacheManager.get<string>(key);
+    const value = await this.client.get(key);
+    console.log("Value",value,key)
     if (!value) return null;
 
     try {
@@ -150,8 +175,13 @@ export class RedisService implements OnModuleInit {
   }
   // Set a value with TTL (in seconds)
   async setCacheWithTTL(key: string, value: unknown, ttlSeconds: number): Promise<void> {
-    await this.client.set(key, JSON.stringify(value), "EX", ttlSeconds);
+try{
+  await this.client.set(key, JSON.stringify(value), "EX", ttlSeconds);
     this._logger.debug(`Set key "${key}" with TTL ${ttlSeconds}s`);
+  
+}catch(error){
+  console.log(error)
+}
   }
  
   // ⚠️ Safe pattern-based deletion using SCAN

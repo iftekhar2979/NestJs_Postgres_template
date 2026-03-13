@@ -157,22 +157,6 @@ export class ConversationsService {
     offerType: OfferStatus;
   }): Promise<Conversations> {
     try {
-      // const existing = await this.participantService.checkChatAlreadyExist({
-      //   product_id: productId,
-      //   user_ids: userIds,
-      // });
-      // console.log(existing)
-      // Case: Conversation already exists
-      // if (existing.length > 1) {
-      //   const existingConversation = await this.conversationRepo.findOne({
-      //     where: { product: { id: productId } },
-      //     relations: ["participants", "product"],
-      //   });
-      //   // console.log(existingConversation)
-      //   // console.warn("Existing Conversation")
-      //   await this.offerStatusHandle({ offer, existingConversation, offerType });
-      //   return existingConversation;
-      // }
 
       const conversations = await this.conversationRepo.find({
         where: { product: { id: productId } },
@@ -243,10 +227,10 @@ export class ConversationsService {
   }
 
   @Cacheable({
-    key: (user_id: string, term: string, page: number, limit: number) => conversationCacheKey(user_id, term, page, limit),
+    key: ({user_id, term, page, limit}:{user_id: string, term: string, page: number, limit: number}) => conversationCacheKey(user_id, term, page, limit),
     ttl: CONVERSATION_CACHE_TTL,
   })
-  async getAllConversations(user_id: string, term: string, page: number, limit: number) {
+  async getAllConversations(user_id: string, term: string, page: number =1, limit: number=10) {
     try {
       // Calculate skip and take for pagination
       const skip = (page - 1) * limit;

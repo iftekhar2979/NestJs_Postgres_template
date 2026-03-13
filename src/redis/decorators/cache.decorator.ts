@@ -41,10 +41,11 @@ export function Cacheable(options: CacheOptions = {}) {
         // Default key: className:methodName:JSON.stringify(args)
         cacheKey = `${target.constructor.name}:${propertyKey}:${JSON.stringify(args)}`;
       }
-
+console.log("Cache Key",cacheKey)
       // Try to get from cache
       try {
         const cachedValue = await redisService.get(cacheKey);
+    console.log("Cache Values",cachedValue)
         if (cachedValue !== null) {
           return cachedValue;
         }
@@ -54,7 +55,7 @@ export function Cacheable(options: CacheOptions = {}) {
 
       // Execute original method
       const result = await originalMethod.apply(this, args);
-
+console.log("Result",result)
       // Store in cache
       try {
         await redisService.setCacheWithTTL(cacheKey, result, options.ttl);
