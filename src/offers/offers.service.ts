@@ -1,29 +1,28 @@
-import { InjectRepository } from "@nestjs/typeorm";
-import { Offer } from "./entities/offer.entity";
+import { InjectQueue } from "@nestjs/bull";
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { Repository } from "typeorm";
-import { ProductsService } from "src/products/products.service";
-import { OrdersService } from "src/orders/orders.service";
-import { OfferStatus } from "./enums/offerStatus.enum";
-import { Order } from "../orders/entities/order.entity";
-import { SendOfferDto } from "./dto/sendOffer.dto";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Queue } from "bull";
 import { ResponseInterface } from "src/common/types/responseInterface";
 import { ConversationsService } from "src/conversations/conversations.service";
-import { NotificationsService } from "src/notifications/notifications.service";
+import { ConverterService } from "src/currency-converter/currency-converter.service";
+import { MailService } from "src/mail/mail.service";
 import {
   NotificationAction,
   NotificationRelated,
   NotificationType,
 } from "src/notifications/entities/notifications.entity";
-import { UserRoles } from "src/user/enums/role.enum";
-import { MailService } from "src/mail/mail.service";
-import { UserService } from "src/user/user.service";
-import { InjectQueue } from "@nestjs/bull";
-import { Queue } from "bull";
-import { ConverterService } from "src/currency-converter/currency-converter.service";
+import { NotificationsService } from "src/notifications/notifications.service";
+import { OrdersService } from "src/orders/orders.service";
 import { defaultCurrency } from "src/products/enums/status.enum";
+import { ProductsService } from "src/products/products.service";
 import { User } from "src/user/entities/user.entity";
-import { title } from "process";
+import { UserRoles } from "src/user/enums/role.enum";
+import { UserService } from "src/user/user.service";
+import { Repository } from "typeorm";
+import { Order } from "../orders/entities/order.entity";
+import { SendOfferDto } from "./dto/sendOffer.dto";
+import { Offer } from "./entities/offer.entity";
+import { OfferStatus } from "./enums/offerStatus.enum";
 
 @Injectable()
 export class OfferService {
@@ -74,11 +73,7 @@ export class OfferService {
       price
     );
 
-    const geniune_price = await this._currencyConverterService.convert(
-      defaultCurrency,
-      user.currency.toUpperCase(),
-      price
-    );
+
     const offer = this._offerRepo.create({
       buyer_id: buyer_id,
       seller_id: product.user_id,
@@ -126,7 +121,6 @@ export class OfferService {
     //   type: "send_offer",
     // });
 
-    console.log("Mail");
     return { message: "Offer sent Successfully!", status: "success", statusCode: 201, data: offer };
   }
 

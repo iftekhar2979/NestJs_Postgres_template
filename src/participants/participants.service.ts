@@ -81,7 +81,7 @@ export class ParticipantsService {
   }
 
   @Cacheable({
-    key:(conversationId,user_id)=>participantsCacheKey(conversationId,user_id),
+    key:({conversation_id,user_id})=>participantsCacheKey(conversation_id,user_id),
     ttl:PARTICIPANTS_CACHE_TTL,
   })
   async checkEligablity({

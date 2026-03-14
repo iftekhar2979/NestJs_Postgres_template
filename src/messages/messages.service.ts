@@ -2,14 +2,13 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { AttachmentService } from "src/attachment/attachment.service";
 import { ResponseInterface } from "src/common/types/responseInterface";
-import { MESSAGES_CACHE_KEY, MESSAGES_CACHE_PATTERN, MESSAGES_CACHE_TTL } from "src/conversations/constants/conversation.constants";
+import { MESSAGES_CACHE_PATTERN } from "src/conversations/constants/conversation.constants";
 import { ConversationsService } from "src/conversations/conversations.service";
 import { Conversations } from "src/conversations/entities/conversations.entity";
-import { Cacheable } from "src/redis/decorators/cache.decorator";
+import { DeliveryMessage } from "src/event-emitter/decorators/socketEvent.emitter";
 import { InvalidateCache } from "src/redis/decorators/invalidCache.decorator";
 import { InjectLogger } from "src/shared/decorators/logger.decorator";
 import { pagination } from "src/shared/utils/pagination";
-import { SocketService } from "src/socket/socket.service";
 import { User } from "src/user/entities/user.entity";
 import { UserService } from "src/user/user.service";
 import { Repository } from "typeorm";
@@ -22,15 +21,14 @@ export class MessagesService {
   constructor(
     @InjectRepository(Messages)
     private _messageRepo: Repository<Messages>,
-    private readonly _conversationService: ConversationsService,
-    private readonly _userService: UserService,
-    private readonly _attachmentService: AttachmentService,
-    private readonly _socketService: SocketService,
+    public _conversationService: ConversationsService,
+    public _userService: UserService,
+    public _attachmentService: AttachmentService,
     @InjectLogger() private readonly _logger: Logger
   ) {}
 
   @InvalidateCache({
-      pattern: ({conversationId}) =>MESSAGES_CACHE_PATTERN(conversationId) ,
+      pattern: (dto: SendMessageDto) =>MESSAGES_CACHE_PATTERN(dto.conversation_id) ,
   })
   async sendMessage(dto: SendMessageDto): Promise<Messages> {
     try {
@@ -72,6 +70,19 @@ export class MessagesService {
       message: `${updateResult.affected} message(s) marked as read`,
     };
   }
+
+
+  @InvalidateCache({
+  pattern: ({ conversation_id }) => `messages:${conversation_id}:*`,
+})
+  @DeliveryMessage({
+  extractor: (msg, params) => ({
+    senderId: params.user.id,
+    receiverId: params.receiver.id,
+    conversation_id: params.conversation_id,
+    message: msg,
+  }),
+  })
   async sendFileAsMessageWithRest({
     conversation_id,
     user,
@@ -98,18 +109,18 @@ export class MessagesService {
     await this._conversationService.updatedConversation({ conversation_id, message: msg });
     
     // Using the server instance for room-based broadcast
-    if (this._socketService.server) {
-      this._socketService.server.to(receiver.id).emit(`conversation-${conversation_id}`, msg);
-      this._socketService.server.to(user.id).emit(`conversation-${conversation_id}`, msg);
-    }
+    // if (this._socketService.server) {
+      // this._socketService.server.to(receiver.id).emit(`conversation-${conversation_id}`, msg);
+      // this._socketService.server.to(user.id).emit(`conversation-${conversation_id}`, msg);
+    // }
     
     return msg;
   }
 
-  @Cacheable({
-    key: ({conversationId, page, limit}:{conversationId: number, page: number, limit: number})  => MESSAGES_CACHE_KEY(conversationId, page, limit),
-    ttl: MESSAGES_CACHE_TTL,
-  })
+  // @Cacheable({
+  //   key: ({conversationId, page, limit}:{conversationId: number, page: number, limit: number})  => MESSAGES_CACHE_KEY(conversationId, page, limit),
+  //   ttl: MESSAGES_CACHE_TTL,
+  // })
   async getMessages({
     conversationId,
     conversation,

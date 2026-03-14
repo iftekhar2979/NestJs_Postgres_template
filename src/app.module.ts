@@ -18,6 +18,7 @@ import { SseModule } from "./sse/sse.module";
 import { UserModule } from "./user/user.module";
 import { envSchema } from "./utils/env.validation";
 // import { ElasticsearchModule } from "@nestjs/elasticsearch";
+
 import { ScheduleModule } from "@nestjs/schedule";
 import { AttachmentModule } from "./attachment/attachment.module";
 import { CategoryModule } from "./category/category.module";
@@ -48,6 +49,7 @@ import * as redisStore from "cache-manager-ioredis";
 import { RedisModule } from "./redis/redis.module";
 // import { BullQueueProcessor } from './bull-queue.processor';
 import { BullModule } from "@nestjs/bull";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 import { ImageProcessor } from "./bull/processors/ProductQueue";
 import { PushNotificationProccessor } from "./bull/processors/pushNotificationQueue";
 import { CurrencyConverterModule } from "./currency-converter/currency-converter.module";
@@ -90,6 +92,9 @@ import { UserlogsModule } from "./userlogs/userlogs.module";
       name: "myQueue", // Name of your queue
     }),
 
+// EventEmitterModule.f 
+// @EventEmitterModule2
+EventEmitterModule.forRoot(),
     ConfigModule.forRoot({
       // envFilePath: [`.env.stage.dev`],
       isGlobal: true,
