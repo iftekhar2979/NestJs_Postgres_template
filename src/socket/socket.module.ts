@@ -1,17 +1,18 @@
-import { Global, Module } from "@nestjs/common";
-import { SocketService } from "./socket.service";
-import { SocketController } from "./socket.controller";
-import { AuthModule } from "src/auth/auth.module";
-import { UserModule } from "src/user/user.module";
-import { PassportModule } from "@nestjs/passport";
-import { JwtModule } from "@nestjs/jwt";
-import { ConfigModule, ConfigService } from "@nestjs/config";
-import { SocketGateway } from "./socket.gateway";
-import { ParticipantsModule } from "src/participants/participants.module";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { Messages } from "src/messages/entities/messages.entity";
-import { Conversations } from "src/conversations/entities/conversations.entity";
 import { BullModule } from "@nestjs/bull";
+import { Global, Module } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { JwtModule } from "@nestjs/jwt";
+import { PassportModule } from "@nestjs/passport";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { AuthModule } from "src/auth/auth.module";
+import { Conversations } from "src/conversations/entities/conversations.entity";
+import { Messages } from "src/messages/entities/messages.entity";
+import { MessagesModule } from "src/messages/messages.module";
+import { ParticipantsModule } from "src/participants/participants.module";
+import { UserModule } from "src/user/user.module";
+import { SocketController } from "./socket.controller";
+import { SocketGateway } from "./socket.gateway";
+import { SocketService } from "./socket.service";
 
 @Global()
 @Module({
@@ -32,9 +33,10 @@ import { BullModule } from "@nestjs/bull";
         };
       },
     }),
+    MessagesModule ,
     //  forwardRef(() => MessagesModule),
-    // MessagesModule,
-    // ConversationsModule,
+   
+    //  MessagesModule,versationsModule,
     BullModule.registerQueue({ name: "product" }, { name: "notifications" }),
     ParticipantsModule,
   ],

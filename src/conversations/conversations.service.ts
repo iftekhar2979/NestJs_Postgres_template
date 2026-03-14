@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ResponseInterface } from "src/common/types/responseInterface";
 import { Messages } from "src/messages/entities/messages.entity";
@@ -10,7 +11,6 @@ import { Product } from "src/products/entities/products.entity";
 import { ProductsService } from "src/products/products.service";
 import { Cacheable } from "src/redis/decorators/cache.decorator";
 import { pagination } from "src/shared/utils/pagination";
-import { SocketService } from "src/socket/socket.service";
 import { User } from "src/user/entities/user.entity";
 import { UserService } from "src/user/user.service";
 import { Brackets, DataSource, In, Repository } from "typeorm";
@@ -27,7 +27,8 @@ export class ConversationsService {
     private readonly productService: ProductsService,
     private readonly userService: UserService,
     private readonly dataSource: DataSource,
-    private readonly socketService: SocketService
+    private readonly eventService: EventEmitter2,
+    // private readonly socketService: SocketService
   ) {}
 
   @Cacheable({
@@ -75,6 +76,8 @@ export class ConversationsService {
     }
     return await this.conversationRepo.save(chat);
   }
+
+  
   async offerStatusHandle({
     offer,
     existingConversation,
@@ -99,7 +102,13 @@ export class ConversationsService {
       delete msg.offer.seller;
       delete msg.offer.product;
       console.log("Existing Conversation", existingConversation);
-      this.socketService.handleMessageDelivery({
+      // this.socketService.handleMessageDelivery({
+      //   senderId: offer.buyer_id,
+      //   receiverId: offer.seller_id,
+      //   conversation_id: existingConversation.id,
+      //   message: msg,
+      // });
+      this.eventService.emit("message.created", {
         senderId: offer.buyer_id,
         receiverId: offer.seller_id,
         conversation_id: existingConversation.id,
@@ -118,7 +127,13 @@ export class ConversationsService {
       });
       await this.messageRepo.save(msg);
       // console.log(msg)
-      this.socketService.handleMessageDelivery({
+      // this.socketService.handleMessageDelivery({
+      //   senderId: offer.buyer_id,
+      //   receiverId: offer.seller_id,
+      //   conversation_id: existingConversation.id,
+      //   message: msg,
+      // });
+          this.eventService.emit("message.created", {
         senderId: offer.buyer_id,
         receiverId: offer.seller_id,
         conversation_id: existingConversation.id,
@@ -136,7 +151,13 @@ export class ConversationsService {
         conversation: existingConversation,
       });
       await this.messageRepo.save(msg);
-      this.socketService.handleMessageDelivery({
+      // this.socketService.handleMessageDelivery({
+      //   senderId: offer.buyer_id,
+      //   receiverId: offer.seller_id,
+      //   conversation_id: existingConversation.id,
+      //   message: msg,
+      // });
+        this.eventService.emit("message.created", {
         senderId: offer.buyer_id,
         receiverId: offer.seller_id,
         conversation_id: existingConversation.id,
@@ -209,12 +230,12 @@ export class ConversationsService {
         // console.log(msg)
         await manager.save(Conversations, savedConversation);
         // await this.updatedConversation({conversation_id:savedConversation.id , message:msg ,conversation:{lastmsg:msg}})
-        this.socketService.handleMessageDelivery({
-          senderId: offer.buyer_id,
-          receiverId: offer.seller_id,
-          conversation_id: savedConversation.id,
-          message: msg,
-        });
+        // this.socketService.handleMessageDelivery({
+        //   senderId: offer.buyer_id,
+        //   receiverId: offer.seller_id,
+        //   conversation_id: savedConversation.id,
+        //   message: msg,
+        // });
 
         // await this.mailService.sendOfferConfirmation(buyer);
 

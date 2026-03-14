@@ -5,9 +5,11 @@ import { Server, Socket } from "socket.io";
 import { Repository } from "typeorm";
 // import mongoose, { Model, ObjectId } from 'mongoose';
 import { InjectQueue } from "@nestjs/bull";
+import { OnEvent } from "@nestjs/event-emitter";
 import { Queue } from "bull";
 import { Conversations } from "src/conversations/entities/conversations.entity";
 import { Messages } from "src/messages/entities/messages.entity";
+import { MessagesService } from "src/messages/messages.service";
 import { ParticipantsService } from "src/participants/participants.service";
 import { InjectLogger } from "src/shared/decorators/logger.decorator";
 import { User } from "src/user/entities/user.entity";
@@ -19,26 +21,17 @@ export class SocketService {
   public server: Server;
   public connectedClients: Map<string, Socket> = new Map();
   public connectedUsers: Map<string, { name: string; socketID: string }> = new Map();
-  private writeInterval: NodeJS.Timeout;
   private readonly swipesCount: Map<string, number> = new Map();
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-    // private readonly conversationService:ConversationsService,
-    // private readonly messageService:MessagesService,
     @InjectRepository(Messages) private readonly messageRepository: Repository<Messages>,
     @InjectRepository(Conversations) private readonly conversationRepository: Repository<Conversations>,
     private readonly participantService: ParticipantsService,
+    private readonly messageService: MessagesService,
     @InjectLogger() private readonly logger: Logger,
     @InjectQueue("notifications") private readonly _notificationQueue: Queue
-    // @InjectRe(Message.name) private readonly messageModel: Model<Message>,
-    // @InjectModel(Conversation.name)
-    // private readonly conversationModel: Model<Conversation>,
-    // private readonly notificationService: NotificationService,
-    // private readonly firebaseService:FirebaseService,
-    // @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
-    // this.writeInterval = setInterval(() => this.flushBufferToDatabase(), 10000);
   }
   afterInit(server: Server) {
     console.log("Socket server initialized");
@@ -49,7 +42,6 @@ export class SocketService {
 
   async handleConnection(socket: Socket) {
     try {
-      // console.log("Socket", socket.handshake);
       const clientId = socket.id;
       const token = socket.handshake?.auth?.token || socket.handshake?.headers?.auth;
       if (!token) {
@@ -78,15 +70,11 @@ export class SocketService {
       });
       socket.on("active-status", () => {
         this.userActiveStatus(payload.id, socket);
-        // this.userDisconnect(payload.id, socket);
       });
       this.userActiveStatus(payload.id, socket);
-      //   this.userDisconnect(payload.id, socket);
       socket.on("seen", (data: { receiver_id: string; conversation_id: number }) => {
         this.handleMessageSeen(payload.id, data.receiver_id, data.conversation_id);
       });
-      // console.log(socket["user"]);
-      // when we get a call to start a call
       const user = socket.handshake.query.user as string;
       this.connectedUsers.set(user, {
         name: user,
@@ -111,28 +99,9 @@ export class SocketService {
       });
       // console.log(this.connectedUsers);
       socket.on("disconnect", async () => {
-        // await this.userService.updateUserUpdatedTimeAndOfflineStatus({ user_id: payload.id });
-        // socket.broadcast.emit(`active-users`, {
-        //   message: `${payload.firstName} is offline .`,
-        //   isActive: false,
-        //   id: payload.id,
-        // });
+        
       });
-      //   socket.on('call-end', (data) => {
-      //     this.handleCallEnd(payload, data, socket);
-      //   });
-      //   socket.on('swipes', () => {
-      //     this.handleSwipesCount(payload, socket);
-      //   });
-      //   socket.on('disconnect', async () => {
-      //     console.warn('disconnected', this.connectedUsers.get(payload.id));
-      //     await this.userService.updateUserDateAndTime(payload.id);
-      //     this.connectedClients.delete(clientId);
-      //     this.connectedUsers.delete(payload.id);
-      //     this.userActiveStatus(payload.id, socket);
-      //     this.userDisconnect(payload.id, socket);
-      //     console.log("Connected User",this.connectedUsers);
-      //   });
+     
     } catch (error) {
       // console.log(error)
       console.error("Error handling connection:", error.message);
@@ -212,6 +181,12 @@ export class SocketService {
     // In a scaled env, knowing if they are NOT on ANY instance needs a global indicator.
   }
 
+  @OnEvent("message.created")
+async handleMessageCreated(payload) {
+
+  await this.handleMessageDelivery(payload);
+
+}
   async handleSendMessage(
     payload: User,
     data: { conversation_id: number; msg: string },
@@ -235,24 +210,20 @@ export class SocketService {
           "Message Delivered Failed!! Because Sender and Receiver are same"
         );
       }
-      const message = this.messageRepository.create({
-        sender,
+    const message =  await this.messageService.sendMessage({
         msg: data.msg,
         type: "text",
-        conversation,
-        isRead: false,
+        sender: sender,
         conversation_id: conversation.id,
-      });
-      // console.log(message);
+       })
+
+      await this.messageService._conversationService.updatedConversation({ conversation_id, message });
       this.handleMessageDelivery({
         senderId: sender.id,
         receiverId: receiver.id,
         conversation_id: conversation.id,
         message,
       });
-      await this.messageRepository.save(message);
-      conversation.lastmsg = message;
-      await this.conversationRepository.save(conversation);
       socket.emit(`conversation-${conversation_id}`, message);
     } catch (error) {
       // console.log(error)
