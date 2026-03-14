@@ -20,7 +20,7 @@ import { TransectionType } from "src/transections/enums/transectionTypes";
 import { User } from "src/user/entities/user.entity";
 import { UserRoles } from "src/user/enums/role.enum";
 import { Wallets } from "src/wallets/entity/wallets.entity";
-import { DataSource, In, Repository } from "typeorm";
+import { DataSource, EntityManager, In, Repository } from "typeorm";
 import { Order } from "./entities/order.entity";
 import { OrderStatus, PaymentStatus } from "./enums/orderStatus";
 @Injectable()
@@ -108,14 +108,15 @@ export class OrdersService {
   //   }
   // }
 
-  async createOrderFromOffer(offer: Offer): Promise<Order> {
+  async createOrderFromOffer(offer: Offer, manager?: EntityManager): Promise<Order> {
+    const orderRepository = manager ? manager.getRepository(Order) : this._orderRepository;
     try {
       if (offer.order_id) {
         throw new BadRequestException("Order already exists for this offer");
       }
 
       // ❗Prevent duplicate orders for same product
-      const existingOrder = await this._orderRepository.findOne({
+      const existingOrder = await orderRepository.findOne({
         where: { product: { id: offer.product.id } },
         relations: ["product", "accepted_offer", "deliveryInfo", "buyer", "seller"],
       });
@@ -126,7 +127,7 @@ export class OrdersService {
 
       const protectionFee = Number(FeeWithCommision(offer.price, 10)) + 0.8;
 
-      const order = this._orderRepository.create({
+      const order = orderRepository.create({
         paymentStatus: PaymentStatus.PENDING,
         status: OrderStatus.PENDING,
 
@@ -148,7 +149,7 @@ export class OrdersService {
         delivery_id: null,
       });
 
-      const savedOrder = await this._orderRepository.save(order);
+      const savedOrder = await orderRepository.save(order);
 
       const notifications = [
         {
