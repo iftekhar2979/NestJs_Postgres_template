@@ -13,7 +13,7 @@ import { Cacheable } from "src/redis/decorators/cache.decorator";
 import { pagination } from "src/shared/utils/pagination";
 import { User } from "src/user/entities/user.entity";
 import { UserService } from "src/user/user.service";
-import { Brackets, DataSource, In, Repository } from "typeorm";
+import { Brackets, DataSource, EntityManager, In, Repository } from "typeorm";
 import { CONVERSATION_CACHE_KEY, CONVERSATION_CACHE_TTL, conversationCacheKey } from "./constants/conversation.constants";
 import { CreateDirectConversationDto } from "./dto/create-direct-conversation.dto";
 import { Conversations } from "./entities/conversations.entity";
@@ -82,13 +82,16 @@ export class ConversationsService {
     offer,
     existingConversation,
     offerType,
+    manager,
   }: {
     offer: Offer;
     existingConversation: Conversations;
     offerType: OfferStatus;
+    manager?: EntityManager;
   }) {
+    const messageRepo = manager ? manager.getRepository(Messages) : this.messageRepo;
     if (offerType === OfferStatus.PENDING) {
-      const msg = this.messageRepo.create({
+      const msg = messageRepo.create({
         sender_id: offer.buyer_id,
         isRead: false,
         msg: `Current Price : ${existingConversation.product.price} \n Offer Price : ${offer.price}`,
@@ -97,7 +100,7 @@ export class ConversationsService {
         type: "offer",
         conversation: existingConversation,
       });
-      await this.messageRepo.save(msg);
+      await messageRepo.save(msg);
       delete msg.offer.buyer;
       delete msg.offer.seller;
       delete msg.offer.product;
@@ -116,7 +119,7 @@ export class ConversationsService {
       });
     } else if (offerType === OfferStatus.ACCEPTED) {
       console.log(offerType);
-      const msg = this.messageRepo.create({
+      const msg = messageRepo.create({
         sender_id: offer.seller_id,
         isRead: false,
         msg: `Offer Price : ${offer.price} is accepted`,
@@ -125,7 +128,7 @@ export class ConversationsService {
         type: "offer",
         conversation: existingConversation,
       });
-      await this.messageRepo.save(msg);
+      await messageRepo.save(msg);
       // console.log(msg)
       // this.socketService.handleMessageDelivery({
       //   senderId: offer.buyer_id,
@@ -141,7 +144,7 @@ export class ConversationsService {
       });
     } else {
       console.log(offerType);
-      const msg = this.messageRepo.create({
+      const msg = messageRepo.create({
         sender_id: offer.seller_id,
         isRead: false,
         msg: `Sorry , Offer Price : ${offer.price} is rejected .`,
@@ -150,7 +153,7 @@ export class ConversationsService {
         type: "offer",
         conversation: existingConversation,
       });
-      await this.messageRepo.save(msg);
+      await messageRepo.save(msg);
       // this.socketService.handleMessageDelivery({
       //   senderId: offer.buyer_id,
       //   receiverId: offer.seller_id,
@@ -171,15 +174,18 @@ export class ConversationsService {
     userIds,
     offer,
     offerType,
+    manager,
   }: {
     productId: number;
     userIds: string[];
     offer: Offer;
     offerType: OfferStatus;
+    manager?: EntityManager;
   }): Promise<Conversations> {
+    const conversationRepo = manager ? manager.getRepository(Conversations) : this.conversationRepo;
     try {
 
-      const conversations = await this.conversationRepo.find({
+      const conversations = await conversationRepo.find({
         where: { product: { id: productId } },
         relations: ["participants", "participants.user", "product"],
       });
@@ -191,12 +197,12 @@ export class ConversationsService {
       });
 
       if (existingConversation) {
-        await this.offerStatusHandle({ offer, existingConversation, offerType });
+        await this.offerStatusHandle({ offer, existingConversation, offerType, manager });
         return existingConversation;
       }
 
-      // Case: New conversation - use transaction
-      return await this.dataSource.transaction(async (manager) => {
+      // Case: New conversation
+      const createNewConversation = async (txManager: EntityManager) => {
         const product = await this.productService.getProduct(productId);
         if (!product) {
           throw new BadRequestException("No Product Found with that reference!");
@@ -206,7 +212,7 @@ export class ConversationsService {
 
         const users = await this.userService.getMultipleUserByIds(userIds);
         // Create conversation using transactional entity manager
-        const savedConversation = await manager.save(Conversations, {
+        const savedConversation = await txManager.save(Conversations, {
           product,
           name: `${product.product_name} (${users.map((u) => u.firstName).join(" - ")})`,
           image: product.images[0]?.image || null,
@@ -214,9 +220,10 @@ export class ConversationsService {
         });
 
         // Add participants
-        await this.participantService.addMultiple(savedConversation, users, product, manager);
+        await this.participantService.addMultiple(savedConversation, users, product, txManager);
         // Save message
-        const msg = await manager.create(Messages, {
+        const messageRepo = txManager.getRepository(Messages);
+        const msg = messageRepo.create({
           sender_id: offer.buyer_id,
           isRead: false,
           msg: `Current Price : ${product.price} \n Offer Price : ${offer.price}`,
@@ -226,21 +233,17 @@ export class ConversationsService {
           conversation: savedConversation,
         });
         savedConversation.lastmsg = msg;
-        await manager.save(msg);
-        // console.log(msg)
-        await manager.save(Conversations, savedConversation);
-        // await this.updatedConversation({conversation_id:savedConversation.id , message:msg ,conversation:{lastmsg:msg}})
-        // this.socketService.handleMessageDelivery({
-        //   senderId: offer.buyer_id,
-        //   receiverId: offer.seller_id,
-        //   conversation_id: savedConversation.id,
-        //   message: msg,
-        // });
-
-        // await this.mailService.sendOfferConfirmation(buyer);
+        await txManager.save(Messages, msg);
+        await txManager.save(Conversations, savedConversation);
 
         return savedConversation;
-      });
+      };
+
+      if (manager) {
+        return await createNewConversation(manager);
+      } else {
+        return await this.dataSource.transaction(createNewConversation);
+      }
     } catch (error) {
       console.log(error);
       throw new BadRequestException("Error in fetching existing conversation");
@@ -260,6 +263,7 @@ export class ConversationsService {
       // Fetch conversations with necessary relations and apply pagination
       const [conversations, total] = await this.conversationRepo
         .createQueryBuilder("conversation")
+        .innerJoin("conversation.participants", "filter_participant", "filter_participant.user_id = :user_id", { user_id })
         .leftJoinAndSelect("conversation.participants", "participant")
         // .leftJoinAndSelect("conversation.product", "product")
         // .leftJoinAndSelect("product.images", "productImages")
@@ -274,7 +278,6 @@ export class ConversationsService {
           "user.isActive",
         ]) // Only select necessary fields from user
         .orderBy("conversation.created_at", "DESC")
-        .where("user.id = :user_id", { user_id }) // Filter conversations where user.id is not equal to provided user_id
         .andWhere(
           new Brackets((qb) => {
             qb.where("conversation.name ILIKE :term", { term: `%${term}%` })
