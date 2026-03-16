@@ -1,14 +1,13 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Favorite } from "./entities/favourite.entity";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, EntityManager, In, Repository } from "typeorm";
-import { Product } from "src/products/entities/products.entity";
-import { User } from "src/user/entities/user.entity";
-import { CreateFavoriteDto } from "./dto/favourite.dto";
 import { ResponseInterface } from "src/common/types/responseInterface";
+import { Product } from "src/products/entities/products.entity";
+import { ProductStatus } from "src/products/enums/status.enum";
 import { pagination } from "src/shared/utils/pagination";
 import { UserService } from "src/user/user.service";
-import { ProductStatus } from "src/products/enums/status.enum";
+import { DataSource, EntityManager, In, Repository } from "typeorm";
+import { CreateFavoriteDto } from "./dto/favourite.dto";
+import { Favorite } from "./entities/favourite.entity";
 
 @Injectable()
 export class FavouritesService {
@@ -87,7 +86,7 @@ export class FavouritesService {
       take: take,
       order: { created_at: "DESC" },
     });
-
+console.log(favorites);
     // Calculate the total number of pages
     const totalPages = Math.ceil(total / limit);
 

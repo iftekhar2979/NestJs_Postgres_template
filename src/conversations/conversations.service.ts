@@ -14,7 +14,7 @@ import { pagination } from "src/shared/utils/pagination";
 import { User } from "src/user/entities/user.entity";
 import { UserService } from "src/user/user.service";
 import { Brackets, DataSource, EntityManager, In, Repository } from "typeorm";
-import { CONVERSATION_CACHE_KEY, CONVERSATION_CACHE_TTL, conversationCacheKey } from "./constants/conversation.constants";
+import { CONVERSATION_CACHE_KEY, CONVERSATION_CACHE_TTL } from "./constants/conversation.constants";
 import { CreateDirectConversationDto } from "./dto/create-direct-conversation.dto";
 import { Conversations } from "./entities/conversations.entity";
 @Injectable()
@@ -39,7 +39,6 @@ export class ConversationsService {
     return await this.conversationRepo.findOneByOrFail({ id: conversationId });
   }
   async createConversation({ product, users }: { product: Product; users: User[] }) {
-    console.log(product);
     const conversation = this.conversationRepo.create({
       name: `${product.product_name} (${users.map((u) => u.firstName).join(" - ")})`,
       image: `${product.images[0].image}`,
@@ -104,7 +103,6 @@ export class ConversationsService {
       delete msg.offer.buyer;
       delete msg.offer.seller;
       delete msg.offer.product;
-      console.log("Existing Conversation", existingConversation);
       // this.socketService.handleMessageDelivery({
       //   senderId: offer.buyer_id,
       //   receiverId: offer.seller_id,
@@ -189,7 +187,6 @@ export class ConversationsService {
         where: { product: { id: productId } },
         relations: ["participants", "participants.user", "product"],
       });
-
       // Find conversation that has exactly the same participants
       const existingConversation = conversations.find((conv) => {
         const participantIds = conv.participants.map((p) => p.user.id).sort();
@@ -250,10 +247,14 @@ export class ConversationsService {
     }
   }
 
-  @Cacheable({
-    key: ({user_id, term, page, limit}:{user_id: string, term: string, page: number, limit: number}) => conversationCacheKey(user_id, term, page, limit),
-    ttl: CONVERSATION_CACHE_TTL,
-  })
+  // @Cacheable({
+  //   key: ({user_id, term, page, limit}:{user_id: string, term: string, page: number, limit: number}) => conversationCacheKey(user_id, term, page, limit),
+  //   ttl: CONVERSATION_CACHE_TTL,
+  // })
+  // @Cacheable({
+  //   key: ({user_id, term, page, limit}:{user_id: string, term: string, page: number, limit: number}) => conversationCacheKey(user_id, term, page, limit),
+  //   ttl: CONVERSATION_CACHE_TTL,
+  // })
   async getAllConversations(user_id: string, term: string, page: number =1, limit: number=10) {
     try {
       // Calculate skip and take for pagination

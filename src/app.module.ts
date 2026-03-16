@@ -50,8 +50,6 @@ import { RedisModule } from "./redis/redis.module";
 // import { BullQueueProcessor } from './bull-queue.processor';
 import { BullModule } from "@nestjs/bull";
 import { EventEmitterModule } from "@nestjs/event-emitter";
-import { ImageProcessor } from "./bull/processors/ProductQueue";
-import { PushNotificationProccessor } from "./bull/processors/pushNotificationQueue";
 import { CurrencyConverterModule } from "./currency-converter/currency-converter.module";
 import { FirebaseModule } from "./firebase/firebase.module";
 import { GeminiModule } from "./gemini/gemini.module";
@@ -70,8 +68,11 @@ import { UserlogsModule } from "./userlogs/userlogs.module";
  *      {@link TypeOrmModule} - it is an ORM and enables easy access to database.
  */
 
+import { PurchaseModule } from "./purchase/purchase.module";
+
 @Module({
   imports: [
+    PurchaseModule,
     CacheModule.register({
       isGlobal: true,
       store: redisStore,
@@ -177,8 +178,6 @@ EventEmitterModule.forRoot(),
     },
     WithdrawsService,
     // BullQueueProcessor,
-    ImageProcessor,
-    PushNotificationProccessor,
     SettingService,
     // ProductBoostgService,
   ],

@@ -1,17 +1,20 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { ProductColor } from "src/products/colors/entities/colors.entity";
+import { Inventory } from "src/products/entities/inventory.entity";
 import { Product } from "src/products/entities/products.entity";
 import { Size } from "src/sizes/entity/sizes.entity";
 import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
+    Column,
+    CreateDateColumn,
+    Entity,
+    Index,
+    JoinColumn,
+    ManyToOne,
+    OneToOne,
+    PrimaryGeneratedColumn,
+    UpdateDateColumn
 } from "typeorm";
+
 @Entity("product_variants")
 @Index(["product_id", "colorId", "sizeId"])
 @Index( ["product_id"])
@@ -45,6 +48,9 @@ export class ProductVariant {
   @ApiProperty({ example: 10, description: "Stock quantity for this color+size combination" })
   @Column({ type: "int", default: 0 })
   unit: number;
+
+  @OneToOne(() => Inventory, (inventory) => inventory.variant)
+  inventory: Inventory;
 
   @ApiProperty({ example: "XL-Red-SKU-001", description: "Optional SKU for this variant" })
   @Column({ type: "varchar", nullable: true })

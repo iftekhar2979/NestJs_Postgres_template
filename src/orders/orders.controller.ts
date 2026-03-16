@@ -1,12 +1,18 @@
 import { BadRequestException, Controller, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
-import { OrdersService } from "./orders.service";
 import { GetUser } from "src/auth/decorators/get-user.decorator";
-import { User } from "src/user/entities/user.entity";
 import { JwtAuthenticationGuard } from "src/auth/guards/session-auth.guard";
+import { User } from "src/user/entities/user.entity";
+import { OrdersService } from "./orders.service";
 
 @Controller("orders")
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  @Get("checkout-info/:productId")
+  @UseGuards(JwtAuthenticationGuard)
+  async getCheckoutData(@GetUser() user: User, @Param("productId") productId: number) {
+    return this.ordersService.getCheckoutData(Number(productId), user);
+  }
 
   @Get("phurcases")
   @UseGuards(JwtAuthenticationGuard)
@@ -16,7 +22,6 @@ export class OrdersController {
   @Get("sales")
   @UseGuards(JwtAuthenticationGuard)
   getOrdersBySeller(@GetUser() user: User, @Query("page") page = 1, @Query("limit") limit = 10) {
-    console.log(user);
     return this.ordersService.findBySellerId(user.id, page, limit, user);
   }
 

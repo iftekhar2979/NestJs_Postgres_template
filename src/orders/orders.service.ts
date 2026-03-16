@@ -1,16 +1,17 @@
 import { InjectQueue } from "@nestjs/bull";
-import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Queue } from "bull";
 import { ResponseInterface } from "src/common/types/responseInterface";
 import { ConverterService } from "src/currency-converter/currency-converter.service";
 import {
-    NotificationAction,
-    NotificationRelated,
-    NotificationType,
+  NotificationAction,
+  NotificationRelated,
+  NotificationType,
 } from "src/notifications/entities/notifications.entity";
 import { NotificationsService } from "src/notifications/notifications.service";
 import { Offer } from "src/offers/entities/offer.entity";
+import { OfferStatus } from "src/offers/enums/offerStatus.enum";
 import { Product } from "src/products/entities/products.entity";
 import { defaultCurrency, ProductStatus } from "src/products/enums/status.enum";
 import { pagination } from "src/shared/utils/pagination";
@@ -36,78 +37,6 @@ export class OrdersService {
     @InjectQueue("notifications") private readonly _notificationQueue: Queue,
     private readonly _currencyConverterService: ConverterService
   ) { }
-  // async createOrderFromOffer(offer: Offer): Promise<Order> {
-  //   try {
-  //     if (offer.order_id) {
-  //       throw new BadRequestException("Order already exists for this offer");
-  //     }
-  //     const existingOrder = await this._orderRepository.findOne({
-  //       where: { product: { id: offer.product.id } },
-  //       relations: ["product", "accepted_offer", "delivery", "buyer", "seller"],
-  //     });
-  //     if (existingOrder) {
-  //       throw new BadRequestException("Order already exists for this Product");
-  //     }
-  //     const order = this._orderRepository.create({
-  //       paymentStatus: PaymentStatus.PENDING,
-  //       status: OrderStatus.PENDING,
-  //       buyer: offer.buyer,
-  //       buyer_id: offer.buyer.id,
-  //       seller: offer.seller,
-  //       seller_id: offer.seller.id,
-  //       product: offer.product,
-  //       protectionFee: FeeWithCommision(offer.price, 10) + 0.8,
-  //       total: offer.price,
-  //       accepted_offer: offer,
-  //       offer_id: offer.id,
-  //       deliveryInfo: null,
-  //       delivery_id: null,
-  //     });
-  //     // console.log("ORDERInfo", order);
-  //     await this._orderRepository.save(order);
-  //     const productName = offer.product.product_name;
-  //     const notifications = [
-  //       {
-  //         userId: offer.buyer.id,
-  //         user: offer.buyer,
-  //         isImportant: true,
-  //         action: NotificationAction.UPDATED,
-  //         related: NotificationRelated.ORDER,
-  //         notificationFor: UserRoles.USER,
-  //         type: NotificationType.SUCCESS,
-  //         targetId: order.id,
-  //         msg: `${productName} is now ready to phurcase !`,
-  //       },
-  //       {
-  //         userId: offer.seller.id,
-  //         user: offer.seller,
-  //         isImportant: true,
-  //         action: NotificationAction.UPDATED,
-  //         related: NotificationRelated.ORDER,
-  //         notificationFor: UserRoles.USER,
-  //         type: NotificationType.INFO,
-  //         targetId: order.id,
-  //         msg: `${productName} is ready to sell!`,
-  //       },
-  //       {
-  //         userId: null,
-  //         isImportant: true,
-  //         action: NotificationAction.UPDATED,
-  //         related: NotificationRelated.ORDER,
-  //         notificationFor: UserRoles.ADMIN,
-  //         type: NotificationType.INFO,
-  //         targetId: order.id,
-  //         msg: `#${order.id} both are agreed with negotiation!`,
-  //       },
-  //     ];
-  //     await this._notificaionService.bulkInsertNotifications(notifications);
-  //     return await this._orderRepository.save(order);
-  //   } catch (error) {
-  //     console.error("Error creating order from offer:", error);
-  //     throw new BadRequestException("Failed to create order from offer");
-  //   }
-  // }
-
   async createOrderFromOffer(offer: Offer, manager?: EntityManager): Promise<Order> {
     const orderRepository = manager ? manager.getRepository(Order) : this._orderRepository;
     try {
@@ -484,5 +413,50 @@ export class OrdersService {
       // Release the query runner
       await queryRunner.release();
     }
+  }
+
+  async getCheckoutData(productId: number, user: User): Promise<ResponseInterface<any>> {
+    const product = await this._productRepository.findOne({
+      where: { id: productId },
+      relations: ["user", "images"],
+    });
+
+    if (!product) {
+      throw new NotFoundException("Product not found");
+    }
+
+    // Check if there is an accepted offer for this product and buyer
+    const acceptedOffer = await this._dataSource.getRepository(Offer).findOne({
+      where: {
+        product: { id: productId },
+        buyer: { id: user.id },
+        status: OfferStatus.ACCEPTED,
+      },
+      order: { created_at: "DESC" },
+    });
+
+    let price = product.price;
+    let isOfferPrice = false;
+
+    if (acceptedOffer) {
+      price = acceptedOffer.price;
+      isOfferPrice = true;
+    }
+
+    const protectionFee = Number(FeeWithCommision(price, 10)) + 0.8;
+    const total = Number(price) + protectionFee;
+
+    return {
+      message: "Checkout data retrieved successfully",
+      status: "success",
+      statusCode: 200,
+      data: {
+        product,
+        price,
+        protectionFee,
+        total,
+        isOfferPrice,
+      },
+    };
   }
 }

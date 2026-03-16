@@ -1,24 +1,25 @@
 // order.entity.ts
 
+import { ApiProperty } from "@nestjs/swagger";
+import { IsInt, Min } from "class-validator";
+import { DeliveryAddress } from "src/delivery/entities/delivery_information.entity";
+import { Offer } from "src/offers/entities/offer.entity";
+import { Product } from "src/products/entities/products.entity";
+import { Transections } from "src/transections/entity/transections.entity";
+import { User } from "src/user/entities/user.entity";
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
-  CreateDateColumn,
-  UpdateDateColumn,
-  JoinColumn,
   OneToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from "typeorm";
-import { ApiProperty } from "@nestjs/swagger";
-import { Product } from "src/products/entities/products.entity";
-import { Offer } from "src/offers/entities/offer.entity";
-import { User } from "src/user/entities/user.entity";
 import { OrderStatus, PaymentStatus } from "../enums/orderStatus";
-import { IsInt, Min } from "class-validator";
-import { Transections } from "src/transections/entity/transections.entity";
-import { DeliveryAddress } from "src/delivery/entities/delivery_information.entity";
+import { OrderItem } from "./order-item.entity";
 
 @Entity("orders")
 export class Order {
@@ -45,7 +46,7 @@ export class Order {
   buyer_id: string;
 
   // 📦 Product relation
-  @OneToOne(() => Product, { onDelete: "CASCADE" })
+  @ManyToOne(() => Product, { onDelete: "CASCADE" })
   @JoinColumn({ name: "product_id" })
   product: Product;
   // 💬 Accepted Offer
@@ -99,6 +100,9 @@ export class Order {
   @ApiProperty({ example: "pending", description: "Payment status" })
   @Column({ type: "enum", enum: PaymentStatus, default: PaymentStatus.PENDING })
   paymentStatus: PaymentStatus;
+
+  @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
+  items: OrderItem[];
 
   @OneToMany(() => Transections, (transection) => transection)
   transections: Transections[];
