@@ -49,7 +49,7 @@ export class ProductScoringService {
 
       // ─── 3. Sales Score (Normalized) ────────────────────────
       const salesScore = Math.min(
-        stats.total_sold / normalization.maxSold,
+        stats.total_sales / normalization.maxSold,
         1
       );
 

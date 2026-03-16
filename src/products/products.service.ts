@@ -35,6 +35,7 @@ import { Between, DataSource, ILike, In, Repository } from "typeorm";
 import { PRODUCT_CONSTANT } from "./constants/product.contants";
 import { CreateProductDto } from "./dto/CreateProductDto.dto";
 import { GetAdminProductQuery, GetProductsQueryDto } from "./dto/GetProductDto.dto";
+import { Inventory } from "./entities/inventory.entity";
 import { ProductImage } from "./entities/productImage.entity";
 import {
   DAYS_IN_SECOND,
@@ -43,6 +44,8 @@ import {
   PRODUCT_BOOSTING_DAYS,
 } from "./entities/products.entity";
 import { defaultCurrency, ProductStatus } from "./enums/status.enum";
+import { ProductStats } from "./stats/entities/productStats.entity";
+import { ProductVariant } from "./varients/entities/productVarient.entity";
 // import {Conver}
 @Injectable()
 export class ProductsService {
@@ -174,7 +177,7 @@ export class ProductsService {
         // product.service_point_id = service_point_id ? service_point_id : null;
         const savedProduct = await queryRunner.manager.save(Product, product);
 
-        // Handle boost transaction
+        // --- RESTORED: Handle boost transaction ---
         if (isBoosted) {
           wallets.balance -= productBoostingCost;
           wallets.version += 1;
@@ -195,16 +198,8 @@ export class ProductsService {
           await queryRunner.manager.save(Wallets, wallets);
           await queryRunner.manager.save(Transections, transection);
         }
-        // if (createProductDto.carrer_type == CARRER_TYPE.COLLECTION_TYPE) {
-        // const productCollection = new CollectionAddress();
-        // productCollection.name = `${userInfo.firstName} ${userInfo.lastName}`;
-        // productCollection.email = userInfo.email;
-        // productCollection.telephone = userInfo.phone;
-        // productCollection.product = savedProduct;
-        // // productCollection.
-        // await queryRunner.manager.save(CollectionAddress, productCollection);
-        // }
-        // Handle images
+
+        // --- RESTORED: Handle images ---
         if (Array.isArray(createProductDto.images) && createProductDto.images.length > 0) {
           const productImages = createProductDto.images.map((imgUrl: string) => {
             const img = new ProductImage();
@@ -213,60 +208,53 @@ export class ProductsService {
             img.product = savedProduct;
             return img;
           });
-
-          // await this._queue.add("category", {
-          //   image: productImages[0].image,
-          //   name: product.category,
-          // });
-         
           await queryRunner.manager.save(ProductImage, productImages);
         }
 
+        // 1. Initialize Inventory for the product (or base variant)
+        const inventory = new Inventory();
+        inventory.product_id = savedProduct.id;
+        inventory.product = savedProduct;
+        inventory.stock = unit;
+        inventory.reserved_stock = 0;
+        
+        // If size/color provided, create a variant and link it
+      if (createProductDto.size || createProductDto.color) {
+   const variant = new ProductVariant();
+   variant.product_id = savedProduct.id;
+   variant.product = savedProduct;
+   variant.sizeId = Number(createProductDto.size);
+   variant.colorId = Number(createProductDto.color);
+   variant.unit = unit;
+   const savedVariant = await queryRunner.manager.save(ProductVariant, variant);
+
+   // Only set variant_id, do NOT set the variant object itself
+   inventory.variant_id = savedVariant.id;
+}
+await queryRunner.manager.save(Inventory, inventory);
+
+        await queryRunner.manager.save(Inventory, inventory);
+
+        console.log("Product Inventory",inventory)
+        // Initialize Product Stats
+        const stats = new ProductStats();
+        stats.product_id = savedProduct.id;
+        stats.product = savedProduct;
+        await queryRunner.manager.save(ProductStats, stats);
+
         await queryRunner.commitTransaction();
 
-        await this._notificationQueue.add("notification_saver", {
-          user: userInfo,
-          related: NotificationRelated.PRODUCT,
-          msg: `${product.product_name} is listed for your review!`,
-          type: NotificationType.SUCCESS,
-          targetId: savedProduct.id,
-          notificationFor: UserRoles.ADMIN,
-          action: NotificationAction.CREATED,
-          isImportant: true,
-        });
-        await this._notificationQueue.add("notification_saver", {
-          user: userInfo,
-          related: NotificationRelated.PRODUCT,
-          msg: `You product ${product.product_name} is listed for admins review!`,
-          type: NotificationType.SUCCESS,
-          targetId: savedProduct.id,
-          notificationFor: UserRoles.USER,
-          action: NotificationAction.CREATED,
-          isImportant: true,
-          title: `You product ${product.product_name} is listed for admins review!`,
-          body: `You will be notified once it is approved.`,
-        });
-        if (isBoosted) {
-          await this._notificationQueue.add("notification_saver", {
-            user: userInfo,
-            related: NotificationRelated.WALLET,
-            msg: `${product.product_name} is boosted for ${boostDays} days with ${productBoostingCost} GBP!`,
-            type: NotificationType.SUCCESS,
-            targetId: savedProduct.id,
-            notificationFor: UserRoles.USER,
-            action: NotificationAction.CREATED,
-            isImportant: true,
-            title: `${product.product_name} is boosted for ${boostDays} days with ${productBoostingCost} GBP!`,
-            body: `It will will be visible to more buyers until ${product.boost_end_time.toLocaleDateString()}`,
-          });
-        }
         const productWithImages = await this._productRepository.findOne({
           where: { id: savedProduct.id },
+          relations: ["images", "user", "inventory", "variants", "variants.inventory"]
         });
-        const productImage = await this._productImageRepository.find({
-          where: { product_id: savedProduct.id },
-        });
-        productWithImages.images = productImage;
+
+        // 2. Cache fully loaded product and inventory in Redis
+        await this._cacheService.set(`product:${savedProduct.id}`, productWithImages, 3600);
+        if (inventory.variant_id) {
+           await this._cacheService.set(`variant:${inventory.variant_id}`, inventory.variant, 3600);
+        }
+        await this._cacheService.set(`inventory:${savedProduct.id}:${inventory.variant_id || 'null'}`, inventory, 3600);
 
         console.log("✅ Product created successfully:", savedProduct.id);
 
@@ -295,9 +283,11 @@ export class ProductsService {
 
     const query = this._productRepository
       .createQueryBuilder("product")
-      .leftJoinAndSelect("product.images", "images");
-    // .leftJoinAndSelect('product.images', 'images');
-    query.leftJoinAndSelect("product.user", "user");
+      .leftJoinAndSelect("product.images", "images")
+      .leftJoinAndSelect("product.user", "user")
+      .leftJoinAndSelect("product.inventory", "inventory")
+      .leftJoinAndSelect("product.variants", "variants")
+      .leftJoinAndSelect("variants.inventory", "variantInventory");
     // Filters
     if (filters?.name) {
       query.andWhere(
@@ -420,7 +410,7 @@ export class ProductsService {
       skip,
       take,
       order: orderby,
-      relations: ["images"], // Ensure images are loaded
+      relations: ["images", "inventory", "variants", "variants.inventory"], // Ensure all necessary relations are loaded
     });
     // const productIds = data.map((product) => product.id);
     // const productImages = await this._productImageRepository.find({
@@ -738,6 +728,8 @@ export class ProductsService {
         "variants",
         "variants.color",
         "variants.size",
+        "inventory",
+        "variants.inventory"
       ],
     });
     // await this._cacheService.set(PRODUCT_CONSTANT.productDetail(id), JSON.stringify(product));

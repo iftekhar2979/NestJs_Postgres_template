@@ -43,6 +43,7 @@ export class OfferService {
     @InjectQueue("notifications") private readonly _notificationQueue: Queue
   ) {}
 
+  
   async createOffer(payload: SendOfferDto, user: User): Promise<ResponseInterface<Offer>> {
     const { buyer_id, product_id, price } = payload;
     const queryRunner = this.dataSource.createQueryRunner();

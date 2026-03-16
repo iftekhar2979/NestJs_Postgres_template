@@ -2,15 +2,20 @@ import { BullModule } from "@nestjs/bull";
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthModule } from "src/auth/auth.module";
+import { ImageProcessor } from "src/bull/processors/ProductQueue";
+import { CategoryModule } from "src/category/category.module";
 import { CurrencyConverterModule } from "src/currency-converter/currency-converter.module";
 import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
+import { MailModule } from "src/mail/mail.module";
 import { NotificationsModule } from "src/notifications/notifications.module";
+import { RedisModule } from "src/redis/redis.module";
 import { Transections } from "src/transections/entity/transections.entity";
 import { UserBehaviourModule } from "src/user-behaviour/user-behaviour.module";
 import { UserModule } from "src/user/user.module";
 import { Wallets } from "src/wallets/entity/wallets.entity";
 import { CategoriesModule } from './categories/categories.module';
 import { ColorsModule } from './colors/colors.module';
+import { Inventory } from "./entities/inventory.entity";
 import { ProductImage } from "./entities/productImage.entity";
 import { Product } from "./entities/products.entity";
 import { ProductsController } from "./products.controller";
@@ -28,7 +33,7 @@ import { ProductVariant } from "./varients/entities/productVarient.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, ProductImage,ProductStats, Wallets, Transections,ProductVariant, CollectionAddress]),
+    TypeOrmModule.forFeature([Product, ProductImage, ProductStats, Wallets, Transections, ProductVariant, CollectionAddress, Inventory]),
     AuthModule,
     UserModule,
     UserBehaviourModule,
@@ -41,11 +46,14 @@ import { ProductVariant } from "./varients/entities/productVarient.entity";
     ColorsModule,
     ReviewsModule,
     StatsModule,
+    RedisModule,
+    MailModule,
+    CategoryModule
   ],
 
   // BullModule.registerQueue({name:"behaviour"})],
   controllers: [ProductsController],
-  providers: [ProductsService,ProductsSecondaryService,ScoreRecalculationService , ProductScoringService , ScoringCronService],
+  providers: [ProductsService,ProductsSecondaryService,ScoreRecalculationService , ProductScoringService , ScoringCronService, ImageProcessor],
   exports: [ProductsService],
 })
 export class ProductsModule {}

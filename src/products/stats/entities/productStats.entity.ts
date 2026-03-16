@@ -15,7 +15,11 @@ export class ProductStats {
     @Column({type:'int',default:0})
     total_reviews: number;
     @Column({type:'int',default:0})
-    total_sold: number;
+    total_sales: number;
+    @Column({type:'decimal', precision: 12, scale: 2, default: 0})
+    total_revenue: number;
+    @Column({type:'timestamp with time zone', nullable: true})
+    last_purchased_at: Date;
     @OneToOne(()=>Product,(prod)=>prod.stats ,  { onDelete: "CASCADE" })
     @JoinColumn({name:'product_id'})
     product: Product;

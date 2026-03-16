@@ -35,6 +35,7 @@ import { PRODUCT_CONSTANT } from "../constants/product.contants";
 import { CreateProductDto } from "../dto/secondary/CreateProduct.dto";
 import { GetAdminProductsQueryDto, GetProductsQueryDto } from "../dto/secondary/GetProduct.dto";
 import { UpdateProductDto } from "../dto/secondary/UpdateProduct.dto";
+import { Inventory } from "../entities/inventory.entity";
 import { ProductImage } from "../entities/productImage.entity";
 import { DAYS_IN_SECOND, Product, PRODUCT_BOOSTING_COST, PRODUCT_BOOSTING_DAYS } from "../entities/products.entity";
 import { defaultCurrency, ProductStatus } from "../enums/status.enum";
@@ -175,11 +176,25 @@ export class ProductsSecondaryService {
           colorId: v.colorId,
           sizeId: v.sizeId,
           unit: v.unit,
-          price_override: v.price_override ?? null,
+        //   price_override: v.price_override ?? null,
           sku: v.sku ?? null,
         })
       );
-      await queryRunner.manager.save(ProductVariant, variants);
+      const savedVariants = await queryRunner.manager.save(ProductVariant, variants);
+      product.variants = savedVariants;
+
+      // 3.1 Initialize Inventory for each variant
+      const inventories = savedVariants.map((v) =>
+        queryRunner.manager.create(Inventory, {
+          product_id: savedProduct.id,
+          product: savedProduct,
+          variant_id: v.id,
+          variant: v,
+          stock: v.unit,
+          reserved_stock: 0,
+        })
+      );
+      await queryRunner.manager.save(Inventory, inventories);
 
       // 4. Collection address
       if (dto.carrer_option === "collection_address" && dto.collectionAddress) {
@@ -799,6 +814,8 @@ export class ProductsSecondaryService {
         "user",
         "favorites",
         "favorites.user",
+        "inventory",
+        "variants.inventory",
         "collectionAddress",
       ],
     });

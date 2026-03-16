@@ -181,7 +181,7 @@ export class SocketService {
     // In a scaled env, knowing if they are NOT on ANY instance needs a global indicator.
   }
 
-  @OnEvent("message.created")
+@OnEvent("message.created")
 async handleMessageCreated(payload) {
 
   await this.handleMessageDelivery(payload);

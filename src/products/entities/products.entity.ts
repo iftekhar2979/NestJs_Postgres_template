@@ -31,6 +31,7 @@ import { Review } from "../reviews/entities/review.entity";
 import { ProductStats } from "../stats/entities/productStats.entity";
 import { SubCategory } from "../sub_categories/entities/sub_categories.entity";
 import { ProductVariant } from "../varients/entities/productVarient.entity";
+import { Inventory } from "./inventory.entity";
 import { ProductImage } from "./productImage.entity";
 
 // \
@@ -175,6 +176,9 @@ export class Product {
 
   @OneToOne(() => ProductStats, (stats) => stats.product)
   stats: ProductStats;
+
+  @OneToMany(() => Inventory, (inventory) => inventory.product)
+  inventory: Inventory[];
 
   @OneToMany(() => Review, (review) => review.product)
   reviews: Review[];
