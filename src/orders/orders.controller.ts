@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Get, Param, Post, Put, Query, Us
 import { GetUser } from "src/auth/decorators/get-user.decorator";
 import { JwtAuthenticationGuard } from "src/auth/guards/session-auth.guard";
 import { User } from "src/user/entities/user.entity";
+import { CheckoutExecuteDto } from "./dto/checkout-execute.dto";
 import { CheckoutPreviewDto } from "./dto/checkout-preview.dto";
 import { OrdersService } from "./orders.service";
 
@@ -13,6 +14,12 @@ export class OrdersController {
   @UseGuards(JwtAuthenticationGuard)
   async calculatePreview(@Body() dto: CheckoutPreviewDto, @GetUser() user: User) {
     return this.ordersService.calculatePreview(dto, user);
+  }
+
+  @Post("checkout/execute")
+  @UseGuards(JwtAuthenticationGuard)
+  async executeCheckout(@Body() dto: CheckoutExecuteDto, @GetUser() user: User) {
+    return this.ordersService.executeCheckout(dto, user);
   }
 
   @Get("checkout-info/:productId")
