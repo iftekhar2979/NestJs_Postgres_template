@@ -1,12 +1,19 @@
-import { BadRequestException, Controller, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { GetUser } from "src/auth/decorators/get-user.decorator";
 import { JwtAuthenticationGuard } from "src/auth/guards/session-auth.guard";
 import { User } from "src/user/entities/user.entity";
+import { CheckoutPreviewDto } from "./dto/checkout-preview.dto";
 import { OrdersService } from "./orders.service";
 
 @Controller("orders")
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  @Post("checkout/preview")
+  @UseGuards(JwtAuthenticationGuard)
+  async calculatePreview(@Body() dto: CheckoutPreviewDto, @GetUser() user: User) {
+    return this.ordersService.calculatePreview(dto, user);
+  }
 
   @Get("checkout-info/:productId")
   @UseGuards(JwtAuthenticationGuard)

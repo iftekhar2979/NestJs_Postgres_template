@@ -4,15 +4,15 @@ import { Inventory } from "src/products/entities/inventory.entity";
 import { Product } from "src/products/entities/products.entity";
 import { Size } from "src/sizes/entity/sizes.entity";
 import {
-    Column,
-    CreateDateColumn,
-    Entity,
-    Index,
-    JoinColumn,
-    ManyToOne,
-    OneToOne,
-    PrimaryGeneratedColumn,
-    UpdateDateColumn
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn
 } from "typeorm";
 
 @Entity("product_variants")
@@ -55,6 +55,10 @@ export class ProductVariant {
   @ApiProperty({ example: "XL-Red-SKU-001", description: "Optional SKU for this variant" })
   @Column({ type: "varchar", nullable: true })
   sku: string | null;
+
+  @ApiProperty({ example: 5.0, description: "Price modifier relative to base product price" })
+  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
+  price_modifier: number;
 
   @CreateDateColumn({ type: "timestamp with time zone" })
   created_at: Date;
