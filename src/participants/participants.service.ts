@@ -75,6 +75,7 @@ export class ParticipantsService {
           id: true,
           product_name: true,
           images: true,
+          price:true,
         },
       },
     });
