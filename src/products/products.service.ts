@@ -231,9 +231,7 @@ export class ProductsService {
    // Only set variant_id, do NOT set the variant object itself
    inventory.variant_id = savedVariant.id;
 }
-await queryRunner.manager.save(Inventory, inventory);
-
-        await queryRunner.manager.save(Inventory, inventory);
+    await queryRunner.manager.save(Inventory, inventory);
 
         console.log("Product Inventory",inventory)
         // Initialize Product Stats

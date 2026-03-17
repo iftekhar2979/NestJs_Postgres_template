@@ -1,5 +1,5 @@
 import { InjectQueue } from "@nestjs/bull";
-import { BadGatewayException, Injectable } from "@nestjs/common";
+import { BadGatewayException, Injectable, LoggerService } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config"; // Correct import
 import { InjectRepository } from "@nestjs/typeorm";
 import { Queue } from "bull";
@@ -14,6 +14,7 @@ import { Wallets } from "src/wallets/entity/wallets.entity";
 import { StripeEvent } from "./entities/stripe-event.entity";
 import { StripePayment } from "./entities/stripe-payment.entity";
 
+import { InjectLogger } from "src/shared/decorators/logger.decorator";
 import Stripe from "stripe";
 import { DataSource, Repository } from "typeorm";
 
@@ -43,6 +44,7 @@ export class StripeService {
     @InjectQueue("product") private readonly _queue: Queue,
     @InjectQueue("notifications") private readonly _notificationQueue: Queue,
     @InjectQueue("email") private readonly _emailQueue: Queue,
+    @InjectLogger() private readonly logger: LoggerService,
   ) {
     this.stripe = new Stripe(this.configService.get<string>("STRIPE_SECRET_KEY"), {
       apiVersion: "2025-07-30.basil", // Specify Stripe API version you're using
@@ -158,6 +160,8 @@ export class StripeService {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(`Error processing webhook ${event.id}:`, error);
+      this.logger.error(`Error processing webhook ${event.id}:`, error);
+      
       // We return 200 to Stripe but log error internally
     } finally {
       await queryRunner.release();
@@ -165,9 +169,9 @@ export class StripeService {
   }
 
   private async processChargeSucceeded(charge: Stripe.Charge, manager: any) {
-    const { userId, orderId, walletTopUp } = charge.metadata;
+    const { userId ,walletTopUp , orderId} = charge.metadata;
+    console.log("charge", charge.metadata);
     if (!userId) return;
-
     // 1. Update or Create StripePayment record
     let payment = await manager.findOne(StripePayment, { where: { charge_id: charge.id } });
     if (!payment) {

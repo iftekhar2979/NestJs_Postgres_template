@@ -6,6 +6,8 @@ import { ImageProcessor } from "src/bull/processors/ProductQueue";
 import { CategoryModule } from "src/category/category.module";
 import { CurrencyConverterModule } from "src/currency-converter/currency-converter.module";
 import { CollectionAddress } from "src/delivery/entities/collection_Address.entity";
+import { InventoryLog } from "src/inventory/entities/inventory-log.entity";
+import { InventoryService } from "src/inventory/inventory.service";
 import { MailModule } from "src/mail/mail.module";
 import { NotificationsModule } from "src/notifications/notifications.module";
 import { RedisModule } from "src/redis/redis.module";
@@ -13,9 +15,9 @@ import { Transections } from "src/transections/entity/transections.entity";
 import { UserBehaviourModule } from "src/user-behaviour/user-behaviour.module";
 import { UserModule } from "src/user/user.module";
 import { Wallets } from "src/wallets/entity/wallets.entity";
+import { Inventory } from "../inventory/entities/inventory.entity";
 import { CategoriesModule } from './categories/categories.module';
 import { ColorsModule } from './colors/colors.module';
-import { Inventory } from "./entities/inventory.entity";
 import { ProductImage } from "./entities/productImage.entity";
 import { Product } from "./entities/products.entity";
 import { ProductsController } from "./products.controller";
@@ -33,7 +35,7 @@ import { ProductVariant } from "./varients/entities/productVarient.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, ProductImage, ProductStats, Wallets, Transections, ProductVariant, CollectionAddress, Inventory]),
+    TypeOrmModule.forFeature([Product, ProductImage, ProductStats , InventoryLog, Wallets, Transections, ProductVariant, CollectionAddress, Inventory]),
     AuthModule,
     UserModule,
     UserBehaviourModule,
@@ -53,7 +55,7 @@ import { ProductVariant } from "./varients/entities/productVarient.entity";
 
   // BullModule.registerQueue({name:"behaviour"})],
   controllers: [ProductsController],
-  providers: [ProductsService,ProductsSecondaryService,ScoreRecalculationService , ProductScoringService , ScoringCronService, ImageProcessor],
+  providers: [ProductsService,ProductsSecondaryService,ScoreRecalculationService , ProductScoringService , ScoringCronService, ImageProcessor,InventoryService],
   exports: [ProductsService],
 })
 export class ProductsModule {}

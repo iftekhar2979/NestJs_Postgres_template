@@ -68,10 +68,12 @@ import { UserlogsModule } from "./userlogs/userlogs.module";
  *      {@link TypeOrmModule} - it is an ORM and enables easy access to database.
  */
 
+import { InventoryModule } from "./inventory/inventory.module";
 import { PurchaseModule } from "./purchase/purchase.module";
 
 @Module({
   imports: [
+    InventoryModule,
     PurchaseModule,
     CacheModule.register({
       isGlobal: true,
