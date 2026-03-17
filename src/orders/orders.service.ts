@@ -14,6 +14,8 @@ import { Offer } from "src/offers/entities/offer.entity";
 import { OfferStatus } from "src/offers/enums/offerStatus.enum";
 import { Product } from "src/products/entities/products.entity";
 import { defaultCurrency, ProductStatus } from "src/products/enums/status.enum";
+import { ProductVariant } from "src/products/varients/entities/productVarient.entity";
+import { RedisService } from "src/redis/redis.service";
 import { pagination } from "src/shared/utils/pagination";
 import { FeeWithCommision } from "src/shared/utils/utils";
 import { Transections } from "src/transections/entity/transections.entity";
@@ -22,8 +24,10 @@ import { User } from "src/user/entities/user.entity";
 import { UserRoles } from "src/user/enums/role.enum";
 import { Wallets } from "src/wallets/entity/wallets.entity";
 import { DataSource, EntityManager, In, Repository } from "typeorm";
+import { CheckoutPreviewDto } from "./dto/checkout-preview.dto";
 import { Order } from "./entities/order.entity";
 import { OrderStatus, PaymentStatus } from "./enums/orderStatus";
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -33,9 +37,11 @@ export class OrdersService {
     @InjectRepository(Product) private _productRepository: Repository<Product>,
     @InjectRepository(Wallets) private _walletRepository: Repository<Wallets>,
     @InjectRepository(Transections) private _transectionRespositoy: Repository<Transections>,
+    @InjectRepository(ProductVariant) private _variantRepository: Repository<ProductVariant>,
     @InjectQueue("product") private readonly _queue: Queue,
     @InjectQueue("notifications") private readonly _notificationQueue: Queue,
-    private readonly _currencyConverterService: ConverterService
+    private readonly _currencyConverterService: ConverterService,
+    private readonly _redisService: RedisService,
   ) { }
   async createOrderFromOffer(offer: Offer, manager?: EntityManager): Promise<Order> {
     const orderRepository = manager ? manager.getRepository(Order) : this._orderRepository;
@@ -452,11 +458,99 @@ export class OrdersService {
       statusCode: 200,
       data: {
         product,
-        price,
-        protectionFee,
-        total,
+        price: Number(price),
+        protectionFee: Number(protectionFee),
+        total: Number(total),
         isOfferPrice,
       },
     };
+  }
+
+  async calculatePreview(dto: CheckoutPreviewDto, user: User) {
+    const { productId, variantId, quantity, currency } = dto;
+
+    // 1. Fetch Product (Redis -> DB)
+    const product = await this._getProductWithCache(productId);
+
+    // 2. Fetch Variant if provided (Redis -> DB)
+    let priceModifier = 0;
+    if (variantId) {
+      const variant = await this._getVariantWithCache(variantId);
+      if (variant.product_id !== productId) {
+        throw new BadRequestException("Variant does not belong to this product");
+      }
+      priceModifier = Number(variant.price_modifier || 0);
+    }
+
+    // 3. Calculate Base Price & Subtotal
+    const basePrice = Number(product.price);
+    const unitPrice = basePrice + priceModifier;
+    const subtotal = unitPrice * quantity;
+
+    // 4. Calculate Discount, Tax, and Protection Fee
+    const discount = 0;
+    const tax = 0; 
+    const protectionFee = Number(FeeWithCommision(subtotal, 10)) + 0.8;
+    const finalPriceBeforeConversion = subtotal - discount + tax + protectionFee;
+
+    // 5. Currency Conversion
+    const targetCurrency = (currency || user.currency || defaultCurrency).toUpperCase();
+
+    // We calculate the breakdown in the target currency
+    const convertedUnit = await this._currencyConverterService.convert(defaultCurrency, targetCurrency, unitPrice);
+    const convertedSubtotal = await this._currencyConverterService.convert(defaultCurrency, targetCurrency, subtotal);
+    const convertedDiscount = await this._currencyConverterService.convert(defaultCurrency, targetCurrency, discount);
+    const convertedTax = await this._currencyConverterService.convert(defaultCurrency, targetCurrency, tax);
+    const convertedProtection = await this._currencyConverterService.convert(defaultCurrency, targetCurrency, protectionFee);
+    const finalPrice = await this._currencyConverterService.convert(defaultCurrency, targetCurrency, finalPriceBeforeConversion);
+
+    return {
+      message: "Checkout preview calculated successfully",
+      status: "success",
+      statusCode: 200,
+      data: {
+        productId,
+        variantId,
+        quantity,
+        currency: targetCurrency,
+        breakdown: {
+          basePrice: convertedUnit,
+          subtotal: convertedSubtotal,
+          protectionFee: convertedProtection,
+          discount: convertedDiscount,
+          tax: convertedTax,
+        },
+        finalPrice,
+      },
+    };
+  }
+
+  private async _getProductWithCache(id: number): Promise<Product> {
+    const cacheKey = `product:${id}`;
+    const cached = await this._redisService.get<Product>(cacheKey);
+    if (cached) return cached;
+
+    const product = await this._productRepository.findOne({
+      where: { id },
+      relations: ["user"],
+    });
+    if (!product) throw new NotFoundException("Product not found");
+
+    await this._redisService.set(cacheKey, product, 3600); // 1 hour TTL
+    return product;
+  }
+
+  private async _getVariantWithCache(id: number): Promise<ProductVariant> {
+    const cacheKey = `variant:${id}`;
+    const cached = await this._redisService.get<ProductVariant>(cacheKey);
+    if (cached) return cached;
+
+    const variant = await this._variantRepository.findOne({
+      where: { id },
+    });
+    if (!variant) throw new NotFoundException("Variant not found");
+
+    await this._redisService.set(cacheKey, variant, 3600);
+    return variant;
   }
 }
