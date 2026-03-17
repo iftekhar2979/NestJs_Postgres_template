@@ -4,6 +4,8 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Queue } from "bull";
 import { ResponseInterface } from "src/common/types/responseInterface";
 import { ConverterService } from "src/currency-converter/currency-converter.service";
+import { DeliveryAddress } from "src/delivery/entities/delivery_information.entity";
+import { Inventory } from "src/inventory/entities/inventory.entity";
 import {
   NotificationAction,
   NotificationRelated,
@@ -15,16 +17,21 @@ import { OfferStatus } from "src/offers/enums/offerStatus.enum";
 import { Product } from "src/products/entities/products.entity";
 import { defaultCurrency, ProductStatus } from "src/products/enums/status.enum";
 import { ProductVariant } from "src/products/varients/entities/productVarient.entity";
+import { PaymentMethod } from "src/purchase/dto/purchase.dto";
 import { RedisService } from "src/redis/redis.service";
 import { pagination } from "src/shared/utils/pagination";
 import { FeeWithCommision } from "src/shared/utils/utils";
 import { Transections } from "src/transections/entity/transections.entity";
 import { TransectionType } from "src/transections/enums/transectionTypes";
 import { User } from "src/user/entities/user.entity";
+import { UserAddress } from "src/user/entities/userAddresses.entity";
 import { UserRoles } from "src/user/enums/role.enum";
 import { Wallets } from "src/wallets/entity/wallets.entity";
 import { DataSource, EntityManager, In, Repository } from "typeorm";
+import { v4 as uuid } from "uuid";
+import { CheckoutExecuteDto } from "./dto/checkout-execute.dto";
 import { CheckoutPreviewDto } from "./dto/checkout-preview.dto";
+import { OrderItem } from "./entities/order-item.entity";
 import { Order } from "./entities/order.entity";
 import { OrderStatus, PaymentStatus } from "./enums/orderStatus";
 
@@ -38,6 +45,7 @@ export class OrdersService {
     @InjectRepository(Wallets) private _walletRepository: Repository<Wallets>,
     @InjectRepository(Transections) private _transectionRespositoy: Repository<Transections>,
     @InjectRepository(ProductVariant) private _variantRepository: Repository<ProductVariant>,
+    @InjectRepository(UserAddress) private _addressRepository: Repository<UserAddress>,
     @InjectQueue("product") private readonly _queue: Queue,
     @InjectQueue("notifications") private readonly _notificationQueue: Queue,
     private readonly _currencyConverterService: ConverterService,
@@ -504,11 +512,27 @@ export class OrdersService {
     const convertedProtection = await this._currencyConverterService.convert(defaultCurrency, targetCurrency, protectionFee);
     const finalPrice = await this._currencyConverterService.convert(defaultCurrency, targetCurrency, finalPriceBeforeConversion);
 
+    // 6. Generate and Store Session (10 mins TTL)
+    const sessionId = uuid();
+    const sessionData = {
+      productId,
+      variantId,
+      quantity,
+      unitPrice,
+      subtotal,
+      protectionFee,
+      finalPrice: finalPriceBeforeConversion,
+      currency: defaultCurrency, // Store in base currency for revalidation
+      userId: user.id
+    };
+    await this._redisService.set(`checkout:session:${sessionId}`, sessionData, 600);
+
     return {
       message: "Checkout preview calculated successfully",
       status: "success",
       statusCode: 200,
       data: {
+        sessionId,
         productId,
         variantId,
         quantity,
@@ -524,6 +548,218 @@ export class OrdersService {
       },
     };
   }
+
+  async executeCheckout(dto: CheckoutExecuteDto, user: User) {
+    const { sessionId, addressId, newAddress, paymentMethod } = dto;
+
+    // 1. Load Session from Redis
+    const sessionKey = `checkout:session:${sessionId}`;
+    const sessionData = await this._redisService.get<any>(sessionKey);
+
+    if (!sessionData) {
+      throw new BadRequestException("Checkout session expired or invalid");
+    }
+
+    // ❗ Invalidate session immediately to prevent duplicate orders from rapid submissions
+    await this._redisService.del(sessionKey);
+
+    if (sessionData.userId !== user.id) {
+      throw new ForbiddenException("Invalid checkout session");
+    }
+
+    const { productId, variantId, quantity, unitPrice: sessionUnitPrice, finalPrice: sessionFinalPrice } = sessionData;
+
+    // 2. Transvalidation of Price & Inventory (Real-time)
+    const product = await this._getProductWithCache(productId);
+    let variant: ProductVariant | null = null;
+    if (variantId) {
+      variant = await this._getVariantWithCache(variantId);
+    }
+
+    const currentUnitPrice = Number(product.price) + (variant ? Number(variant.price_modifier) : 0);
+    const subtotal = currentUnitPrice * quantity;
+    const protectionFee = Number(FeeWithCommision(subtotal, 10)) + 0.8;
+    const currentFinalPrice = subtotal + protectionFee;
+
+    if (Math.abs(currentFinalPrice - Number(sessionFinalPrice)) > 0.01) {
+      throw new BadRequestException("Product pricing has changed. Please preview again.");
+    }
+
+    // 3. Transactional Execution
+    const queryRunner = this._dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // a. Handle/Update Delivery Address
+      let targetAddress: UserAddress;
+      if (addressId) {
+        targetAddress = await queryRunner.manager.findOne(UserAddress, {
+          where: { id: addressId, user_id: user.id },
+        });
+        if (!targetAddress) {
+          throw new BadRequestException("Delivery address not found or unauthorized");
+        }
+      } else if (newAddress) {
+        // Fix REL_... unique constraint: Update if exists, otherwise create
+        const existingAddress = await queryRunner.manager.findOne(UserAddress, {
+          where: { user_id: user.id },
+        });
+
+        if (existingAddress) {
+          targetAddress = Object.assign(existingAddress, newAddress);
+        } else {
+          targetAddress = queryRunner.manager.create(UserAddress, {
+            ...newAddress,
+            user_id: user.id,
+          });
+        }
+        targetAddress = await queryRunner.manager.save(UserAddress, targetAddress);
+      } else {
+        throw new BadRequestException("Delivery address is required");
+      }
+
+      // b. Reserve Inventory
+      const inventory = await queryRunner.manager.findOne(Inventory, {
+        where: { product_id: productId, variant_id: variantId ?? null },
+        lock: { mode: "pessimistic_write" },
+      });
+
+      if (!inventory || inventory.stock < quantity) {
+        throw new BadRequestException("Insufficient stock available");
+      }
+
+      inventory.stock -= quantity;
+      inventory.reserved_stock = Number(inventory.reserved_stock || 0) + quantity;
+      await queryRunner.manager.save(Inventory, inventory);
+
+      // c. Process Payment
+      if (paymentMethod === PaymentMethod.WALLET) {
+        const wallet = await queryRunner.manager.findOne(Wallets, {
+          where: { user_id: user.id },
+          lock: { mode: "pessimistic_write" },
+        });
+
+        if (!wallet || Number(wallet.balance) < currentFinalPrice) {
+          throw new BadRequestException("Insufficient wallet balance");
+        }
+
+        wallet.balance = Number(wallet.balance) - currentFinalPrice;
+        await queryRunner.manager.save(Wallets, wallet);
+
+        const transaction = queryRunner.manager.create(Transections, {
+          user_id: user.id,
+          wallet_id: wallet.id,
+          amount: currentFinalPrice,
+          transection_type: TransectionType.PHURCASE,
+          paymentId: `ORDER-${Date.now()}-${user.id}`,
+          paymentMethod: "Wallet",
+          status: PaymentStatus.COMPLETED,
+          product_id: productId,
+        });
+        await queryRunner.manager.save(Transections, transaction);
+      }
+
+      // d. Create Order
+      const order = queryRunner.manager.create(Order, {
+        buyer_id: user.id,
+        seller_id: product.user_id,
+        product: product,
+        total: currentFinalPrice,
+        protectionFee: protectionFee,
+        status: OrderStatus.PENDING,
+        paymentStatus: PaymentStatus.COMPLETED,
+        delivery_id: null,
+      });
+      const savedOrder = await queryRunner.manager.save(Order, order);
+
+      // e. Create Order Item
+      const orderItem = queryRunner.manager.create(OrderItem, {
+        order_id: savedOrder.id,
+        product_id: productId,
+        variant_id: variantId,
+        quantity,
+        unit_price: currentUnitPrice,
+        total_price: subtotal,
+      });
+      await queryRunner.manager.save(OrderItem, orderItem);
+
+      // f. Create Order-specific Delivery Info snapshot
+      const orderDeliveryInfo = queryRunner.manager.create(DeliveryAddress, {
+        name: `${user.firstName} ${user.lastName}`,
+        address: targetAddress.address,
+        city: targetAddress.city,
+        country: targetAddress.country,
+        postal_code: targetAddress.postal_code,
+        house_number: targetAddress.house_number,
+        address_2: targetAddress.address_2,
+        order: savedOrder,
+      });
+      await queryRunner.manager.save(DeliveryAddress, orderDeliveryInfo);
+
+      await queryRunner.commitTransaction();
+      
+      await this._redisService.del(`checkout:session:${user.id}`);
+
+      // 4. Cleanup & Notifications
+      await this._redisService.deleteByPattern(`inventory:${productId}:*`);
+
+      const notifications = [
+        {
+          userId: user.id,
+          isImportant: true,
+          action: NotificationAction.CREATED,
+          related: NotificationRelated.ORDER,
+          notificationFor: UserRoles.USER,
+          type: NotificationType.SUCCESS,
+          targetId: savedOrder.id,
+          msg: `Your purchase of ${product.product_name} was successful! Order #${savedOrder.id}`,
+        },
+        {
+          userId: product.user_id,
+          isImportant: true,
+          action: NotificationAction.CREATED,
+          related: NotificationRelated.ORDER,
+          notificationFor: UserRoles.USER,
+          type: NotificationType.SUCCESS,
+          targetId: savedOrder.id,
+          msg: `Good news! Your product ${product.product_name} has been purchased. Order #${savedOrder.id}`,
+        },
+        {
+          userId: null,
+          isImportant: true,
+          action: NotificationAction.CREATED,
+          related: NotificationRelated.ORDER,
+          notificationFor: UserRoles.ADMIN,
+          type: NotificationType.INFO,
+          targetId: savedOrder.id,
+          msg: `New Order #${savedOrder.id} created by ${user.firstName} for ${product.product_name}.`,
+        },
+      ];
+
+      await this._notificaionService.bulkInsertNotifications(notifications);
+
+      await this._notificationQueue.add("order_created_event", {
+        orderId: savedOrder.id,
+        buyerId: user.id,
+        totalPrice: savedOrder.total,
+      });
+
+      return {
+        message: "Purchase successful",
+        status: "success",
+        statusCode: 200,
+        data: savedOrder,
+      };
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
 
   private async _getProductWithCache(id: number): Promise<Product> {
     const cacheKey = `product:${id}`;

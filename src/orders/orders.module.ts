@@ -9,6 +9,7 @@ import { Product } from "src/products/entities/products.entity";
 import { ProductVariant } from "src/products/varients/entities/productVarient.entity";
 import { RedisModule } from "src/redis/redis.module";
 import { Transections } from "src/transections/entity/transections.entity";
+import { UserAddress } from "src/user/entities/userAddresses.entity";
 import { UserModule } from "src/user/user.module";
 import { Wallets } from "src/wallets/entity/wallets.entity";
 import { Order } from "./entities/order.entity";
@@ -17,7 +18,7 @@ import { OrdersService } from "./orders.service";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Order, Offer, Product, Wallets, Transections, ProductVariant]),
+    TypeOrmModule.forFeature([Order, Offer, Product, Wallets, Transections, ProductVariant, UserAddress]),
     AuthModule,
     UserModule,
     BullModule.registerQueue({ name: "product" }, { name: "notifications" }),
