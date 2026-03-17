@@ -1,15 +1,16 @@
 import { InjectQueue } from "@nestjs/bull";
 import {
-    BadRequestException,
-    Injectable,
-    InternalServerErrorException,
-    NotFoundException,
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
 } from "@nestjs/common";
 import { Queue } from "bull";
+import { Inventory } from "src/inventory/entities/inventory.entity";
+import { InventoryService } from "src/inventory/inventory.service";
 import { OrderItem } from "src/orders/entities/order-item.entity";
 import { Order } from "src/orders/entities/order.entity";
 import { OrderStatus, PaymentStatus } from "src/orders/enums/orderStatus";
-import { Inventory } from "src/products/entities/inventory.entity";
 import { Product } from "src/products/entities/products.entity";
 import { ProductStatus } from "src/products/enums/status.enum";
 import { ProductStats } from "src/products/stats/entities/productStats.entity";
@@ -31,6 +32,7 @@ export class PurchaseService {
     @InjectQueue("notifications") private readonly notificationQueue: Queue,
     @InjectQueue("product") private readonly productQueue: Queue,
     @InjectQueue("email") private readonly emailQueue: Queue,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   async executePurchase(dto: PurchaseDto, user: User) {
@@ -58,22 +60,12 @@ export class PurchaseService {
     await queryRunner.startTransaction();
 
     try {
-      // 2. Validate Stock (Critical - Pessimistic Lock)
-      const inventory = await queryRunner.manager
-        .createQueryBuilder(Inventory, "inventory")
-        .setLock("pessimistic_write")
-        .where("inventory.product_id = :productId", { productId })
-        .andWhere(variantId ? "inventory.variant_id = :variantId" : "inventory.variant_id IS NULL", { variantId })
-        .getOne();
-
-      if (!inventory) {
-        throw new NotFoundException("Inventory record not found");
-      }
-
-      const availableStock = inventory.stock - inventory.reserved_stock;
-      if (availableStock < quantity) {
-        throw new BadRequestException(`Insufficient stock. Available: ${availableStock}`);
-      }
+      // 2. Reserve Stock (Centralized within InventoryService)
+      await this.inventoryService.reserveStock({
+        productId,
+        variantId: variantId ?? undefined,
+        quantity,
+      });
 
       // 3. Calculate Final Price
       // In this system, product.price is base. If variant has modifier, we'd add it.
@@ -147,9 +139,12 @@ export class PurchaseService {
       });
       await queryRunner.manager.save(OrderItem, orderItem);
 
-      // 7. Update Inventory
-      inventory.stock -= quantity;
-      await queryRunner.manager.save(Inventory, inventory);
+      // 7. Confirm Stock (Centralized within InventoryService)
+      const confirmedInventory = await this.inventoryService.confirmStock({
+        productId,
+        variantId: variantId ?? undefined,
+        quantity,
+      });
 
       // 8. Update Product Statistics
       let stats = await queryRunner.manager.findOne(ProductStats, { where: { product_id: productId } });
@@ -165,7 +160,7 @@ export class PurchaseService {
       await queryRunner.commitTransaction();
 
       // 9. Post-commit side effects: Publish Events & Clear Cache
-      await this.publishEvents(savedOrder, user, inventory, quantity);
+      await this.publishEvents(savedOrder, user, confirmedInventory, quantity);
       await this.invalidateCache(productId, variantId);
 
       return {

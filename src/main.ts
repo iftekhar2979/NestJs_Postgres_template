@@ -14,7 +14,6 @@ import xssClean from "xss-clean";
 import { AppModule } from "./app.module";
 // FIXME: have it if you are using secret manager
 // import { loadSecretsFromAWS } from "./configs/app.config";
-import bodyParser from "body-parser";
 import { join } from "path";
 import { createDataSource } from "./configs/ormconfig";
 import { runMigrations } from "./migration-runner";
@@ -36,6 +35,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     cors: true,
     logger: ["error", "fatal", "log", "verbose", "warn", "debug"],
+    rawBody: true,
   });
   const configService = app.get<ConfigService>(ConfigService);
 
@@ -82,26 +82,42 @@ async function bootstrap() {
   app.use(cookieParser());
   app.use(compression());
 
-  app.use(json({ limit: "50kb" }));
-  app.use(urlencoded({ extended: true, limit: "50kb" }));
+  // Exclude Stripe webhook from global body parsers to prevent "Stream is not readable"
+  app.use((req, res, next) => {
+    if (req.originalUrl === "/api/v1/stripe/webhook") {
+      return next();
+    }
+    json({ limit: "500kb" })(req, res, next);
+  });
+  app.use((req, res, next) => {
+    if (req.originalUrl === "/api/v1/stripe/webhook") {
+      return next();
+    }
+    urlencoded({ extended: true, limit: "500kb" })(req, res, next);
+  });
 
-  app.disable("x-powered-by"); // provide an extra layer of obsecurity to reduce server fingerprinting.
-  app.set("trust proxy", 1); // trust first proxy
+  app.disable("x-powered-by");
+  app.set("trust proxy", 1);
 
   const ignoreMethods =
     configService.get<string>("STAGE") == "dev"
-      ? ["GET", "HEAD", "OPTIONS", "DELETE", "POST", "PATCH", "PUT"] // for devlopment we ignoring all
+      ? ["GET", "HEAD", "OPTIONS", "DELETE", "POST", "PATCH", "PUT"]
       : ["GET", "HEAD", "OPTIONS"];
-  app.use(
+
+  // Apply CSRF but exclude Stripe webhook
+  app.use((req, res, next) => {
+    if (req.originalUrl === "/api/v1/stripe/webhook") {
+      return next();
+    }
     csurf({
       cookie: {
-        httpOnly: true, // Prevent JavaScript access to the CSRF cookie
-        secure: process.env.NODE_ENV === "PROD", // Set to secure only in production
-        sameSite: "strict", // Restrict the cookie to same-site requests
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "PROD",
+        sameSite: "strict",
       },
       ignoreMethods,
-    })
-  );
+    })(req, res, next);
+  });
   app.use(
     helmet({
       hsts: {
@@ -162,7 +178,6 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe({ transform: true, stopAtFirstError: true }));
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-  app.use("/api/v1/stripe/webhook", bodyParser.raw({ type: "*/*" }));
   /* FIXME:
     ########################## 
     ##### Set-up Swagger #####
