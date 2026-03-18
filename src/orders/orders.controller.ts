@@ -28,7 +28,7 @@ export class OrdersController {
     return this.ordersService.getCheckoutData(Number(productId), user);
   }
 
-  @Get("phurcases")
+  @Get("purchases")
   @UseGuards(JwtAuthenticationGuard)
   getOrdersByBuyer(@GetUser() user: User, @Query("page") page = 1, @Query("limit") limit = 10) {
     return this.ordersService.findByBuyerId(user.id, page, limit, user);
@@ -39,11 +39,7 @@ export class OrdersController {
     return this.ordersService.findBySellerId(user.id, page, limit, user);
   }
 
-  @Post(":id/purchases")
-  @UseGuards(JwtAuthenticationGuard)
-  phurcase(@GetUser() user: User, @Query("page") page = 1, @Query("limit") limit = 10) {
-    return this.ordersService.findByBuyerId(user.id, page, limit);
-  }
+
   @Put(":orderID/completed")
   @UseGuards(JwtAuthenticationGuard)
   orderCompleted(@GetUser() user: User, @Param("orderID") order_id: number) {

@@ -120,11 +120,13 @@ Prices are NOT currency-converted — raw GBP values are returned.
   @UseGuards(JwtAuthenticationGuard)
   @ApiResponse({ status: 200, description: "Product retrived successfully", type: Product })
   @ApiQuery({ type: GetProductsQueryDto, required: false })
-  async getProducts(@Query() query: GetProductsQueryDto, @GetUser() user: User) {
+  async getProducts(@Query() query: GetProductsQueryDto, @GetUser() user: User , @Query('type') type: string) {
     if (query.userId) {
       throw new ForbiddenException("Can't resolve the api");
     }
     query.userId = user.id;
+    query.type = type;
+    
     return this._productsSecondaryService.findAll(query);
   }
   @Patch(":id")
@@ -152,13 +154,31 @@ Prices are NOT currency-converted — raw GBP values are returned.
     this._logger.log(`product update dto`, updateProductDto);
     return this._productsService.updateProduct(id, updateProductDto, user.id, user);
   }
+  @Get(":id/boost-preview")
+  @UseGuards(JwtAuthenticationGuard)
+  @ApiOperation({ summary: "Get boost pricing preview for 3 and 7 days" })
+  @ApiResponse({ status: 200, description: "Boost pricing preview retrieved successfully" })
+  @ApiParam({ name: "id", type: Number, description: "ID of the product to preview boost pricing for" })
+  async boostPreview(@Param("id", ParseIntPipe) id: number, @GetUser() user: User) {
+    return this._productsService.boostPreview(id, user);
+  }
+
   @Put(":id/boosts")
   @UseGuards(JwtAuthenticationGuard)
   @UsePipes(new ValidationPipe({ transform: true }))
+  @ApiOperation({ summary: "Boost a product for a specific number of days" })
   @ApiResponse({ status: 200, description: "Product boosted successfully", type: Product })
-  @ApiParam({ name: "id", type: Number, description: "ID of the product to update" })
-  async boostProduct(@Param("id", ParseIntPipe) id: number, @GetUser() user: User) {
-    return this._productsService.boostProduct({ productId: id, user });
+  @ApiParam({ name: "id", type: Number, description: "ID of the product to boost" })
+  @ApiQuery({ name: "days", type: Number, required: false, description: "Number of days to boost (defaults to 3)" })
+  async boostProduct(
+    @Param("id", ParseIntPipe) id: number,
+    @GetUser() user: User,
+    @Query("days", new ParseIntPipe({ optional: true })) days?: number
+  ) {
+    if (!days) {
+      days = 3;
+    }
+    return this._productsService.boostProduct({ productId: id, user, days });
   }
 
   @Patch(":id/status")

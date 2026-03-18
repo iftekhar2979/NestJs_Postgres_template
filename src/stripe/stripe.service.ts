@@ -140,7 +140,7 @@ export class StripeService {
 
     try {
       switch (event.type) {
-        case "charge.succeeded":
+        // case "charge.succeeded":
         case "charge.updated":
           await this.processChargeSucceeded(event.data.object as Stripe.Charge, queryRunner.manager);
           break;

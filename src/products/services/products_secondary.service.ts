@@ -299,6 +299,7 @@ export class ProductsSecondaryService {
     colors,
     price,
     userId,
+    type,
   } = query;
 
   const qb = this._productRepo
@@ -308,13 +309,18 @@ export class ProductsSecondaryService {
       "p.product_name",
       "p.price",
       "p.description",
-    ])
-    .orderBy("p.synthetic_score", "DESC");
+      "p.status",
+      "p.created_at",
+    ]);
 
-  // ── STATUS ─────────────────────────────
-  qb.andWhere("p.status = :status", {
-    status: ProductStatus.AVAILABLE,
-  });
+  // ── FILTER BY TYPE (OWN vs PUBLIC) ─────
+  if (type === "own") {
+    qb.andWhere("p.user_id = :userId", { userId });
+    // For own products, show everything except deleted? Or maybe even pending.
+    qb.andWhere("p.status != :deletedStatus", { deletedStatus: ProductStatus.DELETED });
+  } else {
+    qb.andWhere("p.status = :status", { status: ProductStatus.AVAILABLE });
+  }
 
   // ── SEARCH ─────────────────────────────
   if (term) {
@@ -413,6 +419,8 @@ export class ProductsSecondaryService {
     product_name: p.product_name,
     price: p.price,
     description: p.description,
+    status: p.status,
+    created_at: p.created_at,
     image: imageMap[p.id] || null,
     rating:4,
     reviewCount:5,

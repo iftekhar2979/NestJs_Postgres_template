@@ -1,4 +1,4 @@
-import { Injectable, ExecutionContext, UnauthorizedException } from "@nestjs/common";
+import { ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { InjectLogger } from "src/shared/decorators/logger.decorator";
 import { UserService } from "src/user/user.service";
@@ -18,6 +18,7 @@ export class JwtAuthenticationGuard {
     if (!token) {
       throw new UnauthorizedException("You are not authorized to access this resource!");
     }
+    console.log(token)
     try {
       const payload = await this._jwtService.verifyAsync(token);
       const user = await this._userService.getUserById(payload.id);

@@ -144,7 +144,16 @@ export class OrdersService {
     user?: User
   ): Promise<ResponseInterface<Order[]>> {
     const [orders, total] = await this._orderRepository.findAndCount({
-      where: { buyer_id: buyerId, status: In([OrderStatus.SHIPMENT_READY, OrderStatus.DELIVERED]) },
+      where: {
+      buyer_id: buyerId,
+      status: In([
+        OrderStatus.PENDING,
+        OrderStatus.DELIVERY_FILLED,
+        OrderStatus.PREPEARED,
+        OrderStatus.SHIPMENT_READY,
+        OrderStatus.DELIVERED,
+      ]),
+    },
       relations: ["product", "accepted_offer", "deliveryInfo", "buyer", "seller"],
       skip: (page - 1) * limit,
       take: limit,
@@ -172,7 +181,7 @@ export class OrdersService {
       })
     );
     return {
-      message: "Orders retrieved successfully!",
+      message: "Purchases retrieved successfully!",
       status: "success",
       statusCode: 200,
       data: orders,
@@ -231,7 +240,7 @@ export class OrdersService {
       })
     );
     return {
-      message: "Orders retrieved successfully!",
+      message: "Sales retrieved successfully!",
       status: "success",
       statusCode: 200,
       data: orders,
@@ -367,7 +376,7 @@ export class OrdersService {
         amount: sellerPayout,
         order: order,
         paymentId: paymentId,
-        transection_type: TransectionType.ORDER_COMPLETATION,
+        transection_type: TransectionType.ORDER_COMPLETION,
         status: PaymentStatus.COMPLETED,
         product: product,
         paymentMethod: "Internal",
@@ -631,6 +640,7 @@ export class OrdersService {
         where: { product_id: productId, variant_id: variantId ?? null },
         lock: { mode: "pessimistic_write" },
       });
+      console.log(inventory , quantity);
 
       if (!inventory || inventory.stock < quantity) {
         throw new BadRequestException("Insufficient stock available");
@@ -658,7 +668,7 @@ export class OrdersService {
           user_id: user.id,
           wallet_id: wallet.id,
           amount: currentFinalPrice,
-          transection_type: TransectionType.PHURCASE,
+          transection_type: TransectionType.PURCHASE,
           paymentId: `ORDER-${Date.now()}-${user.id}`,
           paymentMethod: "Wallet",
           status: PaymentStatus.COMPLETED,

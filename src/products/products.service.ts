@@ -447,64 +447,137 @@ export class ProductsService {
       pagination: pagination({ page: parseInt(page), limit: parseInt(limit), total }),
     };
   }
-  async boostProduct({ productId, user }: { productId: number; user: User }) {
-    const product = await this.getProduct(productId); // Assume this fetches the product
-    const wallets = await this._walletsRepo.findOne({ where: { user_id: user.id } });
-
-    if (!wallets) {
-      throw new BadRequestException("Wallet not found for this user");
-    }
-
-    if (product.is_boosted) {
-      throw new BadRequestException("Product already boosted!");
-    }
-
-    const productBoostingCost = PRODUCT_BOOSTING_COST;
-    const boostDays = PRODUCT_BOOSTING_DAYS;
-    const daysInSecond = DAYS_IN_SECOND;
-
-    if (wallets.balance < productBoostingCost) {
-      throw new BadRequestException("You don't have enough balance to boost the product!");
+  async boostPreview(productId: number, user: User) {
+    const product = await this.getProduct(productId);
+    console.log(product)
+    if (!product) {
+      throw new NotFoundException("Product not found");
     }
 
     if (product.user.id !== user.id) {
       throw new ForbiddenException("This is not your product");
     }
 
+    const options = [3, 7];
+    const pricing = await Promise.all(
+      options.map(async (days) => {
+        const baseCostGBP = (PRODUCT_BOOSTING_COST / PRODUCT_BOOSTING_DAYS) * days;
+        const convertedCost = await this._currencyConverterService.convert(
+          defaultCurrency,
+          user.currency.toUpperCase(),
+          baseCostGBP
+        );
+        return {
+          days,
+          cost: Number(convertedCost.toFixed(2)),
+          currency: user.currency.toUpperCase(),
+        };
+      })
+    );
+
+    return {
+      message: "Boost pricing preview retrieved successfully",
+      data: {
+        productId,
+        productName: product.product_name,
+        pricing,
+      },
+      statusCode: 200,
+    };
+  }
+
+  async boostProduct({ productId, user, days }: { productId: number; user: User; days: number }) {
+    const product = await this.getProduct(productId);
+    const wallets = await this._walletsRepo.findOne({ where: { user_id: user.id } });
+
+    if (!wallets) {
+      throw new BadRequestException("Wallet not found for this user");
+    }
+
+    if (product.user.id !== user.id) {
+      throw new ForbiddenException("This is not your product");
+    }
+
+    const boostDays = days || PRODUCT_BOOSTING_DAYS;
+    // Calculate cost proportional to days based on base cost/days
+    const baseCostGBP = (PRODUCT_BOOSTING_COST / PRODUCT_BOOSTING_DAYS) * boostDays;
+
+    // Convert cost to user's currency
+    const totalCostInUserCurrency = await this._currencyConverterService.convert(
+      defaultCurrency,
+      user.currency.toUpperCase(),
+      baseCostGBP
+    );
+
+    if (wallets.balance < totalCostInUserCurrency) {
+      throw new BadRequestException(
+        `Insufficient balance. Boosting for ${boostDays} days costs ${totalCostInUserCurrency.toFixed(2)} ${user.currency}.`
+      );
+    }
+
+    const daysInMS = boostDays * DAYS_IN_SECOND;
+    
     // Start a new transaction
     const queryRunner = this._dataSource.createQueryRunner();
+    await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
       // Update wallet balance
-      wallets.balance -= productBoostingCost;
+      wallets.balance -= totalCostInUserCurrency;
       wallets.version += 1;
 
-      // Update product details
+      // Calculate new boost end time
+      let newBoostEndTime: Date;
+      const now = new Date();
+      
+      if (product.is_boosted && product.boost_end_time && new Date(product.boost_end_time) > now) {
+        // Extend existing boost
+        newBoostEndTime = new Date(new Date(product.boost_end_time).getTime() + daysInMS);
+      } else {
+        // Start fresh boost
+        product.boost_start_time = now;
+        newBoostEndTime = new Date(now.getTime() + daysInMS);
+      }
+      
       product.is_boosted = true;
-      product.boost_start_time = new Date();
-      product.boost_end_time = new Date(Date.now() + boostDays * daysInSecond);
+      product.boost_end_time = newBoostEndTime;
 
       // Create a new transaction record
       const transection = new Transections();
-      transection.amount = productBoostingCost;
+      transection.amount = totalCostInUserCurrency;
       transection.paymentMethod = "Internal";
       transection.product = product;
-      transection.user = product.user;
+      transection.user = user;
       transection.wallet = wallets;
       transection.wallet_id = wallets.id;
       transection.status = PaymentStatus.COMPLETED;
       transection.transection_type = TransectionType.BOOST;
-      transection.paymentId = `TSN-${productId}-${Math.floor(Math.random() * 1000000)}`;
+      transection.paymentId = `BOOST-${productId}-${Date.now()}`;
       transection.product_id = product.id;
 
-      // Save the transaction, wallet, and product within the transaction context
+      // Save everything
       await queryRunner.manager.save(Transections, transection);
       await queryRunner.manager.save(Wallets, wallets);
       const savedProduct = await queryRunner.manager.save(Product, product);
 
-      // Commit the transaction after all operations
+      // Add Notification
+      await this._notificationQueue.add("notification_saver", {
+        user: user,
+        related: NotificationRelated.PRODUCT,
+        action: NotificationAction.UPDATED,
+        msg: `Your product "${product.product_name}" is now boosted until ${newBoostEndTime.toLocaleDateString()}.`,
+        type: NotificationType.SUCCESS,
+        targetId: product.id,
+        notificationFor: UserRoles.USER,
+        isImportant: true,
+      });
+
+      // Commit the transaction
       await queryRunner.commitTransaction();
+
+      // Clear cache
+      await this._cacheService.del(`product:${productId}`);
 
       return {
         message: "Product boosted successfully",
@@ -513,12 +586,10 @@ export class ProductsService {
         statusCode: 200,
       };
     } catch (error) {
-      // Rollback the transaction if any error occurs
       await queryRunner.rollbackTransaction();
       console.error("Error during boosting product transaction:", error);
-      throw new InternalServerErrorException("An error occurred while boosting the product.");
+      throw new InternalServerErrorException(error.message || "An error occurred while boosting the product.");
     } finally {
-      // Always release the queryRunner, whether the transaction was successful or not
       await queryRunner.release();
     }
   }

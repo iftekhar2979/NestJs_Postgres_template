@@ -13,10 +13,10 @@ import { ConfigService } from "@nestjs/config";
 import { Cache } from "cache-manager";
 import { ConverterService } from "src/currency-converter/currency-converter.service";
 import {
-    NotificationAction,
-    NotificationRelated,
-    Notifications,
-    NotificationType,
+  NotificationAction,
+  NotificationRelated,
+  Notifications,
+  NotificationType,
 } from "src/notifications/entities/notifications.entity";
 import { NotificationsService } from "src/notifications/notifications.service";
 import { Order } from "src/orders/entities/order.entity";
@@ -423,7 +423,7 @@ export class ShipmentService {
         transaction.amount = totalAmount;
         transaction.order = existingOrder;
         transaction.paymentId = paymentId;
-        transaction.transection_type = TransectionType.PHURCASE;
+        transaction.transection_type = TransectionType.PURCHASE;
         transaction.status = PaymentStatus.COMPLETED;
         transaction.product = product;
         transaction.paymentMethod = "Internal";
