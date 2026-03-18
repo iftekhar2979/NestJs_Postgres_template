@@ -77,10 +77,8 @@ export class RedisService implements OnModuleInit {
    * @param ttl Time to live in seconds
    */
   async set(key: string, value: any, ttl?: number): Promise<void> {
-    console.log(value)
     const stringValue = typeof value === "string" ? value : JSON.stringify(value);
     if (ttl) {
-      console.log("Setting key",key,value,ttl)
       await this.client.set(key, stringValue, "EX", ttl);
     } else {
       await this.client.set(key, stringValue);

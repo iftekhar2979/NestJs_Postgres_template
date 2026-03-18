@@ -107,7 +107,7 @@ export class PurchaseService {
           user_id: user.id,
           wallet_id: wallet.id,
           amount: totalToPay,
-          transection_type: TransectionType.PHURCASE,
+          transection_type: TransectionType.PURCHASE,
           paymentId: `PURCH-${Date.now()}-${user.id}`,
           paymentMethod: "Wallet",
           status: PaymentStatus.COMPLETED,

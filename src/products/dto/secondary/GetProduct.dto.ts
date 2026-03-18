@@ -62,6 +62,7 @@ export class GetProductsQueryDto {
   // Injected by controller — never from client
   userId?: string;
   userCurrency?: string;
+  type?: string;
 }
 
 export class GetAdminProductsQueryDto extends GetProductsQueryDto {
