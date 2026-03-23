@@ -104,9 +104,14 @@ async function bootstrap() {
       ? ["GET", "HEAD", "OPTIONS", "DELETE", "POST", "PATCH", "PUT"]
       : ["GET", "HEAD", "OPTIONS"];
 
-  // Apply CSRF but exclude Stripe webhook
+  // Apply CSRF but exclude Stripe webhook and auth endpoints
   app.use((req, res, next) => {
-    if (req.originalUrl === "/api/v1/stripe/webhook") {
+    // Skip CSRF for Stripe webhook and auth endpoints
+    if (
+      req.originalUrl === "/api/v1/stripe/webhook" ||
+      req.originalUrl.startsWith("/api/v1/auth") ||
+      req.originalUrl.startsWith("/api/auth")
+    ) {
       return next();
     }
     csurf({

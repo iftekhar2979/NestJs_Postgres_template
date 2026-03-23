@@ -69,6 +69,7 @@ export class AuthController {
     @InjectQueue("notifications") private readonly _queue: Queue
   ) {}
   @Post("signup")
+  @UseInterceptors(TransformInterceptor)
   @ApiOperation({
     description: "Api to register new users.",
     summary: "Api to register new users. It takes (firstName, lastName, email and password) as input",
@@ -131,7 +132,9 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: "Invalid credentials" })
   @ApiBody({ required: true, type: LoginUserDto })
   async loginPassportLocal(@Req() req: Request) {
+    console.log("Req", req.body);
     const user = req.user as any;
+    console.log("User", user);
     if (req.body.fcm) {
       await this._userService.updateUserData({ fcm: req.body.fcm }, user);
       user.fcm = req.body.fcm;

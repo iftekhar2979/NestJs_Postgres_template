@@ -1,17 +1,16 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
 import {
-  IsAlpha,
   IsEmail,
   IsNotEmpty,
   IsNumberString,
   IsString,
   Matches,
   MaxLength,
-  MinLength,
+  MinLength
 } from "class-validator";
-import { IsNotAdmin } from "../../shared/decorators/not-admin.decorator";
 import { UserRoles } from "src/user/enums/role.enum";
+import { IsNotAdmin } from "../../shared/decorators/not-admin.decorator";
 
 export class CreateUserDto {
   /**
@@ -76,9 +75,9 @@ export class CreateUserDto {
   @IsNotEmpty({ message: "Password can not be empty" })
   @MinLength(8, { message: "Password must contain minimum of 8 characters" })
   @MaxLength(32, { message: "Password must contain maximum of 32 characters" })
-  @Matches(/(?:(?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {
-    message: "Weak Password",
-  })
+  // @Matches(/(?:(?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {
+  //   message: "Weak Password",
+  // })
   password: string;
 }
 
