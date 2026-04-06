@@ -1,9 +1,7 @@
-import { Controller, Delete, Get, Param, Query, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { AccountActivatedGuard } from "../user/guards/account-activation.guard";
-import { S3Service } from "./s3.service";
+import { Controller, Delete, Get, Param, Query } from "@nestjs/common";
+import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { PreSignedUrlDTO } from "./dto/pre-signed-url.dto";
+import { S3Service } from "./s3.service";
 
 @ApiTags("S3")
 // @ApiBearerAuth()
