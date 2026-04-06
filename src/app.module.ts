@@ -95,9 +95,9 @@ import { PurchaseModule } from "./purchase/purchase.module";
       name: "myQueue", // Name of your queue
     }),
 
-// EventEmitterModule.f 
-// @EventEmitterModule2
-EventEmitterModule.forRoot(),
+    // EventEmitterModule.f
+    // @EventEmitterModule2
+    EventEmitterModule.forRoot(),
     ConfigModule.forRoot({
       // envFilePath: [`.env.stage.dev`],
       isGlobal: true,
