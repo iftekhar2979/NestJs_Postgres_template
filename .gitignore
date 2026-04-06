@@ -5,7 +5,6 @@
 /public/uploads
 # files
 # NOTE: Un-comment this in real projects
-.env*
 
 # .env
 .env.stage.dev
@@ -36,8 +35,8 @@ lerna-debug.log*
 *.sublime-workspace
 
 # IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
+config.bat

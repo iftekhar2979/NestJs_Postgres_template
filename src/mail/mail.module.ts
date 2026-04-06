@@ -9,14 +9,14 @@ import { MailService } from "./mail.service";
 /**
  * It is a feature module where we keep the service and code related to mails. we import the nestjs mailer module and configure it to work with templates using pugAdapter.
  */
-console.log(process.env.SENDGRID_API_KEY);
+
 @Module({
   imports: [
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        if (configService.get<string>("NODE_ENV") === "DEV") {
+        if (configService.get<string>("NODE_ENV") === "PROD") {
           return {
             transport: {
               host: configService.get<string>("EMAIL_HOST"),

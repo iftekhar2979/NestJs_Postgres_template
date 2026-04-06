@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from "@nestjs/common";
+import { CategoryQuery } from "./dto/query";
 import { SubCategoriesService } from "./sub_categories.service";
 
 @Controller("sub-categories")
@@ -12,14 +13,14 @@ export class SubCategoriesController {
 
   @Get()
   findAll(
+    @Query("categoryId") categoryId: CategoryQuery,
     @Query("page") page: string = "1",
-    @Query("limit") limit: string = "10",
-    @Query("categoryId") categoryId?: string
+    @Query("limit") limit: string = "10"
   ) {
     return this.subCategoriesService.findAll(
       parseInt(page),
       parseInt(limit),
-      categoryId ? parseInt(categoryId) : undefined
+      categoryId.categoryId ? parseInt(categoryId.categoryId) : undefined
     );
   }
 

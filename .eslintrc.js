@@ -20,4 +20,3 @@ module.exports = {
     "no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     "no-unused-imports": "off", // if using eslint-plugin-unused-imports (see below)
   },
-};
